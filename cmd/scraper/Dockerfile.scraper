@@ -1,0 +1,39 @@
+FROM node:14.17.6-alpine AS base
+
+# Install certificates and git
+RUN apk add --update --no-cache libc6-compat ca-certificates git
+# Define working directory and copy source
+WORKDIR /app
+
+COPY proto /app/proto
+
+COPY cmd/scraper/package.json cmd/scraper/yarn.lock ./
+
+FROM base AS dependencies
+WORKDIR /app
+
+RUN npm install --production
+RUN cp -R node_modules /tmp/node_modules
+
+# Install dependencies and build whatever you have to build
+RUN npm install -g @mapbox/node-pre-gyp
+RUN npm install
+
+COPY cmd/scraper/ /app
+RUN npm run build
+
+FROM dependencies as release
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+COPY --from=dependencies /tmp/node_modules ./node_modules
+COPY --from=dependencies /app/dist ./dist
+COPY proto /app
+
+COPY cmd/scraper/.env.production .env
+
+EXPOSE 50050
+
+# Start the app
+CMD ["npm", "run", "start:production"]

@@ -1,0 +1,5 @@
+tmp/
+plugins/
+.git/
+.circleci/
+*.pem

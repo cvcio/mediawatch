@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package mediawatch.feeds.v2;
+
+// third party imports
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "tagger/tagger.proto";
+
+// mediawatch specific imports
+import "mediawatch/common/v2/common.proto";
+
+// FeedStream Model
+message FeedStream {
+    // stream key to select, can be the twitter_id of the feed in case 
+    // stream yype is STREAM_TYPE_TWITTER, otherwise an ATOM url 
+    // or feeds url.
+    string stream_target = 1;
+    // Cron like sceduling used only when stream_type is rss
+    string execute_every = 2;
+
+    // stream type, can be other, twitter or rss
+    // currently only twitter is supported
+    mediawatch.common.v2.StreamType stream_type = 3;
+    // common status (see common.proto)
+    mediawatch.common.v2.Status stream_status = 4;
+}
+
+// FeedDOM Model
+message FeedDOM {
+    string dom_type = 1;
+    string api = 2;
+    string title = 3;
+    string excerpt = 4;
+    string body = 5;
+    string authors = 6;
+    string sources = 7;
+    string tags = 8;
+    string categories = 9;
+    string published_at = 10;
+    string edited_at = 11;
+    string timezone_offset = 12;
+    string img = 13;
+}
+
+// FeedLocalization Model
+message FeedLocalization {
+    string country = 1;
+    mediawatch.common.v2.Locality locality = 2;
+    // Feed predefined language code in ISO 639-1 format
+    string lang = 3;
+}
+
+// FeedMeta Model
+message FeedMeta {    
+    // email (if provided)
+    string email = 1;
+
+    // as suggested by ioanna archontaki (phd@uoa)
+    // the purpose of these meta is to correlate feeds
+    // by their political context
+    mediawatch.common.v2.BusinessType business_type = 2;
+    string business_owner = 3;
+    // if the business is registered or not in a 
+    // public business registry, association, etc.
+    bool business_registered = 4;
+    mediawatch.common.v2.ContentType content_type = 5;
+    mediawatch.common.v2.PoliticalOrientation political_orientation = 6;
+    string political_affiliation = 7;
+    mediawatch.common.v2.Tier tier = 8;
+}
+
+message Feed {
+    // UUID as a string
+    string id = 1 [(tagger.tags) = "bson:\"_id,omitempty\""];
+    // UUID string representation
+    string uuid = 2;
+    // Feed creation datetime in RFC3339 format
+    google.protobuf.Timestamp created_at = 3;
+    // Feed update datetime in RFC3339 format
+    google.protobuf.Timestamp updated_at = 4;
+    // Name of the feed
+    string name = 5;
+    // Twitter user_name of the feed (if appliccable)
+    string user_name = 6;
+    // A small description of the feed
+    string description = 7;
+    // Twitter id_str of the feed (if appliccable)
+    string twitter_id = 8;
+    // Twitter profile_image_url of the feed (if appliccable), or favicon url
+    string icon = 9;
+    // Base url of the feed, including trailing slash `/`
+    string url = 10;
+    // strem fields
+    FeedStream stream = 11;
+    // localization fields
+    FeedLocalization localization = 12;
+    // meta fields
+    FeedMeta meta = 13;
+    // dom fiedlds
+    FeedDOM dom = 14;
+};
+
+message FeedStreamList {
+    repeated string data = 1;
+}
+
+message FeedList {
+    repeated Feed data = 1;
+    mediawatch.common.v2.Pagination pagination = 2;
+}
+
+message FeedWithFields {
+    string id = 1;
+    google.protobuf.Struct meta = 2;
+}
+
+message QueryFeed {
+    string id = 1;
+    int64 limit = 2;
+    int64 page = 3;
+    string sort_order = 4;
+    string sort_key = 5;
+
+    string country = 6;
+    string lang = 7;
+
+    mediawatch.common.v2.StreamType stream_type = 8;
+    mediawatch.common.v2.Status stream_status = 9;
+}
+
+service FeedService {
+    // create a new feed
+    rpc Create (Feed) returns (Feed) {};
+    // get a single feed
+    rpc Get (QueryFeed) returns (Feed) {};
+    // get list of feeds by query
+    rpc List (QueryFeed) returns (FeedList) {};
+    // update a feed
+    rpc Update (Feed) returns (mediawatch.common.v2.ResponseWithMessage) {};
+    // update feed with fields
+    rpc UpdateWithFields (FeedWithFields) returns (mediawatch.common.v2.ResponseWithMessage) {};
+    // delete a feed
+    rpc Delete (Feed) returns (mediawatch.common.v2.ResponseWithMessage) {};
+    // get the stream list
+    rpc GetStreamList (QueryFeed) returns (FeedStreamList) {};
+}

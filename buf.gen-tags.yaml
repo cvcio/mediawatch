@@ -1,0 +1,15 @@
+
+version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/cvcio/mediawatch/internal
+    except:
+      - buf.build/googleapis/googleapis
+      - buf.build/srikrsna/protoc-gen-gotag
+plugins:
+  - name: gotag
+    out: .
+    opt:
+      - outdir=internal
+      - paths=source_relative,xxx=bson+"-"

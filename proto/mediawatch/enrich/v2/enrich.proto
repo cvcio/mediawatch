@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package mediawatch.enrich.v2;
+
+
+message EnrichRequest {
+    string body = 1;
+    string lang = 2;
+}
+
+message Entity {
+    string entity_text = 1;
+    string entity_type = 2;
+}
+
+message NLP {
+    repeated string stopwords   = 1;
+    repeated string keywords    = 2;
+    repeated Entity entities    = 3;
+    string          summary     = 4;
+    repeated string topics      = 5;
+    repeated string claims      = 6;
+    repeated string quotes      = 7;
+}   
+
+message Data {
+    NLP  nlp        = 1;
+}
+
+message EnrichResponse {
+    // success, error
+    string status   = 1;
+    // 200, 500
+    int32 code      = 2;
+    // message
+    string message  = 3;
+    // data Object {}
+    Data data       = 4;
+}
+
+service EnrichService {
+    rpc NLP         (EnrichRequest) returns (EnrichResponse) {};
+    rpc StopWords   (EnrichRequest) returns (EnrichResponse) {};
+    rpc Keywords    (EnrichRequest) returns (EnrichResponse) {};
+    rpc Entities    (EnrichRequest) returns (EnrichResponse) {};
+    rpc Summary     (EnrichRequest) returns (EnrichResponse) {};
+    rpc Topics      (EnrichRequest) returns (EnrichResponse) {};
+    rpc Quotes      (EnrichRequest) returns (EnrichResponse) {};
+    rpc Claims      (EnrichRequest) returns (EnrichResponse) {};
+}

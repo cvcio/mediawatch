@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package mediawatch.compare.v2;
+
+// SingleRequest
+message SingleRequest {
+    // document id
+    string id = 1;
+}
+
+// OneToManyRequest
+message OneToManyRequest {
+    // document id
+    string id = 1;
+    // list of target document ids
+    repeated string targets = 2;
+}
+
+// ManyToManyRequest
+message ManyToManyRequest {
+    // list of source document ids
+    repeated string sources = 1;
+    // list of target document ids
+    repeated string targets = 2;
+}
+
+// SingleResponse
+message SingleResponse {
+    // list of results
+    repeated Result result = 1;
+}
+
+// OneToManyResponse
+message OneToManyResponse {
+    // list of results
+    repeated Result result = 1;
+}
+
+// ManyToManyResponse
+message ManyToManyResponse {
+    // list of results
+    repeated Result result = 1;
+}
+
+// Result
+message Result {
+    // success, error
+    string status   = 1;
+    // 200, 500
+    int32 code      = 2;
+    // message
+    string message  = 3;
+    // source document id
+    string source   = 4;
+    // target document id
+    string target   = 5;
+    // plagiarism score
+    double score    = 6;
+}
+
+// CompareService implements plagiarism detection service.
+service CompareService {
+    // Single compares a single document by id with multiple auto-discovered
+    rpc Single(SingleRequest) returns (SingleResponse) {};
+    // OneToMany compares a single document by id with multiple document ids provided
+    rpc OneToMany(OneToManyRequest) returns (OneToManyResponse) {};
+    // ManyToMany compares a list of documents ids with multiple document ids provided
+    rpc ManyToMany(ManyToManyRequest) returns (ManyToManyResponse) {};
+}

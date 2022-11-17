@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package mediawatch.scrape.v2;
+
+// ScrapeService Service
+service ScrapeService {
+    // Endpoint Scrape
+    rpc Scrape(ScrapeRequest) returns (ScrapeResponse) {};
+    // Endpoint SimpleScrape
+    rpc SimpleScrape(SimpleScrapeRequest) returns (ScrapeResponse) {};
+    // Endpoint ReloadPassages 
+    rpc ReloadPassages(Empty) returns(ReloadPassagesResponse) {};
+}
+
+message Empty {};
+
+// RequestArticle for SimpleScrape
+message SimpleScrapeRequest {
+    string feed = 1;
+    string url  = 2;
+    string lang = 3;
+}
+
+// RequestStream for Scrape in Streaming mode (ex. svc-listen)
+message ScrapeRequest {
+    string feed        = 1;
+    string url         = 2;
+    string tweet_id    = 3;
+    string lang        = 4;
+    string screen_name = 5;
+    string crawled_at  = 6;
+}
+
+// Content of the Scraped Article or Stream
+message Content {
+    string title            = 1;
+    string body             = 2;
+    repeated string authors = 3;
+    repeated string tags    = 4;
+    string published_at     = 5;
+    string description      = 6;
+    string image            = 7;
+}
+
+// Data for the Response Object
+message Data {
+    Content content = 1;
+}
+
+// Response Object
+message ReloadPassagesResponse {
+    // success, error
+    string status   = 1;
+    // 200, 500
+    int32 code      = 2;
+    // message
+    string message  = 3;
+    // data Object {}
+    Data data       = 4;
+}
+
+// Response Object
+message ScrapeResponse {
+    // success, error
+    string status   = 1;
+    // 200, 500
+    int32 code      = 2;
+    // message
+    string message  = 3;
+    // data Object {}
+    Data data       = 4;
+}

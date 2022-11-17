@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package mediawatch.common.v2;
+
+// Status Enumeration
+enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_PENDING = 1;
+    STATUS_ACTIVE = 2;
+    STATUS_SUSPENDED = 3;
+    STATUS_CLOSED = 4;
+    STATUS_DELETED = 5;
+}
+
+// StreamType Enumeration
+enum StreamType {
+    STREAM_TYPE_UNSPECIFIED = 0;
+    STREAM_TYPE_OTHER = 1;
+    STREAM_TYPE_TWITTER = 2;
+    STREAM_TYPE_RSS = 3;
+}
+// Locality Enumeration
+enum Locality {
+    LOCALITY_UNSPECIFIED = 0;
+    LOCALITY_OTHER = 1;
+    LOCALITY_LOCAL = 2;
+    LOCALITY_NATIONAL = 3;
+    LOCALITY_INTERNATIONAL = 4;
+    LOCALITY_MIXED = 5;
+}
+// BusinessType Enumeration
+enum BusinessType {
+    BUSINESS_TYPE_UNSPECIFIED = 0;
+    BUSINESS_TYPE_OTHER = 1;
+    BUSINESS_TYPE_AGENCY = 2;
+    BUSINESS_TYPE_ORGANIZATION = 3;
+    BUSINESS_TYPE_BLOG = 4;
+    BUSINESS_TYPE_PORTAL = 5;
+}
+
+// ContentType Enumeration
+enum ContentType {
+    CONTENT_TYPE_UNSPECIFIED = 0;
+    CONTENT_TYPE_OTHER = 1;
+    CONTENT_TYPE_NEWS = 2;
+    CONTENT_TYPE_MARKET_BUSINESS = 3;
+    CONTENT_TYPE_DEFENCE_ARMY_POLICE = 4;
+    CONTENT_TYPE_ENTERTAINMENT = 5;
+    CONTENT_TYPE_HEALTH_BEAUTY = 6;
+    CONTENT_TYPE_SPORTS = 7;
+    CONTENT_TYPE_RELIGION = 8;
+    CONTENT_TYPE_MIXED = 9;
+}
+
+// PoliticalOrientation Enumeration
+enum PoliticalOrientation {
+    POLITICAL_ORIENTATION_UNSPECIFIED = 0;
+    POLITICAL_ORIENTATION_OTHER = 1;
+    POLITICAL_ORIENTATION_LEFT = 2;
+    POLITICAL_ORIENTATION_CENTER_LEFT = 3;
+    POLITICAL_ORIENTATION_CENTER = 4;
+    POLITICAL_ORIENTATION_CENTER_RIGHT = 5;
+    POLITICAL_ORIENTATION_RIGHT = 6;
+    POLITICAL_ORIENTATION_FAR_RIGHT = 7;
+}
+
+// Tier Enumeration
+enum Tier {
+    TIER_UNSPECIFIED = 0;
+    TIER_OTHER = 1;
+    TIER_TRADITIONAL = 2;
+    TIER_DIGITAL = 3;
+    TIER_BROADCASTING_TV = 4;
+    TIER_BROADCASTING_RADIO = 5;
+    TIER_MIXED = 6;
+}
+// Pagination
+message Pagination {
+    int64 total = 1;
+    int64 pages = 2;
+}
+
+// ResponseWithMessage
+message ResponseWithMessage {
+    string status = 1;
+    string message = 2;
+}

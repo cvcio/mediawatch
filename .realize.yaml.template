@@ -1,0 +1,133 @@
+settings:
+  legacy:
+    force: false
+    interval: 0s
+schema:
+- name: listen
+  path: .
+  commands:
+    install:
+      status: true
+      method: go build -o ./tmp/listen ./cmd/listen/
+    run:
+      status: true  
+      method: ./tmp/listen
+  watcher:
+    extensions:
+    - go
+    paths:
+    - /
+    ignored_paths:
+      - .git
+      - .realize
+      - vendor
+      - cmd/worker
+      - cmd/compare
+      - cmd/server
+  env:
+    DEBUG: "true"
+    DEV: "true"
+    REDIS_ENABLE: "false"
+    KAFKA_ENABLE: "true"
+    TWITTER_CONSUMER_KEY: XXX
+    TWITTER_CONSUMER_SECRET: XXX
+    TWITTER_ACCESS_TOKEN: XXX-XXX
+    TWITTER_ACCESS_TOKEN_SECRET: XXX
+- name: worker
+  path: .
+  commands:
+    install:
+      status: true
+      method: go build -o ./tmp/worker ./cmd/worker/
+    run:
+      status: true  
+      method: ./tmp/worker
+  watcher:
+    extensions:
+    - go
+    paths:
+    - .
+    ignored_paths:
+      - .git
+      - .realize
+      - vendor
+      - cmd/compare
+      - cmd/listen
+      - cmd/server
+  env:
+    DEBUG: "true"
+    DEV: "true"
+    REDIS_ENABLE: "false"
+    KAFKA_ENABLE: "true"
+- name: compare
+  path: .
+  status: true
+  commands:
+    install:
+      status: true
+      method: go build -o ./tmp/compare ./cmd/compare/
+    run:
+      status: true  
+      method: ./tmp/compare
+  watcher:
+    extensions:
+    - go
+    paths:
+    - .
+    ignored_paths:
+      - .git
+      - .realize
+      - vendor
+      - cmd/worker
+      - cmd/listen
+      - cmd/server
+  env:
+    DEBUG: "true"
+    DEV: "true"
+    REDIS_ENABLE: "false"
+    KAFKA_ENABLE: "true"
+- name: api
+  path: .
+  commands:
+    install:
+      status: true
+      method: go build -o ./tmp/server ./cmd/server/
+    run:
+      status: true  
+      method: ./tmp/server
+  watcher:
+    extensions:
+      - go
+    paths:
+      - .
+    ignored_paths:
+      - .git
+      - .realize
+      - vendor
+      - cmd/worker
+      - cmd/listen
+      - cmd/compare
+  env:
+    PORT: 8001
+    AUTH_DEBUG: "false"
+    DEBUG: "true"
+    DEV: "true"
+    TWITTER_CONSUMER_KEY: XXX
+    TWITTER_CONSUMER_SECRET: XXX
+    TWITTER_ACCESS_TOKEN: XXX-XXX
+    TWITTER_ACCESS_TOKEN_SECRET: XXX
+    GOOGLE_AUTH_CLIENT_ID: XXX-XXX.apps.googleusercontent.com
+    GOOGLE_AUTH_CLIENT_SECRET: XXX-XXX
+    GOOGLE_AUTH_CB_URL: http://localhost:8001/v2/auth/google/callback	
+    CLIENT_AUTH_CB_URL: http://localhost:8080/auth/login
+    SMTP_USER: email@domain.com
+    SMTP_FROM: email@domain.com
+    SMTP_FROM_NAME: MediaWatch
+    SMTP_REPLY: email@domain.com
+    SMTP_PASS: XXX
+    SMTP_SERVER: smtp.server.com
+    SMTP_PORT: 587
+    TWILIO_SID: XXX
+    TWILIO_TOKEN: XXX
+    MONGO_URL: mongodb://localhost:27017
+    STRIPE_KEY: XXX

@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package mediawatch.articles.v2;
+
+// third party imports
+import "google/protobuf/timestamp.proto";
+
+// mediawatch specific imports
+import "mediawatch/enrich/v2/enrich.proto";
+import "mediawatch/feeds/v2/feed.proto";
+import "mediawatch/common/v2/common.proto";
+
+// Content
+message Content {
+    string title = 1;
+    string excerpt = 2;
+    string image = 3;
+    string body = 4;
+
+    repeated string authors = 5;
+    repeated string sources = 6;
+    repeated string tags = 7;
+    repeated string categories = 8;
+    
+    google.protobuf.Timestamp published_at = 9;
+    google.protobuf.Timestamp edited_at = 10;
+};
+
+// Article
+message Article {
+    int64 uid = 1;
+    string doc_id = 2;
+    string lang = 3;
+    string screen_name = 4;
+    string url = 5;
+    int64 tweet_id = 6;
+    string tweet_id_str = 7;
+    
+    Content content = 8;
+    mediawatch.enrich.v2.NLP nlp = 9;
+    mediawatch.feeds.v2.Feed feed = 10;
+    // Metrics metrics = 11;
+
+    google.protobuf.Timestamp crawled_at = 12;
+};
+
+// ArticleRequest
+message ArticleRequest {
+    string doc_id = 1;
+    string url = 2;
+    string tweet_id_str = 3;
+};
+
+// ArticlesRequest
+message ArticlesRequest {};
+
+// ArticleResponse
+message ArticleResponse {
+    Article data = 1;
+};
+
+// ArticlesResponse
+message ArticlesResponse {
+    repeated Article data = 1;
+    mediawatch.common.v2.Pagination pagination = 2;
+};
+
+// ArticlesService
+service ArticlesService {
+    // GetArticle
+    rpc GetArticle(ArticleRequest) returns (ArticleResponse) {};
+
+    // GetArticles
+    rpc GetArticles(ArticlesRequest) returns (ArticlesResponse) {};
+
+    // StreamArticles
+    rpc StreamArticles(ArticlesRequest) returns (stream ArticleResponse);
+
+    // StreamRelatedArticles
+    rpc StreamRelatedArticles(ArticlesRequest) returns (stream ArticleResponse);
+};
