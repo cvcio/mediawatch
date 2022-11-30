@@ -27,6 +27,9 @@ github.com/cespare/xxhash/v2
 # github.com/cvcio/go-plagiarism v0.2.2
 ## explicit; go 1.15
 github.com/cvcio/go-plagiarism
+# github.com/cvcio/twitter v0.0.0-20221128174909-51ad0afadbb3
+## explicit; go 1.15
+github.com/cvcio/twitter
 # github.com/dgrijalva/jwt-go v3.2.0+incompatible
 ## explicit
 github.com/dgrijalva/jwt-go
@@ -131,6 +134,9 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mitchellh/mapstructure v1.5.0
 ## explicit; go 1.14
 github.com/mitchellh/mapstructure
+# github.com/mrjones/oauth v0.0.0-20190623134757-126b35219450
+## explicit
+github.com/mrjones/oauth
 # github.com/neo4j/neo4j-go-driver/v4 v4.2.2
 ## explicit; go 1.14
 github.com/neo4j/neo4j-go-driver/v4/neo4j
@@ -382,7 +388,6 @@ golang.org/x/net/html/atom
 golang.org/x/net/html/charset
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
-golang.org/x/net/http2/h2c
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
@@ -391,6 +396,7 @@ golang.org/x/net/trace
 ## explicit; go 1.11
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
+golang.org/x/oauth2/clientcredentials
 golang.org/x/oauth2/github
 golang.org/x/oauth2/google
 golang.org/x/oauth2/google/internal/externalaccount

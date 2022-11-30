@@ -4,19 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 
-	"github.com/ChimeraCoder/anaconda"
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/models/link"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/kafka"
 	"github.com/cvcio/mediawatch/pkg/logger"
-	"github.com/cvcio/mediawatch/pkg/twitter"
+	"github.com/cvcio/twitter"
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
@@ -59,6 +59,51 @@ func NewListenGroup(
 		kafkaClient,
 		errChan,
 	}
+}
+
+func removeRules(api *twitter.Twitter) (bool, error) {
+	rules, err := api.GetFilterStreamRules(nil)
+	if err != nil {
+		return false, err
+	}
+	var ids []string
+	for _, v := range rules.Data {
+		if v.Tag == "mediawatch-listener" {
+			ids = append(ids, v.ID)
+		}
+	}
+	if len(ids) > 0 {
+		rulesdel := new(twitter.Rules)
+		rulesdel.Delete = &twitter.RulesDelete{
+			Ids: ids,
+		}
+		deleted, err := api.PostFilterStreamRules(nil, rulesdel)
+		if err != nil {
+			return false, err
+		}
+		if deleted == nil {
+			return false, errors.New("Rules not deleted")
+		}
+	}
+	return true, nil
+}
+
+func addRules(api *twitter.Twitter, usernames []string) (bool, error) {
+	rules := new(twitter.Rules)
+	for _, v := range usernames {
+		rules.Add = append(rules.Add, &twitter.RulesData{
+			Value: v,
+			Tag:   "mediawatch-listener",
+		})
+	}
+	added, err := api.PostFilterStreamRules(nil, rules)
+	if err != nil {
+		return false, err
+	}
+	if added == nil {
+		return false, errors.New("Rules not added")
+	}
+	return true, nil
 }
 
 func main() {
@@ -123,29 +168,35 @@ func main() {
 
 	// ============================================================
 	// Get tweeter ids from feeds
-	fIDs := getScreenNames(feeds.Data)
+	fUsernames := getUsernames(feeds.Data)
 
 	// ============================================================
 	// Create a new twitter client
-	twitterAPIClient, err := twitter.NewAPI(cfg.Twitter.TwitterConsumerKey,
-		cfg.Twitter.TwitterConsumerSecret, cfg.Twitter.TwitterAccessToken,
-		cfg.Twitter.TwitterAccessTokenSecret)
+	api, err := twitter.NewTwitter(cfg.Twitter.TwitterConsumerKey, cfg.Twitter.TwitterConsumerSecret)
+	// twitterAPIClient, err := twitter.NewAPI(cfg.Twitter.TwitterConsumerKey,
+	// 	cfg.Twitter.TwitterConsumerSecret, cfg.Twitter.TwitterAccessToken,
+	// 	cfg.Twitter.TwitterAccessTokenSecret)
 	if err != nil {
 		log.Fatalf("[SVC-LISTEN] Error connecting to twitter: %s", err.Error())
 	}
 
 	// ============================================================
-	// Create a new Listener service, with our twitter stream and the scrape service grpc conn
-	log.Debugf("[SVC-LISTEN] Twitter ids to listen : %v", fIDs)
-
-	svc, err := twitter.NewListener(
-		twitterAPIClient, log,
-		twitter.WithPublicStream(map[string][]string{"follow": fIDs}),
-	)
-
-	if err != nil {
-		log.Fatalf("[SVC-LISTEN] error creating twitter listener: %s", err.Error())
+	// Remove all active filter stream rules
+	if _, err := removeRules(api); err != nil {
+		log.Fatalf("[SVC-LISTEN] Error while removing filter stream rules: %s", err.Error())
 	}
+
+	// ============================================================
+	// Add new stream rules
+	rules := splitFrom512(fUsernames)
+	if _, err := addRules(api, rules); err != nil {
+		log.Fatalf("[SVC-LISTEN] Error while adding filter stream rules: %s", err.Error())
+	}
+
+	// svc, err := twitter.NewListener(
+	// 	twitterAPIClient, log,
+	// 	twitter.WithPublicStream(map[string][]string{"follow": fIDs}),
+	// )
 
 	// Create a channel to send catched urls from tweets
 	tweetChan := make(chan link.CatchedURL, 1)
@@ -165,13 +216,35 @@ func main() {
 	}
 
 	// ========================================
+
+	// ============================================================
+	// Create a new Listener service, with our twitter stream and the scrape service grpc conn
+	log.Debugf("[SVC-LISTEN] Twitter rules to listen : %v", rules)
+
+	v := url.Values{}
+	v.Add("expansions", "author_id,attachments.media_keys")
+	v.Add("user.fields", "id,name,profile_image_url,url,username,verified")
+	v.Add("tweet.fields", "created_at,id,author_id,lang,entities,in_reply_to_user_id")
+
+	go func() {
+		stream, err := api.GetFilterStream(v)
+		if err != nil {
+			errSingals <- err
+			return
+		}
+
+		for t := range stream.C {
+			f, _ := t.(twitter.StreamData)
+			handler(log, f, tweetChan)
+		}
+	}()
 	// Here we start listening for tweets given a handler function
-	go svc.TweetListen(handler(log, tweetChan))
+	// go svc.TweetListen(handler(log, tweetChan))
 
 	// Start the service listening for requests.
 	log.Info("[SVC-LISTEN] Ready to start")
 	go func() {
-		log.Infof("[SVC-COMPARE] Starting prometheus web server listening %s", cfg.GetPrometheusURL())
+		log.Infof("[SVC-LISTEN] Starting prometheus web server listening %s", cfg.GetPrometheusURL())
 		errSingals <- promHandler.ListenAndServe()
 	}()
 	// ========================================
@@ -226,8 +299,8 @@ func main() {
 	}
 }
 
-// getScreenNames list to listen
-func getScreenNames(feeds []*feed.Feed) []string {
+// getIds list to listen
+func getIds(feeds []*feed.Feed) []string {
 	twitterIDs := make([]string, 0)
 	for _, f := range feeds {
 		if f.TwitterIDStr != "" {
@@ -240,36 +313,85 @@ func getScreenNames(feeds []*feed.Feed) []string {
 	return twitterIDs
 }
 
-// handler handles incoming tweets
-func handler(log *zap.SugaredLogger, tweetChan chan link.CatchedURL) func(t anaconda.Tweet) {
-	return func(t anaconda.Tweet) {
-		// Introduce a better logic here to classify Tweet and extract Url
-		if !twitter.IsTweet(t) {
-			return
+// getUsernames list to listen
+func getUsernames(feeds []*feed.Feed) []string {
+	twitterUsernames := make([]string, 0)
+	for _, f := range feeds {
+		if f.ScreenName != "" {
+			twitterUsernames = append(twitterUsernames, f.ScreenName)
 		}
-		if len(t.Entities.Urls) == 0 {
-			return
-		}
-		for u := range t.Entities.Urls {
-			// Introduce clean URL logic
-			// Remove Twitter Share ID (i.e. /#.WpAW30E8tRc.twitter)
-			l, err := link.Parse(t.Entities.Urls[u].Expanded_url)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
+	}
+	return twitterUsernames
+}
 
-			createdTime, _ := t.CreatedAtTime()
-			tweetChan <- link.CatchedURL{
-				ID:               uuid.New().String(),
-				URL:              l,
-				TweetID:          t.Id,
-				TwitterUserID:    t.User.Id,
-				TwitterUserIDStr: t.User.IdStr,
-				ScreenName:       t.User.ScreenName,
-				CreatedAt:        createdTime,
-				CreatedAtStr:     t.CreatedAt,
+func splitFrom512(input []string) []string {
+	var output []string
+	current := ""
+	for _, v := range input {
+		s := "from:" + v
+		if len(current) <= 512-(4+len(s)) {
+			current += s + " OR "
+		} else {
+			if current[len(current)-4:] == " OR " {
+				current = current[0 : len(current)-4]
 			}
+			output = append(output, current)
+			current = ""
 		}
+	}
+	return output
+}
+
+func getUserNameFromTweet(authorId string, users []*twitter.User) string {
+	for _, v := range users {
+		if v.ID == authorId {
+			return v.UserName
+		}
+	}
+	return ""
+}
+
+// handler handles incoming tweets
+func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.CatchedURL) {
+	for _, v := range t.MatchingRules {
+		if v.Tag != "mediawatch-listener" {
+			return
+		}
+	}
+	if t.Data.InReplyToUserID != "" {
+		return
+	}
+	if len(t.Data.Entities.URLs) == 0 {
+		return
+	}
+	for _, u := range t.Data.Entities.URLs {
+		// Introduce clean URL logic
+		// Remove Twitter Share ID (i.e. /#.WpAW30E8tRc.twitter)
+		l, err := link.Parse(u.ExpandedURL)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+
+		tweetID, err := strconv.ParseInt(t.Data.ID, 10, 64)
+		if err != nil {
+			continue
+		}
+		authorID, err := strconv.ParseInt(t.Data.AuthorID, 10, 64)
+		if err != nil {
+			continue
+		}
+		createdAt, _ := t.Data.CreatedAtTime()
+		messsage := link.CatchedURL{
+			ID:               uuid.New().String(),
+			URL:              l,
+			TweetID:          tweetID,
+			TwitterUserID:    authorID,
+			TwitterUserIDStr: t.Data.AuthorID,
+			ScreenName:       getUserNameFromTweet(t.Data.AuthorID, t.Includes.Users),
+			CreatedAt:        createdAt,
+			CreatedAtStr:     t.Data.CreatedAt,
+		}
+		tweetChan <- messsage
 	}
 }
