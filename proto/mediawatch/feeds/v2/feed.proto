@@ -13,7 +13,7 @@ import "mediawatch/common/v2/common.proto";
 // FeedStream Model
 message FeedStream {
     // stream key to select, can be the twitter_id of the feed in case 
-    // stream yype is STREAM_TYPE_TWITTER, otherwise an ATOM url 
+    // stream type is STREAM_TYPE_TWITTER, otherwise an ATOM url 
     // or feeds url.
     string stream_target = 1;
     // Cron like sceduling used only when stream_type is rss
@@ -68,6 +68,7 @@ message FeedMeta {
     mediawatch.common.v2.PoliticalOrientation political_orientation = 6;
     string political_affiliation = 7;
     mediawatch.common.v2.Tier tier = 8;
+    string registry_id = 9;
 }
 
 message Feed {
@@ -131,17 +132,17 @@ message QueryFeed {
 
 service FeedService {
     // create a new feed
-    rpc Create (Feed) returns (Feed) {};
+    rpc CreateFeed (Feed) returns (Feed) {};
     // get a single feed
-    rpc Get (QueryFeed) returns (Feed) {};
+    rpc GetFeed (QueryFeed) returns (Feed) {};
     // get list of feeds by query
-    rpc List (QueryFeed) returns (FeedList) {};
+    rpc GetFeeds (QueryFeed) returns (FeedList) {};
     // update a feed
-    rpc Update (Feed) returns (mediawatch.common.v2.ResponseWithMessage) {};
+    rpc UpdateFeed (Feed) returns (mediawatch.common.v2.ResponseWithMessage) {};
     // update feed with fields
-    rpc UpdateWithFields (FeedWithFields) returns (mediawatch.common.v2.ResponseWithMessage) {};
+    rpc UpdateFeedWithFields (FeedWithFields) returns (mediawatch.common.v2.ResponseWithMessage) {};
     // delete a feed
-    rpc Delete (Feed) returns (mediawatch.common.v2.ResponseWithMessage) {};
+    rpc DeleteFeed (Feed) returns (mediawatch.common.v2.ResponseWithMessage) {};
     // get the stream list
-    rpc GetStreamList (QueryFeed) returns (FeedStreamList) {};
+    rpc GetFeedsStreamList (QueryFeed) returns (FeedStreamList) {};
 }

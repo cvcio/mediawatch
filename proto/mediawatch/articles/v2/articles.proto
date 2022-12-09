@@ -39,20 +39,35 @@ message Article {
     Content content = 8;
     mediawatch.enrich.v2.NLP nlp = 9;
     mediawatch.feeds.v2.Feed feed = 10;
-    // Metrics metrics = 11;
 
-    google.protobuf.Timestamp crawled_at = 12;
+    google.protobuf.Timestamp crawled_at = 11;
 };
 
 // ArticleRequest
 message ArticleRequest {
     string doc_id = 1;
-    string url = 2;
-    string tweet_id_str = 3;
+    bool include_rels = 2;
 };
 
 // ArticlesRequest
-message ArticlesRequest {};
+message ArticlesRequest {
+    string doc_id = 1;
+    mediawatch.common.v2.SortBy sort = 2;
+    mediawatch.common.v2.RangeBy range = 3;
+    string index = 4;
+    bool cases = 5;
+    string q = 6;
+    string title = 7;
+    string body = 8;
+    string tags = 9;
+    string authors = 10;
+    string lang = 11;
+    string feeds = 12;
+    string keywords = 13;
+    int32 skip = 14;
+    int32 limit = 15;
+    bool include_rels = 16;
+};
 
 // ArticleResponse
 message ArticleResponse {

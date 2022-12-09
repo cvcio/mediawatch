@@ -49,13 +49,13 @@ type Config struct {
 		TwitterAccessTokenSecret string `envconfig:"TWITTER_ACCESS_TOKEN_SECRET" default:""`
 	}
 	Scrape struct {
-		Host string `envconfig:"SVC_SCRAPER" default:"127.0.0.1:50050"`
+		Host string `envconfig:"SVC_SCRAPER" default:"0.0.0.0:50050"`
 	}
 	Enrich struct {
-		Host string `envconfig:"SVC_ENRICH" default:"127.0.0.1:50030"`
+		Host string `envconfig:"SVC_ENRICH" default:"0.0.0.0:50030"`
 	}
 	Compare struct {
-		Host string `envconfig:"SVC_COMPARE" default:"127.0.0.1:50040"`
+		Host string `envconfig:"SVC_COMPARE" default:"0.0.0.0:50040"`
 	}
 	Mongo struct {
 		URL         string        `envconfig:"MONGO_URL" default:"mongodb://localhost:27017"`
@@ -71,7 +71,7 @@ type Config struct {
 		Index string `envconfig:"ES_INDEX" default:"mediawatch_articles"`
 	}
 	Neo struct {
-		URL  string `envconfig:"NEO_URL" default:"http://neo4j:123@localhost:7474/db/data/"`
+		URL  string `envconfig:"NEO_URL" default:"http://neo4j:neo4j@localhost:7474/db/data/"`
 		BOLT string `envconfig:"NEO_BOLT" default:"bolt://localhost:7687"`
 		User string `envconfig:"NEO_USER" default:"neo4j"`
 		Pass string `envconfig:"NEO_PASS" default:"neo4j"`
@@ -139,6 +139,9 @@ func NewConfig() *Config {
 
 func (c *Config) GetMongoURL() string {
 	return fmt.Sprintf("%s/%s", c.Mongo.URL, c.Mongo.Path)
+}
+func (c *Config) GetElasticsearchURL() string {
+	return fmt.Sprintf("%s", c.Elasticsearch.Host)
 }
 
 func (c *Config) GetRedisURL() string {

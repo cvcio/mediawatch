@@ -1,6 +1,8 @@
 package feed
 
 import (
+	"net/url"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -111,4 +113,12 @@ type TestData struct {
 	Title       string    `json:"title,omitempty" bson:"title,omitempty"`
 	Body        string    `json:"body,omitempty" bson:"body,omitempty"`
 	PublishedAt time.Time `json:"publishedAt,omitempty" bson:"publishedAt,omitempty"`
+}
+
+func (f *Feed) Hostname() string {
+	u, err := url.Parse(f.URL)
+	if err != nil {
+		return f.URL
+	}
+	return strings.TrimPrefix(u.Hostname(), "www")
 }

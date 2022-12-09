@@ -54,6 +54,12 @@ run-mediawatch:
 run-api:
 	realize start -n api
 
+run-connect-api:
+	realize start -n connect-api
+
+run-feeds:
+	realize start -n feeds
+
 run-listen:
 	realize start -n listen
 

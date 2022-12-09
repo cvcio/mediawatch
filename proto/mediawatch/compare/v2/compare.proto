@@ -30,14 +30,8 @@ message SingleResponse {
     repeated Result result = 1;
 }
 
-// OneToManyResponse
-message OneToManyResponse {
-    // list of results
-    repeated Result result = 1;
-}
-
 // ManyToManyResponse
-message ManyToManyResponse {
+message MultipleResponse {
     // list of results
     repeated Result result = 1;
 }
@@ -63,7 +57,7 @@ service CompareService {
     // Single compares a single document by id with multiple auto-discovered
     rpc Single(SingleRequest) returns (SingleResponse) {};
     // OneToMany compares a single document by id with multiple document ids provided
-    rpc OneToMany(OneToManyRequest) returns (OneToManyResponse) {};
+    rpc OneToMany(OneToManyRequest) returns (MultipleResponse) {};
     // ManyToMany compares a list of documents ids with multiple document ids provided
-    rpc ManyToMany(ManyToManyRequest) returns (ManyToManyResponse) {};
+    rpc ManyToMany(ManyToManyRequest) returns (MultipleResponse) {};
 }

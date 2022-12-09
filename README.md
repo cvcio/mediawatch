@@ -12,6 +12,10 @@ MediaWatch is a real-time network analysis platform which continuously monitors 
 
 To corelate passages or claims within articles we use [go-plagiarism](https://github.com/cvcio/go-plagiarism) as our principal algorithm. Though, **we are not interested in plagiarism itself**, we have found, in our long-term feasibility study, that journalists tend to reproduce passages, claims or articles in full (aka copy-paste), as a process in which **an existing narrative is transformed into multiple similar ones, to extend attention to the agenda and frame**, we call this process **"The Chain of Misinformation"**.
 
+## How it works
+
+MediaWatch comprises of multiple micro-servives. **Listen** micro-service is responsible for streaming data using Twitter API as a source of articles. To stream data from Twitter we developed a [client library](https://github.com/cvcio/twitter) that implements Twitter's v2 API endpoints. The **worker** micro-service orchestrates tasks and i/o tranfers between other micro-services, **scraper** responsible for extracting data from news sources, **enrich** responsible for enriching data using various AI models, and **compare** responsible for creating relationships between entities (articles, feeds, authors etc.).
+
 ## Micro Services Architecture
 
 ![MediaWatch CORE](./assets/MediaWatch%20Core.drawio.png)

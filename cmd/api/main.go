@@ -1,4 +1,4 @@
-package api
+package main
 
 import (
 	"context"
@@ -7,10 +7,14 @@ import (
 
 	"github.com/cvcio/mediawatch/internal/services/api"
 	"github.com/cvcio/mediawatch/pkg/config"
+	"github.com/cvcio/mediawatch/pkg/logger"
 	"github.com/kelseyhightower/envconfig"
 )
 
 func main() {
+	// ============================================================
+	// Read Config
+	// ============================================================
 	// Create a new Config struct to store environment variables
 	cfg := config.NewConfig()
 
@@ -22,13 +26,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	// ============================================================
+	// Set Logger
+	// ============================================================
+	log := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
+
+	// ============================================================
+	// Start the Service
+	// ============================================================
 	// Create the context to cancel at exit
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Run the gRPC Server
-	if err := api.RunGRPC(ctx, cfg); err != nil {
-		fmt.Printf("API failure, exiting with error: %s\n", err.Error())
-		os.Exit(1)
+	// Run the Connect/gRPC Server
+	if err := api.RunConnect(ctx, cfg, log); err != nil {
+		log.Fatalf("[SERVER] Fatal failure, exiting with error: %s\n", err.Error())
 	}
 }
