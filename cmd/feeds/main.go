@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -109,6 +110,7 @@ func main() {
 	}
 	log.Info("[SVC-FEEDS] Connected to Redis")
 	defer rdb.Close()
+
 	// ============================================================
 	// Kafka
 	// ============================================================
@@ -132,6 +134,12 @@ func main() {
 	defer worker.Close()
 
 	// ============================================================
+	// Proxy HTTP Client
+	// ============================================================
+	proxy, _ := url.Parse("socks5://0.0.0.0:9201")
+	proxyClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxy)}}
+
+	// ============================================================
 	// Prometheus
 	// ============================================================
 	// Create a registry and a web server for prometheus metrics
@@ -152,13 +160,13 @@ func main() {
 	done := make(chan bool, 1)
 	defer close(done)
 
-	go func(log *zap.SugaredLogger, done chan bool, targets []string, worker *ListenGroup, rdb *redis.RedisClient) {
+	go func(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxyClient *http.Client, done chan bool, targets []string) {
 		c := chunks(targets, 4)
 		for _, v := range c {
-			ticker := NewTicker(log, done, v, worker, rdb)
+			ticker := NewTicker(log, worker, rdb, proxyClient, done, v)
 			go ticker.Tick()
 		}
-	}(log, done, FEEDS, worker, rdb)
+	}(log, worker, rdb, proxyClient, done, FEEDS)
 
 	// ============================================================
 	// Set Channels

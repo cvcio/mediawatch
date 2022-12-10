@@ -41,6 +41,7 @@ message Article {
     mediawatch.feeds.v2.Feed feed = 10;
 
     google.protobuf.Timestamp crawled_at = 11;
+    int64 rel_count = 12;
 };
 
 // ArticleRequest
