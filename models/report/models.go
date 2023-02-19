@@ -3,7 +3,7 @@ package report
 import (
 	"time"
 
-	"github.com/cvcio/mediawatch/models/article"
+	"github.com/cvcio/mediawatch/models/deprecated/article"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 

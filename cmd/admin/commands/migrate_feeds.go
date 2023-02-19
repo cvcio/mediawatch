@@ -17,7 +17,7 @@ var (
 	// migrateCmd represents the init command
 	migrateFeedsCmd = &cobra.Command{
 		Use:   "feeds",
-		Short: "",
+		Short: "migrate feeds from v1 to v2",
 		Long:  ``,
 		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {

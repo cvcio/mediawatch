@@ -73,4 +73,6 @@ type CatchedURL struct {
 	ScreenName       string    `json:"screen_name"`
 	CreatedAt        time.Time `json:"created_at"`
 	CreatedAtStr     string    `json:"created_at_str"`
+	Title            string    `json:"title"`
+	Hostname         string    `json:"hostname"`
 }

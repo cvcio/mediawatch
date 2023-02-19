@@ -131,6 +131,9 @@ type Config struct {
 		Enabled bool   `envconfig:"STRIPE_ENABLED" default:"true"`
 		Key     string `envconfig:"STRIPE_KEY" default:""`
 	}
+	RSSStreamer struct {
+		Init bool `envconfig:"RSS_STREAMER_INIT" default:"true"`
+	}
 }
 
 func NewConfig() *Config {

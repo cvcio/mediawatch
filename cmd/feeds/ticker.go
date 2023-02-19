@@ -1,12 +1,20 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"math"
 	"net/http"
+	"net/url"
 	"sort"
 	"time"
 
+	"github.com/cvcio/mediawatch/models/deprecated/feed"
+	"github.com/cvcio/mediawatch/models/link"
 	"github.com/cvcio/mediawatch/pkg/redis"
+	"github.com/google/uuid"
 	"github.com/mmcdole/gofeed"
+	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
 
@@ -17,63 +25,142 @@ type Ticker struct {
 	proxy   *http.Client
 	ticker  time.Ticker
 	done    chan bool
-	targets []string
+	targets []*feed.Feed
+	init    bool
 }
 
-func NewTicker(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxy *http.Client, done chan bool, targets []string) *Ticker {
+type CacheLast struct {
+	Id              string    `json:"feed_id"`
+	Hostname        string    `json:"hostname"`
+	LastArticleAt   time.Time `json:"last_article_at"`
+	LastArticleLink string    `json:"last_article_link"`
+}
+
+func NewTicker(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxy *http.Client, done chan bool, targets []*feed.Feed, init bool) *Ticker {
 	return &Ticker{
 		log:     log,
 		worker:  worker,
 		rdb:     rdb,
 		proxy:   proxy,
-		ticker:  *time.NewTicker(time.Second * 120),
+		ticker:  *time.NewTicker(time.Second * 600),
 		done:    done,
 		targets: targets,
+		init:    init,
 	}
 }
 
 func (ticker *Ticker) Fetch() {
 	for _, v := range ticker.targets {
+		if _, err := url.Parse(v.RSS); err != nil {
+			ticker.rdb.Set("feed:status:"+v.ID.Hex(), "offline", time.Hour*3)
+			ticker.log.Errorf("[SVC-FEEDS] Unable to validate URL: %s", v.RSS)
+			continue
+		}
+		if status, _ := ticker.rdb.Get("feed:status:" + v.ID.Hex()); status == "offline" {
+			continue
+		}
 		parser := gofeed.NewParser()
 		// TODO: Find a way to use a proxy for the reqursts, without getting back too many 403s. Using Tor works, but with too many errors.
 		// parser.Client = ticker.proxy
 		parser.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" // "MediaWatch Bot/3.0 (mediawatch.io)"
 
 		// parse feed
-		data, err := parser.ParseURL(v)
+		data, err := parser.ParseURL(v.RSS)
 		if err != nil {
 			// TODO: Investigate how often this happens
 			// TODO: Add prometheus metrics with error codes per feed
-			ticker.log.Errorf("[SVC-FEEDS] Error parsing RSS feed for: %s - %s", v, err.Error())
+			ticker.rdb.Set("feed:status:"+v.ID.Hex(), "offline", time.Hour*3)
+			ticker.log.Errorf("[SVC-FEEDS] Error parsing RSS feed for: (%s) - %s", v.Hostname(), err.Error())
 			continue
 		}
+
+		if &data.Items == nil || len(data.Items) == 0 {
+			continue
+		}
+
 		// create a new slice with the feed items and sort by time published
 		slice := data.Items
 		sort.Slice(slice, func(i, j int) bool {
+			if slice[i].PublishedParsed == nil || slice[j].PublishedParsed == nil {
+				return false
+			}
 			return slice[i].PublishedParsed.Before(*slice[j].PublishedParsed)
 		})
 
 		// iter over the items and check if the article is already processed.
 		// we assume that the article is processed if the publish time of an item
 		// is before or equal to the time stored in redis key/value store.
-		for _, v := range slice {
+		for _, l := range slice {
+			if l.PublishedParsed == nil {
+				// Probably the item is empty, skip it.
+				continue
+			}
+
+			timePublished := l.PublishedParsed.Truncate(time.Millisecond)
+
 			// get the last saved time in redis key/value store
-			if last, _ := ticker.rdb.Get(data.Link); last != "" {
-				lastDate, _ := time.Parse(time.RFC3339, last)
-				if lastDate.After(*v.PublishedParsed) || lastDate.Equal(*v.PublishedParsed) {
+			if last, _ := ticker.rdb.Get("feed:last:" + v.ID.Hex()); last != "" {
+				var lastCache CacheLast
+				if err := json.Unmarshal([]byte(last), &lastCache); err != nil {
+					ticker.log.Errorf("[SVC-FEEDS] Unable to unmarshal cache: %v", last)
+					continue
+				}
+
+				if lastCache.LastArticleAt.Before(timePublished) == false {
+					continue
+				}
+
+				if lastCache.LastArticleLink == l.Link {
 					continue
 				}
 			}
 
-			ticker.log.Debugf("[SVC-FEEDS] %s (%s) %s", v.PublishedParsed.Format(time.RFC3339), data.Title, v.Title)
+			ticker.log.Debugf("[SVC-FEEDS] %s (%s) %s", timePublished.Format(time.RFC3339), v.Hostname(), l.Title)
 
-			// write message to kafka
-			// go ticker.worker.Produce(kafka.Message{})
+			now := time.Now()
+			unix := now.UnixNano()
+
+			catchedURL := link.CatchedURL{
+				ID:               uuid.New().String(),
+				URL:              l.Link,
+				TweetID:          unix,
+				TwitterUserID:    v.TwitterID,
+				TwitterUserIDStr: fmt.Sprintf("%d", v.TwitterID),
+				CreatedAt:        timePublished,
+				CreatedAtStr:     timePublished.Format(time.RFC3339),
+				Title:            l.Title,
+			}
+
+			newCache, err := json.Marshal(&CacheLast{
+				Id:              v.ID.Hex(),
+				Hostname:        v.Hostname(),
+				LastArticleAt:   catchedURL.CreatedAt,
+				LastArticleLink: catchedURL.URL,
+			})
+			if err != nil {
+				ticker.log.Errorf("[SVC-FEEDS] Unable to marshal cache: %s", err.Error())
+				continue
+			}
 
 			// update last time published per target in redis key/value store
-			ticker.rdb.Set(data.Link, v.PublishedParsed.Format(time.RFC3339))
+			ticker.rdb.Set("feed:last:"+v.ID.Hex(), string(newCache), 0)
 
-			// TODO: Add prometheus counter
+			// write message to kafka
+			message, err := json.Marshal(&catchedURL)
+			if err != nil {
+				ticker.log.Errorf("[SVC-FEEDS] Unable to marshal message: %s", err.Error())
+				continue
+			}
+
+			if ticker.init {
+				continue
+			}
+
+			go ticker.worker.Produce(kafka.Message{
+				Value: []byte(message),
+			})
+
+			time.Sleep(150)
 		}
 	}
 }
@@ -87,4 +174,45 @@ func (ticker *Ticker) Tick() {
 			go ticker.Fetch()
 		}
 	}
+}
+
+// Returns true if a value is null, undefined, or NaN.
+func isNullish(value interface{}) bool {
+	if value, ok := value.(string); ok {
+		return value == ""
+	}
+	if value, ok := value.(*string); ok {
+		if value == nil {
+			return true
+		}
+		return *value == ""
+	}
+	if value, ok := value.(int); ok {
+		return math.IsNaN(float64(value))
+	}
+	if value, ok := value.(*int); ok {
+		if value == nil {
+			return true
+		}
+		return math.IsNaN(float64(*value))
+	}
+	if value, ok := value.(float32); ok {
+		return math.IsNaN(float64(value))
+	}
+	if value, ok := value.(*float32); ok {
+		if value == nil {
+			return true
+		}
+		return math.IsNaN(float64(*value))
+	}
+	if value, ok := value.(float64); ok {
+		return math.IsNaN(value)
+	}
+	if value, ok := value.(*float64); ok {
+		if value == nil {
+			return true
+		}
+		return math.IsNaN(*value)
+	}
+	return value == nil
 }

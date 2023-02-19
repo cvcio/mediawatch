@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	articlesv2 "github.com/cvcio/mediawatch/internal/mediawatch/articles/v2"
 	enrich_pb "github.com/cvcio/mediawatch/internal/mediawatch/enrich/v2"
 	scrape_pb "github.com/cvcio/mediawatch/internal/mediawatch/scrape/v2"
 	"github.com/kelseyhightower/envconfig"
@@ -20,11 +21,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
+	"github.com/cvcio/mediawatch/models/deprecated/nodes"
 	"github.com/cvcio/mediawatch/models/link"
-	"github.com/cvcio/mediawatch/models/nodes"
+	"github.com/cvcio/mediawatch/models/relationships"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/es"
@@ -369,14 +371,16 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	}
 
 	// create a new article document
-	a := new(article.Document)
-	a.DocID = in.ID
-	a.URL = in.URL
-	a.TweetID = in.TweetID
-	a.TweetIDStr = fmt.Sprintf("%d", in.TweetID)
-	a.ScreenName = feed.ScreenName
+	a := new(articlesv2.Article)
+	a.DocId = in.ID
+	a.Url = in.URL
+	// a.TweetID = in.TweetID
+	// a.TweetIDStr = fmt.Sprintf("%d", in.TweetID)
+	// a.ScreenName = feed.ScreenName
+	a.Hostname = feed.Hostname()
 	a.Lang = feed.Lang
-	a.CrawledAt = in.CreatedAt
+	a.CrawledAt = timestamppb.New(in.CreatedAt)
+	a.Content.Title = in.Title
 
 	// =========================================================================
 	timer := prometheus.NewTimer(grpcDuration.WithLabelValues("scraper"))
@@ -405,13 +409,16 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	a.Content.Body = scrapeResp.Data.Content.Body
 	a.Content.Authors = scrapeResp.Data.Content.Authors
 	a.Content.Tags = scrapeResp.Data.Content.Tags
-	a.Content.Title = scrapeResp.Data.Content.Title
+	if a.Content.Title == "" {
+		a.Content.Title = scrapeResp.Data.Content.Title
+	}
 	a.Content.Excerpt = scrapeResp.Data.Content.Description
 	a.Content.Image = scrapeResp.Data.Content.Image
 
 	// make sure to parse the datetime object
-	a.Content.PublishedAt, err = time.Parse(time.RFC3339, scrapeResp.Data.Content.PublishedAt)
-	if err != nil {
+	if publishedAt, err := time.Parse(time.RFC3339, scrapeResp.Data.Content.PublishedAt); err == nil {
+		a.Content.PublishedAt = timestamppb.New(publishedAt)
+	} else {
 		// otherwise set published datetime to crawled time
 		a.Content.PublishedAt = a.CrawledAt
 	}
@@ -436,19 +443,13 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	worker.log.Debugf("[SVC-WORKER] ENRICH:  %s - %s", in.ScreenName, in.URL)
 
 	// set enriched data to nlp
-	a.NLP.Summary = enrichResp.Data.Nlp.Summary
-	a.NLP.Keywords = enrichResp.Data.Nlp.Keywords
-	a.NLP.StopWords = enrichResp.Data.Nlp.Stopwords
-	a.NLP.Topics = enrichResp.Data.Nlp.Topics
-	a.NLP.Quotes = enrichResp.Data.Nlp.Quotes
-	a.NLP.Claims = enrichResp.Data.Nlp.Claims
-
-	for _, entity := range enrichResp.Data.Nlp.Entities {
-		a.NLP.Entities = append(a.NLP.Entities, &article.Entity{
-			EntityText: entity.EntityText,
-			EntityType: entity.EntityType,
-		})
-	}
+	a.Nlp.Summary = enrichResp.Data.Nlp.Summary
+	a.Nlp.Keywords = enrichResp.Data.Nlp.Keywords
+	a.Nlp.Stopwords = enrichResp.Data.Nlp.Stopwords
+	a.Nlp.Topics = enrichResp.Data.Nlp.Topics
+	a.Nlp.Quotes = enrichResp.Data.Nlp.Quotes
+	a.Nlp.Claims = enrichResp.Data.Nlp.Claims
+	a.Nlp.Entities = enrichResp.Data.Nlp.Entities
 
 	timer.ObserveDuration()
 
@@ -456,7 +457,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// Save the Document to Elasticsearch
 	_, err = worker.esClient.Client.Index().
 		Index(worker.esIndex).
-		Id(a.DocID).
+		Id(a.DocId).
 		BodyJson(a).
 		Do(context.Background())
 	if err != nil {
@@ -469,38 +470,42 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// =========================================================================
 	// Create a new nodeAuthor if not exist for each Atuhor extracted
 	// by svc-scraper service and return the uid
-	var authors []*nodes.NodeAuthor
+	var authors []*relationships.NodeAuthor
 	for _, author := range a.Content.Authors {
-		uid, err := nodes.MergeNodeAuthor(worker.ctx, worker.neoClient, author)
+		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, author, "author")
 		if err != nil {
 			worker.log.Debugf("[SVC-WORKER] merge author error: %s", err.Error())
 			continue
 		}
-		authors = append(authors, &nodes.NodeAuthor{
-			UID: uid,
+		authors = append(authors, &relationships.NodeAuthor{
+			Uid: uid,
+		})
+	}
+
+	var topics []*relationships.NodeTopic
+	for _, topic := range a.Nlp.Topics {
+		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, topic.Text, "topic")
+		if err != nil {
+			worker.log.Debugf("[SVC-WORKER] merge topic error: %s", err.Error())
+			continue
+		}
+		topics = append(topics, &relationships.NodeTopic{
+			Uid: uid,
 		})
 	}
 
 	// =========================================================================
 	// Create a new nodeArticle
-	nArticle := &nodes.NodeArticle{}
-	nArticle.DocID = a.DocID
+	nArticle := &relationships.NodeArticle{}
+	nArticle.DocId = a.DocId
 	nArticle.Lang = a.Lang
-	nArticle.CrawledAt = a.CrawledAt
-	nArticle.URL = a.URL
-	nArticle.TweetID = a.TweetID
-	nArticle.TweetIDStr = a.TweetIDStr
+	nArticle.CrawledAt = a.CrawledAt.AsTime()
+	nArticle.Url = a.Url
 	nArticle.Title = a.Content.Title
-	nArticle.Body = a.Content.Body
-	nArticle.Summary = a.NLP.Summary
-	nArticle.Tags = a.Content.Tags
-	nArticle.Categories = a.Content.Categories
-	nArticle.PublishedAt = a.Content.PublishedAt
-	nArticle.EditedAt = a.Content.EditedAt
-	nArticle.Keywords = a.NLP.Keywords
-	nArticle.Topics = a.NLP.Topics
+	nArticle.PublishedAt = a.Content.PublishedAt.AsTime()
+	nArticle.ScreenName = a.Hostname
 
-	resNeo, err := nodes.CreateNodeArticle(worker.ctx, worker.neoClient, nArticle)
+	resNeo, err := relationships.CreateNodeArticle(worker.ctx, worker.neoClient, nArticle)
 	if err != nil {
 		worker.log.Debugf("[SVC-WORKER] merge article error: %s", err.Error())
 		if !strings.Contains(err.Error(), "already exists with label `Article`") {
@@ -514,15 +519,19 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// Save relationships
 	// feed published at
 	if fUID != "" {
-		go nodes.MergeRel(worker.ctx, worker.neoClient, nArticle.DocID, fUID, "PUBLISHED_AT")
+		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, fUID, "PUBLISHED_AT", "feed")
 	}
 	for _, author := range authors {
 		// author of
-		go nodes.MergeRel(worker.ctx, worker.neoClient, author.UID, nArticle.DocID, "AUTHOR_OF")
+		go relationships.MergeRel(worker.ctx, worker.neoClient, author.Uid, nArticle.DocId, "AUTHOR_OF", "author")
 		if fUID != "" {
 			// writes for
-			go nodes.MergeRel(worker.ctx, worker.neoClient, author.UID, fUID, "WRITES_FOR")
+			go relationships.MergeRel(worker.ctx, worker.neoClient, author.Uid, fUID, "WRITES_FOR", "author")
 		}
+	}
+
+	for _, topic := range topics {
+		go relationships.MergeRel(worker.ctx, worker.neoClient, topic.Uid, nArticle.DocId, "IN_TOPIC", "topic")
 	}
 
 	// marshal node article

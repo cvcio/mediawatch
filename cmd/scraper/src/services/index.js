@@ -220,7 +220,6 @@ class ScrapeService {
                 });
         }
     }
-
     ReloadPassages = (req, callback) => {
         this.GetPassages();
         return callback(null, null);

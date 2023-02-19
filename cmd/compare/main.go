@@ -23,8 +23,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/cvcio/mediawatch/models/article"
-	"github.com/cvcio/mediawatch/models/nodes"
+	"github.com/cvcio/mediawatch/models/deprecated/article"
+	"github.com/cvcio/mediawatch/models/deprecated/nodes"
+	"github.com/cvcio/mediawatch/models/relationships"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/es"
 	"github.com/cvcio/mediawatch/pkg/kafka"
@@ -83,7 +84,7 @@ func (worker *CompareGroup) Consume() {
 		}
 
 		// Unmarshal incoming json message
-		var msg article.Document
+		var msg relationships.NodeArticle
 		if err := json.Unmarshal(m.Value, &msg); err != nil {
 			// mark message as read (commit)
 			worker.Commit(m)
@@ -93,10 +94,10 @@ func (worker *CompareGroup) Consume() {
 			continue
 		}
 
-		worker.log.Debugf("[SVC-COMPARE] COMPARE: %s (%s)", msg.DocID, msg.CrawledAt)
+		worker.log.Debugf("[SVC-COMPARE] COMPARE: %s (%s)", msg.DocId, msg.CrawledAt)
 
 		// test the article for similar
-		go worker.compare.FindAndCompare(msg.DocID)
+		go worker.compare.FindAndCompare(msg.DocId)
 
 		// mark message as read (commit)
 		worker.Commit(m)

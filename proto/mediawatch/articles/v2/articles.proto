@@ -31,17 +31,16 @@ message Article {
     int64 uid = 1;
     string doc_id = 2;
     string lang = 3;
-    string screen_name = 4;
+    string hostname = 4;
     string url = 5;
-    int64 tweet_id = 6;
-    string tweet_id_str = 7;
+    string feed_id = 6;
     
-    Content content = 8;
-    mediawatch.enrich.v2.NLP nlp = 9;
-    mediawatch.feeds.v2.Feed feed = 10;
+    Content content = 7;
+    mediawatch.enrich.v2.NLP nlp = 8;
+    mediawatch.feeds.v2.Feed feed = 9;
 
-    google.protobuf.Timestamp crawled_at = 11;
-    int64 rel_count = 12;
+    google.protobuf.Timestamp crawled_at = 10;
+    int64 rel_count = 11;
 };
 
 // ArticleRequest

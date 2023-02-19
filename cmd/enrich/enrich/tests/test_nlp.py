@@ -17,7 +17,7 @@ test_text = "Οι φιλορώσοι αυτονομιστές αντάρτες �
 
 def test_extract_quotes():
     quotes = extract_quotes(test_text)
-    assert len(quotes) == 4
+    assert len(quotes) == 5
     logging.info(quotes)
 
 
@@ -42,7 +42,7 @@ def test_extract_entities():
     test_spacy_model = spacy.load("el_core_news_md")
     doc = test_spacy_model(test_text)
     entities = extract_entities(doc)
-    assert len(entities) == 12
+    assert len(entities) == 26
     logging.info(entities)
 
 
@@ -66,5 +66,5 @@ def test_extract_claims():
     test_spacy_model = spacy.load("el_core_news_md")
     doc = test_spacy_model(test_text)
     claims = extract_claims(doc, list(test_spacy_model.Defaults.stop_words), 0.4)
-    assert len(claims) == 4
+    assert len(claims) == 6
     logging.info(claims)

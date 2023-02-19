@@ -66,6 +66,6 @@ func (rdb *RedisClient) Get(key string) (string, error) {
 }
 
 // Set
-func (rdb *RedisClient) Set(key string, value string) error {
-	return rdb.Client.Set(rdb.ctx, key, value, 0).Err()
+func (rdb *RedisClient) Set(key string, value string, ttl time.Duration) error {
+	return rdb.Client.Set(rdb.ctx, key, value, ttl).Err()
 }

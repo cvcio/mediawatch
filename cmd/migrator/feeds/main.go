@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/url"
 	"os"
 	"time"
 
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/pkg/db"
-	"github.com/cvcio/mediawatch/pkg/twitter"
 )
+
+const FILE = "/home/andefined/Downloads/MediaWatch Feeds - MediaWatch 2023 Feeds.csv"
 
 func main() {
 	dConn, err := db.NewMongoDB("mongodb://localhost:27017", "mediawatch", 10*time.Second)
@@ -22,22 +22,21 @@ func main() {
 	}
 
 	// Create a new twitter client
-	twtt, err := twitter.NewAPI("",
-		"", "",
-		"")
-	if err != nil {
-		log.Fatalf("Error connecting to twitter: %s", err.Error())
-	}
-	a, err := os.Open("tmp/exports/MediaWatch Feeds - feeds 20210131.csv")
+	// twtt, err := twitter.NewAPI("",
+	// 	"", "",
+	// 	"")
+	// if err != nil {
+	// 	log.Fatalf("Error connecting to twitter: %s", err.Error())
+	// }
+	file, err := os.Open(FILE)
 	if err != nil {
 		log.Fatalln("Couldn't open the csv file", err)
 	}
 
-	ra := csv.NewReader(a)
-
+	records := csv.NewReader(file)
 	for {
 		// Read each record from csv
-		record, err := ra.Read()
+		record, err := records.Read()
 		if err == io.EOF {
 			break
 		}
@@ -46,39 +45,43 @@ func main() {
 		}
 		if record[0] != "_id" {
 			// _id,name,screen_name,tier,business_type,business_owner,registered,political_stance,political_orientation,content_type,country,locality,lang,url,status,testURL
+			// _id,createdAt,updatedAt,deleted,country,lang,name,screen_name,twitter_id,business_type,tier,content_type,url,rss,stream_type,business_owner,locality,political_orientation,political_stance,status,testURL,twitter_id_str,registered,hostname,registry_id,meta_classes.api,meta_classes.feed_type
 			if record[0] != "" {
-				// update
 				f := new(feed.UpdateFeed)
-				f.Name = &record[1]
-				f.ScreenName = &record[2]
-				f.Tier = &record[3]
-				f.BusinessType = &record[4]
-				f.BusinessOwner = &record[5]
-				f.Registered = &record[6]
-				f.PoliticalStance = &record[7]
-				f.PoliticalOrientation = &record[8]
-				f.ContentType = &record[9]
-				f.Country = &record[10]
-				f.Locality = &record[11]
-				f.Lang = &record[12]
-				f.URL = &record[13]
-				f.Status = &record[14]
-				f.TestURL = &record[15]
+				f.RSS = &record[13]
+				f.StreamType = &record[14]
+				// // update
+				// f := new(feed.UpdateFeed)
+				// f.Name = &record[1]
+				// f.ScreenName = &record[2]
+				// f.Tier = &record[3]
+				// f.BusinessType = &record[4]
+				// f.BusinessOwner = &record[5]
+				// f.Registered = &record[6]
+				// f.PoliticalStance = &record[7]
+				// f.PoliticalOrientation = &record[8]
+				// f.ContentType = &record[9]
+				// f.Country = &record[10]
+				// f.Locality = &record[11]
+				// f.Lang = &record[12]
+				// f.URL = &record[13]
+				// f.Status = &record[14]
+				// f.TestURL = &record[15]
 
-				user, err := twtt.GetUsersShow(*f.ScreenName, url.Values{})
-				if err != nil {
-					fmt.Printf("MISSING ACCOUNT (%s)\n", *f.ScreenName)
-				} else {
-					f.ScreenName = &user.ScreenName
-					f.TwitterID = &user.Id
-					f.TwitterIDStr = &user.IdStr
-					f.Description = &user.Description
-					f.TwitterProfileImage = &user.ProfileImageUrlHttps
-				}
+				// user, err := twtt.GetUsersShow(*f.ScreenName, url.Values{})
+				// if err != nil {
+				// 	fmt.Printf("MISSING ACCOUNT (%s)\n", *f.ScreenName)
+				// } else {
+				// 	f.ScreenName = &user.ScreenName
+				// 	f.TwitterID = &user.Id
+				// 	f.TwitterIDStr = &user.IdStr
+				// 	f.Description = &user.Description
+				// 	f.TwitterProfileImage = &user.ProfileImageUrlHttps
+				// }
 
 				err = feed.Update(context.Background(), dConn, record[0], f, time.Now())
 				if err != nil {
-					fmt.Printf("COULDNT UPDATE (%s)\n", *f.ScreenName)
+					fmt.Printf("COULDNT UPDATE (%s)\n", record[6])
 				}
 			}
 			// else {

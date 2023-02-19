@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 
-	"github.com/cvcio/mediawatch/models/nodes"
+	"github.com/cvcio/mediawatch/models/deprecated/nodes"
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/es"
 	"github.com/cvcio/mediawatch/pkg/neo"

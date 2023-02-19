@@ -27,6 +27,7 @@ type Feed struct {
 	TwitterIDStr        string `json:"twitter_id_str,omitempty" bson:"twitter_id_str"`
 	TwitterProfileImage string `json:"twitter_profile_image,omitempty" bson:"twitter_profile_image"`
 	RSS                 string `json:"rss,omitempty" bson:"rss"`
+	StreamType          string `json:"stream_type,omitempty" bson:"stream_type"`
 
 	// Info
 	Email                string `json:"email,omitempty" bson:"email"`
@@ -78,6 +79,7 @@ type UpdateFeed struct {
 	Lang                 *string      `json:"lang" bson:"lang"`
 	URL                  *string      `json:"url" bson:"url"`
 	RSS                  *string      `json:"rss" bson:"rss"`
+	StreamType           *string      `json:"stream_type,omitempty" bson:"stream_type"`
 	MetaClasses          *MetaClasses `json:"meta_classes,omitempty" bson:"meta_classes,omitempty"`
 	Status               *string      `json:"status" bson:"status"`
 	TestURL              *string      `json:"testURL" bson:"testURL"`
@@ -120,5 +122,6 @@ func (f *Feed) Hostname() string {
 	if err != nil {
 		return f.URL
 	}
-	return strings.TrimPrefix(u.Hostname(), "www")
+	h := strings.TrimPrefix(u.Hostname(), "www")
+	return strings.TrimPrefix(h, ".")
 }

@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cvcio/mediawatch/models/article"
+	"github.com/cvcio/mediawatch/models/deprecated/article"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/es"
 	"github.com/kelseyhightower/envconfig"
@@ -78,9 +78,9 @@ func main() {
 	// =========================================================================
 	// Query elasticsearch
 	query := elastic.NewBoolQuery()
-	query = query.Must(
-		elastic.NewRangeQuery("crawledAt").Gte("2022-02-01"),
-	)
+	// query = query.Must(
+	// 	elastic.NewRangeQuery("crawledAt").Gte("2022-02-01"),
+	// )
 
 	C := 0
 	total, _ := esClient.Client.Count(*index).Query(query).Do(context.Background())

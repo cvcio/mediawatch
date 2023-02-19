@@ -21,9 +21,9 @@ type CompareServiceClient interface {
 	// Single compares a single document by id with multiple auto-discovered
 	Single(ctx context.Context, in *SingleRequest, opts ...grpc.CallOption) (*SingleResponse, error)
 	// OneToMany compares a single document by id with multiple document ids provided
-	OneToMany(ctx context.Context, in *OneToManyRequest, opts ...grpc.CallOption) (*OneToManyResponse, error)
+	OneToMany(ctx context.Context, in *OneToManyRequest, opts ...grpc.CallOption) (*MultipleResponse, error)
 	// ManyToMany compares a list of documents ids with multiple document ids provided
-	ManyToMany(ctx context.Context, in *ManyToManyRequest, opts ...grpc.CallOption) (*ManyToManyResponse, error)
+	ManyToMany(ctx context.Context, in *ManyToManyRequest, opts ...grpc.CallOption) (*MultipleResponse, error)
 }
 
 type compareServiceClient struct {
@@ -43,8 +43,8 @@ func (c *compareServiceClient) Single(ctx context.Context, in *SingleRequest, op
 	return out, nil
 }
 
-func (c *compareServiceClient) OneToMany(ctx context.Context, in *OneToManyRequest, opts ...grpc.CallOption) (*OneToManyResponse, error) {
-	out := new(OneToManyResponse)
+func (c *compareServiceClient) OneToMany(ctx context.Context, in *OneToManyRequest, opts ...grpc.CallOption) (*MultipleResponse, error) {
+	out := new(MultipleResponse)
 	err := c.cc.Invoke(ctx, "/mediawatch.compare.v2.CompareService/OneToMany", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -52,8 +52,8 @@ func (c *compareServiceClient) OneToMany(ctx context.Context, in *OneToManyReque
 	return out, nil
 }
 
-func (c *compareServiceClient) ManyToMany(ctx context.Context, in *ManyToManyRequest, opts ...grpc.CallOption) (*ManyToManyResponse, error) {
-	out := new(ManyToManyResponse)
+func (c *compareServiceClient) ManyToMany(ctx context.Context, in *ManyToManyRequest, opts ...grpc.CallOption) (*MultipleResponse, error) {
+	out := new(MultipleResponse)
 	err := c.cc.Invoke(ctx, "/mediawatch.compare.v2.CompareService/ManyToMany", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -68,9 +68,9 @@ type CompareServiceServer interface {
 	// Single compares a single document by id with multiple auto-discovered
 	Single(context.Context, *SingleRequest) (*SingleResponse, error)
 	// OneToMany compares a single document by id with multiple document ids provided
-	OneToMany(context.Context, *OneToManyRequest) (*OneToManyResponse, error)
+	OneToMany(context.Context, *OneToManyRequest) (*MultipleResponse, error)
 	// ManyToMany compares a list of documents ids with multiple document ids provided
-	ManyToMany(context.Context, *ManyToManyRequest) (*ManyToManyResponse, error)
+	ManyToMany(context.Context, *ManyToManyRequest) (*MultipleResponse, error)
 }
 
 // UnimplementedCompareServiceServer should be embedded to have forward compatible implementations.
@@ -80,10 +80,10 @@ type UnimplementedCompareServiceServer struct {
 func (UnimplementedCompareServiceServer) Single(context.Context, *SingleRequest) (*SingleResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Single not implemented")
 }
-func (UnimplementedCompareServiceServer) OneToMany(context.Context, *OneToManyRequest) (*OneToManyResponse, error) {
+func (UnimplementedCompareServiceServer) OneToMany(context.Context, *OneToManyRequest) (*MultipleResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OneToMany not implemented")
 }
-func (UnimplementedCompareServiceServer) ManyToMany(context.Context, *ManyToManyRequest) (*ManyToManyResponse, error) {
+func (UnimplementedCompareServiceServer) ManyToMany(context.Context, *ManyToManyRequest) (*MultipleResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ManyToMany not implemented")
 }
 

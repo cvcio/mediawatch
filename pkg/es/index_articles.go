@@ -109,22 +109,12 @@ var indexArticles = `
                   },
                   "entities": {
                       "properties": {
-                          "entity_text": {
-                              "type": "text",
-                              "fields": {
-                                  "keyword": {
-                                      "type": "keyword"
-                                  }
-                              }
-                          },
-                          "entity_type": {
-                              "type": "text",
-                              "fields": {
-                                  "keyword": {
-                                      "type": "keyword"
-                                  }
-                              }
-                          }
+                            "text": {
+                                "type": "keyword"
+                            },
+                            "type": {
+                                "type": "keyword"
+                            }
                       }
                   },
                   "tokens": {

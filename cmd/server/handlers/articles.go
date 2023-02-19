@@ -5,9 +5,9 @@ import (
 	"time"
 
 	scrape_pb "github.com/cvcio/mediawatch/internal/mediawatch/scrape/v2"
-	"github.com/cvcio/mediawatch/models/article"
+	"github.com/cvcio/mediawatch/models/deprecated/article"
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
-	"github.com/cvcio/mediawatch/models/nodes"
+	"github.com/cvcio/mediawatch/models/deprecated/nodes"
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/es"

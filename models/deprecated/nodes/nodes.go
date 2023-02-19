@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/cvcio/mediawatch/models/article"
+	"github.com/cvcio/mediawatch/models/deprecated/article"
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/pkg/neo"
 	"github.com/google/uuid"

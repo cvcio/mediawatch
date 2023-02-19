@@ -3,7 +3,7 @@ package web
 import (
 	"net/http"
 
-	"github.com/cvcio/mediawatch/models/article"
+	"github.com/cvcio/mediawatch/models/deprecated/article"
 	"github.com/go-chi/render"
 )
 

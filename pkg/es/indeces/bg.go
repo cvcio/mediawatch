@@ -95,10 +95,10 @@ var ArticlesBG = `
                     },
                     "entities": {
                         "properties": {
-                            "entity_text": {
+                            "text": {
                                 "type": "keyword"
                             },
-                            "entity_type": {
+                            "type": {
                                 "type": "keyword"
                             }
                         }

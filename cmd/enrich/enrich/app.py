@@ -611,7 +611,6 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
         return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
 
 
-
     def NLP(self, data, context):
         """
         NLP gRPC endpoint

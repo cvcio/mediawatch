@@ -13,17 +13,13 @@ import "mediawatch/common/v2/common.proto";
 // FeedStream Model
 message FeedStream {
     // stream key to select, can be the twitter_id of the feed in case 
-    // stream type is STREAM_TYPE_TWITTER, otherwise an ATOM url 
-    // or feeds url.
+    // stream type is STREAM_TYPE_TWITTER, otherwise an ATOM/RSS feed url. 
     string stream_target = 1;
-    // Cron like sceduling used only when stream_type is rss
-    string execute_every = 2;
-
     // stream type, can be other, twitter or rss
     // currently only twitter is supported
-    mediawatch.common.v2.StreamType stream_type = 3;
+    mediawatch.common.v2.StreamType stream_type = 2;
     // common status (see common.proto)
-    mediawatch.common.v2.Status stream_status = 4;
+    mediawatch.common.v2.Status stream_status = 3;
 }
 
 // FeedDOM Model
@@ -49,6 +45,8 @@ message FeedLocalization {
     mediawatch.common.v2.Locality locality = 2;
     // Feed predefined language code in ISO 639-1 format
     string lang = 3;
+    string region = 4;
+    string union = 5;
 }
 
 // FeedMeta Model
