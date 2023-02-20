@@ -9,6 +9,7 @@ const toUpperCase = (str) => {
 const normalizeString = (str) => {
 	let text = str.trim();
 
+	text = text.replace(/\b([a-zA-Z=]*[0-9]){24,}[a-zA-Z=]*\b/g, '');
 	text = text.replace(/<[^>]+>/g, '');
 	text = text.replace(/<(?:.|\n)*?>/gm, '');
 	text = text.replace(/<br>/gi, '\n');

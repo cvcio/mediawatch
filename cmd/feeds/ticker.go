@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -117,24 +115,18 @@ func (ticker *Ticker) Fetch() {
 
 			ticker.log.Debugf("[SVC-FEEDS] %s (%s) %s", timePublished.Format(time.RFC3339), v.Hostname(), l.Title)
 
-			now := time.Now()
-			unix := now.UnixNano()
-
 			catchedURL := link.CatchedURL{
-				ID:               uuid.New().String(),
-				URL:              l.Link,
-				TweetID:          unix,
-				TwitterUserID:    v.TwitterID,
-				TwitterUserIDStr: fmt.Sprintf("%d", v.TwitterID),
-				CreatedAt:        timePublished,
-				CreatedAtStr:     timePublished.Format(time.RFC3339),
-				Title:            l.Title,
+				ID:         uuid.New().String(),
+				URL:        l.Link,
+				CreatedAt:  timePublished.Format(time.RFC3339),
+				Title:      l.Title,
+				ScreenName: v.ScreenName,
 			}
 
 			newCache, err := json.Marshal(&CacheLast{
 				Id:              v.ID.Hex(),
 				Hostname:        v.Hostname(),
-				LastArticleAt:   catchedURL.CreatedAt,
+				LastArticleAt:   timePublished,
 				LastArticleLink: catchedURL.URL,
 			})
 			if err != nil {
@@ -174,45 +166,4 @@ func (ticker *Ticker) Tick() {
 			go ticker.Fetch()
 		}
 	}
-}
-
-// Returns true if a value is null, undefined, or NaN.
-func isNullish(value interface{}) bool {
-	if value, ok := value.(string); ok {
-		return value == ""
-	}
-	if value, ok := value.(*string); ok {
-		if value == nil {
-			return true
-		}
-		return *value == ""
-	}
-	if value, ok := value.(int); ok {
-		return math.IsNaN(float64(value))
-	}
-	if value, ok := value.(*int); ok {
-		if value == nil {
-			return true
-		}
-		return math.IsNaN(float64(*value))
-	}
-	if value, ok := value.(float32); ok {
-		return math.IsNaN(float64(value))
-	}
-	if value, ok := value.(*float32); ok {
-		if value == nil {
-			return true
-		}
-		return math.IsNaN(float64(*value))
-	}
-	if value, ok := value.(float64); ok {
-		return math.IsNaN(value)
-	}
-	if value, ok := value.(*float64); ok {
-		if value == nil {
-			return true
-		}
-		return math.IsNaN(*value)
-	}
-	return value == nil
 }

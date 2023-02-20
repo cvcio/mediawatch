@@ -85,7 +85,7 @@ services:
     volumes:
       - data_neo4j_data:/data
       - $PWD/tmp:/export
-      - data_neo4j_logs:/logs
+      # - data_neo4j_logs:/logs
       # - $PWD/plugins:/var/lib/neo4j/plugins
     labels:
       - "traefik.frontend.rule=Host:neo4j.docker.localhost"
@@ -147,7 +147,6 @@ services:
 
 volumes:
   data_neo4j_data: 
-  data_neo4j_logs: 
   data_mongo:
   data_elasticsearh:
   data_dgraph:

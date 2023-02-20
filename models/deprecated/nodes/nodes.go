@@ -16,15 +16,16 @@ import (
 func EnsureIndex(ctx context.Context) {
 	indexCypher := `
 		CREATE CONSTRAINT article_uid ON (a:Article) ASSERT a.uid IS UNIQUE;
-		CREATE CONSTRAINT article_docId ON (a:Article) ASSERT a.docId IS UNIQUE;
+		CREATE CONSTRAINT article_doc_id ON (a:Article) ASSERT a.doc_id IS UNIQUE;
 
-		CREATE CONSTRAINT article_tweetId ON (a:Article) ASSERT a.tweet_id IS UNIQUE;
-		CREATE CONSTRAINT article_tweetIdStr ON (a:Article) ASSERT a.tweet_id_str IS UNIQUE;
+		// CREATE CONSTRAINT article_tweetId ON (a:Article) ASSERT a.tweet_id IS UNIQUE;
+		// CREATE CONSTRAINT article_tweetIdStr ON (a:Article) ASSERT a.tweet_id_str IS UNIQUE;
 
 		CREATE CONSTRAINT feed_uid ON (f:Feed) ASSERT f.uid IS UNIQUE;
+		CREATE CONSTRAINT feed_screen_name ON (f:Feed) ASSERT f.screen_name IS UNIQUE;
 
-		CREATE CONSTRAINT feed_twitter_id_str ON (f:Feed) ASSERT f.twitter_id_str IS UNIQUE;
-		CREATE CONSTRAINT feed_twitter_id ON (f:Feed) ASSERT f.twitter_id IS UNIQUE;
+		// CREATE CONSTRAINT feed_twitter_id_str ON (f:Feed) ASSERT f.twitter_id_str IS UNIQUE;
+		// CREATE CONSTRAINT feed_twitter_id ON (f:Feed) ASSERT f.twitter_id IS UNIQUE;
 
 		CREATE CONSTRAINT author_uid ON (a:Author) ASSERT a.uid IS UNIQUE;
 		CREATE CONSTRAINT author_name ON (a:Author) ASSERT a.author IS UNIQUE;

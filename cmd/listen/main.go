@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/models/link"
@@ -265,7 +266,7 @@ func main() {
 				"catched",
 				"tweetID", u.TweetID,
 				"user", u.ScreenName,
-				"timeCreated", u.CreatedAtStr,
+				"timeCreated", u.CreatedAt,
 				"url", u.URL,
 			)
 
@@ -389,8 +390,7 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 			TwitterUserID:    authorID,
 			TwitterUserIDStr: t.Data.AuthorID,
 			ScreenName:       getUserNameFromTweet(t.Data.AuthorID, t.Includes.Users),
-			CreatedAt:        createdAt,
-			CreatedAtStr:     t.Data.CreatedAt,
+			CreatedAt:        createdAt.Format(time.RFC3339),
 		}
 		tweetChan <- messsage
 	}

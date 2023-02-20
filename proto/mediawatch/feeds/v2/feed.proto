@@ -75,9 +75,9 @@ message Feed {
     // UUID string representation
     string uuid = 2;
     // Feed creation datetime in RFC3339 format
-    google.protobuf.Timestamp created_at = 3;
+    string created_at = 3;
     // Feed update datetime in RFC3339 format
-    google.protobuf.Timestamp updated_at = 4;
+    string updated_at = 4;
     // Name of the feed
     string name = 5;
     // Twitter user_name of the feed (if appliccable)

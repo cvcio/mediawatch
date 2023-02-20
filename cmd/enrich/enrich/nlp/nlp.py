@@ -138,9 +138,8 @@ def extract_topics(body, pipeline):
             padding=True,
             truncation=True,
             max_length=512,
-            return_all_scores=True,
-        )[0]
-        logging.info(topics)
+            top_k=4,
+        )
     except:
         pass
     topics = [

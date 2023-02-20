@@ -3,14 +3,16 @@ package relationships
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/pkg/neo"
 	"github.com/google/uuid"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 )
 
 func getEntityType(entityType string) string {
-	switch entityType {
+	switch strings.ToLower(entityType) {
 	case "feed":
 		return "Feed"
 	case "gpe":
@@ -28,9 +30,94 @@ func getEntityType(entityType string) string {
 	}
 }
 
+var nodeFeedTpl = `
+	MERGE (n:Feed {
+		feed_id: $feed_id,
+		name: $name, 
+		screen_name: $screen_name,
+		url: $url,
+		type: $type
+	})
+	ON CREATE SET n.uid = $uid
+	RETURN n.uid
+`
+
+func mergeNodeFeed(f *feed.Feed) neo4j.TransactionWork {
+	return func(tx neo4j.Transaction) (interface{}, error) {
+		result, err := tx.Run(nodeFeedTpl, map[string]interface{}{
+			"feed_id":     f.ID.Hex(),
+			"name":        f.Name,
+			"screen_name": f.ScreenName,
+			"url":         f.URL,
+			"type":        "feed",
+			"uid":         uuid.New().String(),
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if result.Next() {
+			return result.Record().Values[0], nil
+		}
+
+		return nil, fmt.Errorf("feed %s record didn't create: %s", f.ScreenName, result.Err().Error())
+	}
+}
+
+func MergeNodeFeed(ctx context.Context, neoClient *neo.Neo, f *feed.Feed) (string, error) {
+	session := neoClient.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer session.Close()
+	res, err := session.WriteTransaction(mergeNodeFeed(f))
+	if err != nil {
+		return "", err
+	}
+	return res.(string), nil
+}
+
 var nodeEntityTpl = `
-	MERGE (n: $entity {
-		label: $label
+	MERGE (n:Entity {
+		label: $label,
+		type: $type
+	})
+	ON CREATE SET n.uid = $uid
+	RETURN n.uid
+`
+var nodeOrganizationTpl = `
+	MERGE (n:Organization {
+		label: $label,
+		type: $type
+	})
+	ON CREATE SET n.uid = $uid
+	RETURN n.uid
+`
+var nodeGPETpl = `
+	MERGE (n:GPE {
+		label: $label,
+		type: $type
+	})
+	ON CREATE SET n.uid = $uid
+	RETURN n.uid
+`
+var nodePersonTpl = `
+	MERGE (n:Person {
+		label: $label,
+		type: $type
+	})
+	ON CREATE SET n.uid = $uid
+	RETURN n.uid
+`
+var nodeTopicTpl = `
+	MERGE (n:Topic {
+		label: $label,
+		type: $type
+	})
+	ON CREATE SET n.uid = $uid
+	RETURN n.uid
+`
+var nodeAuthorTpl = `
+	MERGE (n:Author {
+		label: $label,
 		type: $type
 	})
 	ON CREATE SET n.uid = $uid
@@ -39,11 +126,23 @@ var nodeEntityTpl = `
 
 func mergeNodeEntity(label string, entityType string) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
-		result, err := tx.Run(nodeEntityTpl, map[string]interface{}{
-			"entity": getEntityType(entityType),
-			"label":  label,
-			"type":   entityType,
-			"uid":    uuid.New().String(),
+		template := nodeEntityTpl
+		if getEntityType(entityType) == "Organization" {
+			template = nodeOrganizationTpl
+		} else if getEntityType(entityType) == "GPE" {
+			template = nodeGPETpl
+		} else if getEntityType(entityType) == "Person" {
+			template = nodePersonTpl
+		} else if getEntityType(entityType) == "Topic" {
+			template = nodeTopicTpl
+		} else if getEntityType(entityType) == "Author" {
+			template = nodeAuthorTpl
+		}
+
+		result, err := tx.Run(template, map[string]interface{}{
+			"label": label,
+			"type":  entityType,
+			"uid":   uuid.New().String(),
 		})
 
 		if err != nil {
@@ -71,12 +170,12 @@ func MergeNodeEntity(ctx context.Context, neoClient *neo.Neo, label string, enti
 var nodeArticleTpl = `
 	MERGE (n:Article {
 		uid: $uid, 
-		docId: $docId,
+		doc_id: $doc_id,
 		lang: $lang,
-		crawledAt: datetime($crawledAt),
+		crawled_at: datetime($crawled_at),
 		url: $url,
 		title: $title,
-		publishedAt: datetime($publishedAt),
+		published_at: datetime($published_at),
 		screen_name: $screen_name
 	})
 	ON CREATE SET n.uid = $uid
@@ -156,19 +255,19 @@ func CreateWritesForTxFunc(source string, dest string) neo4j.TransactionWork {
 
 var hasEntityTpl = `
 	MATCH (a:Article {uid: $source})
-	MATCH (b:$entity {uid: $dest})
+	MATCH (b:Entity {uid: $dest})
 	MERGE (a)-[:HAS_ENTITY]-(b)
 `
 
-func CreateHasEntityTxFunc(source string, dest string, entityType string) neo4j.TransactionWork {
+func CreateHasEntityTxFunc(source string, dest string) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
-		return tx.Run(hasEntityTpl, map[string]interface{}{"source": source, "dest": dest, "entity": getEntityType(entityType)})
+		return tx.Run(hasEntityTpl, map[string]interface{}{"source": source, "dest": dest})
 	}
 }
 
 var topicTpl = `
 	MATCH (a:Article {uid: $source})
-	MATCH (b:Entity {uid: $dest})
+	MATCH (b:Topic {uid: $dest})
 	MERGE (a)-[:IN_TOPIC]-(b)
 `
 
@@ -177,7 +276,7 @@ func CreateTopicTxFunc(source string, dest string) neo4j.TransactionWork {
 		return tx.Run(topicTpl, map[string]interface{}{"source": source, "dest": dest})
 	}
 }
-func MergeRel(ctx context.Context, neoClient *neo.Neo, source, dest, rel string, entityType string) error {
+func MergeRel(ctx context.Context, neoClient *neo.Neo, source, dest, rel string) error {
 	session := neoClient.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	defer session.Close()
 
@@ -191,7 +290,7 @@ func MergeRel(ctx context.Context, neoClient *neo.Neo, source, dest, rel string,
 	case "WRITES_FOR":
 		f = CreateWritesForTxFunc(source, dest)
 	case "HAS_ENTITY":
-		f = CreateHasEntityTxFunc(source, dest, entityType)
+		f = CreateHasEntityTxFunc(source, dest)
 	case "IN_TOPIC":
 		f = CreateTopicTxFunc(source, dest)
 	}

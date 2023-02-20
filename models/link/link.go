@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
 )
 
 func Validate(URL string) (*url.URL, error) {
@@ -65,14 +64,12 @@ func Parse(URL string) (string, error) {
 }
 
 type CatchedURL struct {
-	ID               string    `json:"docId"`
-	URL              string    `json:"url"`
-	TweetID          int64     `json:"tweet_id"`
-	TwitterUserID    int64     `json:"twitter_user_id"`
-	TwitterUserIDStr string    `json:"twitter_user_id_str"`
-	ScreenName       string    `json:"screen_name"`
-	CreatedAt        time.Time `json:"created_at"`
-	CreatedAtStr     string    `json:"created_at_str"`
-	Title            string    `json:"title"`
-	Hostname         string    `json:"hostname"`
+	ID               string `json:"docId"`
+	URL              string `json:"url"`
+	TweetID          int64  `json:"tweet_id"`
+	TwitterUserID    int64  `json:"twitter_user_id"`
+	TwitterUserIDStr string `json:"twitter_user_id_str"`
+	ScreenName       string `json:"screen_name"`
+	CreatedAt        string `json:"created_at"`
+	Title            string `json:"title"`
 }

@@ -22,8 +22,8 @@ message Content {
     repeated string tags = 7;
     repeated string categories = 8;
     
-    google.protobuf.Timestamp published_at = 9;
-    google.protobuf.Timestamp edited_at = 10;
+    string published_at = 9;
+    string edited_at = 10;
 };
 
 // Article
@@ -38,9 +38,10 @@ message Article {
     Content content = 7;
     mediawatch.enrich.v2.NLP nlp = 8;
     mediawatch.feeds.v2.Feed feed = 9;
-
-    google.protobuf.Timestamp crawled_at = 10;
+    
+    string crawled_at = 10;
     int64 rel_count = 11;
+    string screen_name = 12;
 };
 
 // ArticleRequest

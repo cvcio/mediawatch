@@ -306,8 +306,7 @@ func getTweets(s string, n int, id string, tweetChan chan link.CatchedURL) {
 					TwitterUserID:    t.User.Id,
 					TwitterUserIDStr: t.User.IdStr,
 					ScreenName:       t.User.ScreenName,
-					CreatedAt:        createdTime.UTC(),
-					CreatedAtStr:     t.CreatedAt,
+					CreatedAt:        createdTime.Format(time.RFC3339),
 				}
 			}
 		}

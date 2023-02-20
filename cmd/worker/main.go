@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,10 +21,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
-	"github.com/cvcio/mediawatch/models/deprecated/nodes"
 	"github.com/cvcio/mediawatch/models/link"
 	"github.com/cvcio/mediawatch/models/relationships"
 	"github.com/cvcio/mediawatch/pkg/config"
@@ -58,7 +56,7 @@ type WorkerGroup struct {
 	errChan     chan error
 
 	dbConn    *db.MongoDB
-	esClient  *es.ES
+	esClient  *es.Elastic
 	esIndex   string
 	neoClient *neo.Neo
 	scrape    scrape_pb.ScrapeServiceClient
@@ -114,15 +112,15 @@ func (worker *WorkerGroup) Consume() {
 
 		// check if article exists before processing it
 		// on nil error the article exists
-		if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
-			// process the article
-			err = worker.ProcessArticle(msg)
-			if err != nil {
-				worker.log.Debugf("[SVC-WORKER] ERRORED: %s - %s", msg.ScreenName, err.Error())
-				// send the error to channel
-				worker.errChan <- errors.Wrap(err, "failed process article")
-			}
+		// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
+		// process the article
+		err = worker.ProcessArticle(msg)
+		if err != nil {
+			worker.log.Debugf("[SVC-WORKER] ERRORED: %s - %s", msg.ScreenName, err.Error())
+			// send the error to channel
+			worker.errChan <- errors.Wrap(err, "failed process article")
 		}
+		// }
 		// mark message as read (commit)
 		worker.Commit(m)
 		timer.ObserveDuration()
@@ -150,7 +148,7 @@ func NewWorkerGroup(
 	kafkaClient *kafka.KafkaGoClient,
 	errChan chan error,
 	dbConn *db.MongoDB,
-	esClient *es.ES,
+	esClient *es.Elastic,
 	esIndex string,
 	neoClient *neo.Neo,
 	scrape scrape_pb.ScrapeServiceClient,
@@ -199,7 +197,7 @@ func main() {
 	// =========================================================================
 	// Start elasticsearch
 	log.Info("[SVC-WORKER] Initialize Elasticsearch")
-	esClient, err := es.NewElastic(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
+	esClient, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
 	if err != nil {
 		log.Fatalf("[SVC-WORKER] Register Elasticsearch: %v", err)
 	}
@@ -207,10 +205,7 @@ func main() {
 	log.Info("[SVC-WORKER] Connected to Elasticsearch")
 	log.Info("[SVC-WORKER] Check for elasticsearch indexes")
 
-	// now := time.Now()
-	// cfg.Elasticsearch.Index + now.Format("2006-01"),
-	// cfg.Elasticsearch.Index + now.AddDate(0, 1, 0).Format("2006-01")},
-	err = es.CreateElasticIndexArticles(esClient, []string{cfg.Elasticsearch.Index})
+	err = esClient.CreateElasticIndexWithLanguages(cfg.Elasticsearch.Index, cfg.Langs)
 	if err != nil {
 		log.Fatalf("[SVC-WORKER] Index in elasticsearch: %v", err)
 	}
@@ -355,14 +350,14 @@ func main() {
 // compare microservice and finally write to storage.
 func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// retrieve feed infoirmation (language, id, etc.)
-	feed, err := feed.ByID(context.Background(), worker.dbConn, in.TwitterUserIDStr)
+	feed, err := feed.ByScreenName(context.Background(), worker.dbConn, in.ScreenName)
 	if err != nil {
 		worker.log.Debugf("[SVC-WORKER] feed not found: %s", err.Error())
 		return errors.Wrap(err, "feed not found")
 	}
 
 	// create a new node into the neo4j database, if not exists
-	fUID, err := nodes.MergeNodeFeed(worker.ctx, worker.neoClient, feed)
+	fUID, err := relationships.MergeNodeFeed(worker.ctx, worker.neoClient, feed)
 	if err != nil {
 		// if there is an error during feed node creation return an error
 		// as will not be able to associate the article with a feed.
@@ -372,15 +367,15 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 
 	// create a new article document
 	a := new(articlesv2.Article)
+	a.Content = new(articlesv2.Content)
+	a.Nlp = new(enrich_pb.NLP)
+
 	a.DocId = in.ID
 	a.Url = in.URL
-	// a.TweetID = in.TweetID
-	// a.TweetIDStr = fmt.Sprintf("%d", in.TweetID)
-	// a.ScreenName = feed.ScreenName
+	a.ScreenName = feed.ScreenName
 	a.Hostname = feed.Hostname()
 	a.Lang = feed.Lang
-	a.CrawledAt = timestamppb.New(in.CreatedAt)
-	a.Content.Title = in.Title
+	a.CrawledAt = in.CreatedAt
 
 	// =========================================================================
 	timer := prometheus.NewTimer(grpcDuration.WithLabelValues("scraper"))
@@ -389,9 +384,8 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	scrapeReq := scrape_pb.ScrapeRequest{
 		Url:        in.URL,
 		Lang:       feed.Lang,
-		TweetId:    in.ID,
 		ScreenName: strings.ToLower(feed.ScreenName),
-		CrawledAt:  in.CreatedAtStr,
+		CrawledAt:  in.CreatedAt,
 	}
 
 	// scrape the article
@@ -409,15 +403,17 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	a.Content.Body = scrapeResp.Data.Content.Body
 	a.Content.Authors = scrapeResp.Data.Content.Authors
 	a.Content.Tags = scrapeResp.Data.Content.Tags
-	if a.Content.Title == "" {
+	if in.Title != "" {
+		a.Content.Title = in.Title
+	} else {
 		a.Content.Title = scrapeResp.Data.Content.Title
 	}
 	a.Content.Excerpt = scrapeResp.Data.Content.Description
 	a.Content.Image = scrapeResp.Data.Content.Image
 
 	// make sure to parse the datetime object
-	if publishedAt, err := time.Parse(time.RFC3339, scrapeResp.Data.Content.PublishedAt); err == nil {
-		a.Content.PublishedAt = timestamppb.New(publishedAt)
+	if _, err := time.Parse(time.RFC3339, scrapeResp.Data.Content.PublishedAt); err == nil {
+		a.Content.PublishedAt = scrapeResp.Data.Content.PublishedAt
 	} else {
 		// otherwise set published datetime to crawled time
 		a.Content.PublishedAt = a.CrawledAt
@@ -455,12 +451,12 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 
 	// =========================================================================
 	// Save the Document to Elasticsearch
-	_, err = worker.esClient.Client.Index().
-		Index(worker.esIndex).
-		Id(a.DocId).
-		BodyJson(a).
-		Do(context.Background())
-	if err != nil {
+	data, _ := json.Marshal(a)
+	if _, err := worker.esClient.Client.Index(
+		worker.esIndex+"_"+strings.ToLower(a.Lang),
+		bytes.NewReader(data),
+		worker.esClient.Client.Index.WithDocumentID(a.DocId),
+	); err != nil {
 		worker.log.Debugf("[SVC-WORKER] article indexing error: %s", err.Error())
 		return errors.Wrap(err, "index error")
 	}
@@ -470,27 +466,30 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// =========================================================================
 	// Create a new nodeAuthor if not exist for each Atuhor extracted
 	// by svc-scraper service and return the uid
-	var authors []*relationships.NodeAuthor
+	var entities []*relationships.NodeEntity
 	for _, author := range a.Content.Authors {
 		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, author, "author")
 		if err != nil {
 			worker.log.Debugf("[SVC-WORKER] merge author error: %s", err.Error())
 			continue
 		}
-		authors = append(authors, &relationships.NodeAuthor{
-			Uid: uid,
+		entities = append(entities, &relationships.NodeEntity{
+			Uid:   uid,
+			Type:  "author",
+			Label: author,
 		})
 	}
 
-	var topics []*relationships.NodeTopic
 	for _, topic := range a.Nlp.Topics {
 		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, topic.Text, "topic")
 		if err != nil {
 			worker.log.Debugf("[SVC-WORKER] merge topic error: %s", err.Error())
 			continue
 		}
-		topics = append(topics, &relationships.NodeTopic{
-			Uid: uid,
+		entities = append(entities, &relationships.NodeEntity{
+			Uid:   uid,
+			Type:  "topic",
+			Label: topic.Text,
 		})
 	}
 
@@ -499,10 +498,10 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	nArticle := &relationships.NodeArticle{}
 	nArticle.DocId = a.DocId
 	nArticle.Lang = a.Lang
-	nArticle.CrawledAt = a.CrawledAt.AsTime()
+	nArticle.CrawledAt = a.CrawledAt
 	nArticle.Url = a.Url
 	nArticle.Title = a.Content.Title
-	nArticle.PublishedAt = a.Content.PublishedAt.AsTime()
+	nArticle.PublishedAt = a.Content.PublishedAt
 	nArticle.ScreenName = a.Hostname
 
 	resNeo, err := relationships.CreateNodeArticle(worker.ctx, worker.neoClient, nArticle)
@@ -519,19 +518,18 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// Save relationships
 	// feed published at
 	if fUID != "" {
-		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, fUID, "PUBLISHED_AT", "feed")
+		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, fUID, "PUBLISHED_AT")
 	}
-	for _, author := range authors {
-		// author of
-		go relationships.MergeRel(worker.ctx, worker.neoClient, author.Uid, nArticle.DocId, "AUTHOR_OF", "author")
-		if fUID != "" {
-			// writes for
-			go relationships.MergeRel(worker.ctx, worker.neoClient, author.Uid, fUID, "WRITES_FOR", "author")
+	for _, entity := range entities {
+		if entity.Type == "author" {
+			go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, nArticle.DocId, "AUTHOR_OF")
+			if fUID != "" {
+				// writes for
+				go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, fUID, "WRITES_FOR")
+			}
+		} else if entity.Type == "topic" {
+			go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
 		}
-	}
-
-	for _, topic := range topics {
-		go relationships.MergeRel(worker.ctx, worker.neoClient, topic.Uid, nArticle.DocId, "IN_TOPIC", "topic")
 	}
 
 	// marshal node article

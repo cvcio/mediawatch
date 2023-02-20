@@ -134,6 +134,7 @@ type Config struct {
 	RSSStreamer struct {
 		Init bool `envconfig:"RSS_STREAMER_INIT" default:"true"`
 	}
+	Langs []string `envconfig:"LANGS" default:"el"`
 }
 
 func NewConfig() *Config {
