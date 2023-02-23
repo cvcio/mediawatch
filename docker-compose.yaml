@@ -11,7 +11,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock # So that Traefik can listen to the Docker events
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.1
     ports:
       - 9200:9200
       - 9300:9300
@@ -20,13 +20,14 @@ services:
      - bootstrap.memory_lock=true
      - ES_JAVA_OPTS=-Xms512m -Xmx512m
      - network.host=0.0.0.0
+     - xpack.security.enabled=false
     volumes:
       - data_elasticsearh:/usr/share/elasticsearch/data
     labels:
       - "traefik.frontend.rule=Host:elasticsearch.docker.localhost"
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.10.2
+    image: docker.elastic.co/kibana/kibana:8.6.1
     ports:
       - 5601:5601
     environment:
@@ -56,7 +57,7 @@ services:
       - "traefik.frontend.rule=Host:express.docker.localhost"
 
   neo4j:
-    image: neo4j:4.4.15
+    image: neo4j:5.5.0
     ports:
       - 7474:7474
       - 7473:7473
@@ -105,7 +106,7 @@ services:
       - data_zookeper:/var/lib/zookeeper
   
   kafka:
-    image: wurstmeister/kafka:2.12-2.5.0
+    image: wurstmeister/kafka:2.13-2.7.2
     environment:
       KAFKA_ADVERTISED_PORT: 9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
