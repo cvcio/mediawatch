@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/cvcio/mediawatch/pkg/es/indeces"
-	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v8"
 )
 
 // Elastic struct implements elasticsearch client.
@@ -48,10 +48,11 @@ func (es *Elastic) CreateIndex(name, template string) error {
 	if err != nil {
 		return err
 	}
+
 	if res.IsError() {
 		return fmt.Errorf("Cannot create index: %s", res)
 	}
-	res.Body.Close()
+	defer res.Body.Close()
 	return nil
 }
 
@@ -66,11 +67,8 @@ func (es *Elastic) CheckIfIndexExists(name string) bool {
 		return false
 	}
 
-	res.Body.Close()
-	if res.StatusCode != 200 {
-		return false
-	}
-	return true
+	defer res.Body.Close()
+	return res.StatusCode == 200
 }
 
 // CreateElasticIndexWithLanguages creates indexes for each language provided.
@@ -90,6 +88,7 @@ func (es *Elastic) CreateElasticIndexWithLanguages(prefix string, languages []st
 	return nil
 }
 
+// getIndex return the index mapping by language.
 func getIndex(language string) string {
 	switch strings.ToLower(language) {
 	case "bg":
