@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,16 +14,14 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/cvcio/go-plagiarism"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/olivere/elastic/v7"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"golang.org/x/sync/errgroup"
 
-	"github.com/cvcio/mediawatch/models/deprecated/article"
-	"github.com/cvcio/mediawatch/models/deprecated/nodes"
+	"github.com/cvcio/go-plagiarism"
+	articlesv2 "github.com/cvcio/mediawatch/internal/mediawatch/articles/v2"
+	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/models/relationships"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/es"
@@ -42,9 +39,11 @@ var (
 	}, []string{"service"})
 )
 
+const SIZE = 64
+
 // Compare Service
 type Compare struct {
-	es        *es.ES
+	es        *es.Elastic
 	index     string
 	log       *zap.SugaredLogger
 	cfg       *config.Config
@@ -55,7 +54,7 @@ type Compare struct {
 type CompareGroup struct {
 	ctx         context.Context
 	log         *zap.SugaredLogger
-	kafkaClient *kafka.KafkaGoClient
+	kafkaClient *kafka.KafkaClient
 	errChan     chan error
 	compare     *Compare
 }
@@ -94,10 +93,10 @@ func (worker *CompareGroup) Consume() {
 			continue
 		}
 
-		worker.log.Debugf("[SVC-COMPARE] COMPARE: %s (%s)", msg.DocId, msg.CrawledAt)
+		worker.log.Debugf("[SVC-COMPARE] FindAndCompare: %s (%s)", msg.DocId, msg.CrawledAt)
 
 		// test the article for similar
-		go worker.compare.FindAndCompare(msg.DocId)
+		go worker.compare.FindAndCompare(msg.DocId, msg.Lang)
 
 		// mark message as read (commit)
 		worker.Commit(m)
@@ -115,7 +114,7 @@ func (worker *CompareGroup) Commit(m kaf.Message) {
 // NewCompareGroup implements a new CompareGroup struct.
 func NewCompareGroup(
 	log *zap.SugaredLogger,
-	kafkaClient *kafka.KafkaGoClient,
+	kafkaClient *kafka.KafkaClient,
 	errChan chan error,
 	compare *Compare,
 ) *CompareGroup {
@@ -150,17 +149,12 @@ func main() {
 	// =========================================================================
 	// Start elasticsearch
 	log.Info("[SVC-COMPARE] Initialize Elasticsearch")
-	esClient, err := es.NewElastic(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
+	esClient, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
 	if err != nil {
 		log.Fatalf("[SVC-COMPARE] Register Elasticsearch: %v", err)
 	}
 
 	log.Info("[SVC-COMPARE] Connected to Elasticsearch")
-	log.Info("[SVC-COMPARE] Check for elasticsearch indexes")
-	err = es.CreateElasticIndexArticles(esClient, []string{cfg.Elasticsearch.Index})
-	if err != nil {
-		log.Fatalf("[SVC-COMPARE] Index in elasticsearch: %v", err)
-	}
 
 	// =========================================================================
 	// Start neo4j client
@@ -192,7 +186,7 @@ func main() {
 	kafkaChan := make(chan error, 1)
 
 	// create a reader/writer kafka connection
-	kafkaGoClient := kafka.NewGoClient(
+	kafkaGoClient := kafka.NewKafkaClient(
 		true, false,
 		[]string{cfg.Kafka.Broker},
 		cfg.Kafka.CompareTopic,
@@ -273,9 +267,10 @@ func main() {
 // keywords and tests (one-to-one) each article using the go-plagiarism
 // algorithm.
 // Read more about go-plagiarism -> https://github.com/cvcio/go-plagiarism
-func (c Compare) FindAndCompare(id string) error {
+func (c Compare) FindAndCompare(id string, lang string) error {
 	// retrive the source article we want to compare from elasticsearch
-	source, err := article.Get(context.Background(), c.es, id)
+	// source, err := article.Get(context.Background(), c.es, id)
+	source, err := article.GetById(context.Background(), c.es, c.index+"_"+strings.ToLower(lang), id)
 	if err != nil {
 		// in very rare occasions the document is missing
 		c.log.Debugf("[SVC-COMPARE] failed to get document: %s", err.Error())
@@ -285,31 +280,47 @@ func (c Compare) FindAndCompare(id string) error {
 	// in some occasions the article is too small or there was a problem while
 	// extracting the keywords from the article using enrich microservice,
 	// resulting to have only a few (<2) keywords.
-	if len(source.NLP.Keywords) < 2 {
+	if len(source.Nlp.Keywords) < 2 {
 		c.log.Debugf("[SVC-COMPARE] article (%s) too small or could't extract keywords", id)
 		return nil
 	}
 
-	now := source.CrawledAt
+	now, _ := time.Parse(time.RFC3339, source.CrawledAt)
 	// last 7 days
 	from := now.AddDate(0, 0, -7)
 
-	// create the elasticsearch query
-	query := elastic.NewBoolQuery()
-	queries := make([]elastic.Query, 0)
-	// query only within same language
-	queries = append(queries, elastic.NewQueryStringQuery(source.Lang).Field("lang"))
-	// query articles with similar keywords
-	queries = append(queries, elastic.NewQueryStringQuery(strings.Join(source.NLP.Keywords, " ")).Field("nlp.keywords"))
-	// set query window from-now
-	queries = append(queries, elastic.NewRangeQuery("content.publishedAt").Gte(from.Format(time.RFC3339)).Lte(now.Format(time.RFC3339)))
-	query = query.Must(queries...)
+	must := []map[string]interface{}{}
+	must = append(must, map[string]interface{}{
+		"match": map[string]interface{}{
+			"lang": lang,
+		},
+	})
+	filter := []map[string]interface{}{}
+	filter = append(filter, map[string]interface{}{
+		"range": map[string]interface{}{
+			"content.published_at": map[string]interface{}{
+				"gte": from.Format(time.RFC3339),
+				"lte": time.Now().Format(time.RFC3339),
+			},
+		},
+	})
+	filter = append(filter, map[string]interface{}{
+		"multi_match": map[string]interface{}{
+			"query":  strings.Join(source.Nlp.Keywords, " "),
+			"fields": []string{"nlp.keywords"},
+		},
+	})
 
-	// select the index to query
-	currentIndex := c.index
+	query := map[string]interface{}{
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"must":   must,
+				"filter": filter,
+			},
+		},
+	}
 
-	// count total potential similar articles
-	total, err := c.es.Client.Count(currentIndex).Query(query).Do(context.Background())
+	total, err := article.Count(context.Background(), c.es, c.index+"_"+strings.ToLower(lang), query)
 	if err != nil {
 		c.log.Errorf("[SVC-COMPARE] Error counting total potential similar %s", err.Error())
 		return errors.Wrap(err, "failed to get potential similar")
@@ -317,103 +328,216 @@ func (c Compare) FindAndCompare(id string) error {
 
 	if total == 0 {
 		// if there are no potential similar articles return
-		c.log.Debugf("[SVC-COMPARE] No similar articles found for DocId: %s", source.DocID)
+		c.log.Debugf("[SVC-COMPARE] No similar articles found for DocId: %s", source.DocId)
 		return nil
 	}
 
-	// set size of the scroller
-	SIZE := 64
+	articles, err := article.Search(context.Background(), c.es, c.index+"_"+strings.ToLower(lang), query, 2000)
+	if err != nil {
+		return err
+	}
 
-	hits := make(chan json.RawMessage)
-	g, ctx := errgroup.WithContext(context.Background())
-	g.Go(func() error {
-		defer close(hits)
-		// Scroller
-		scroll := c.es.Client.Scroll(currentIndex).Query(query).Size(SIZE)
-		// Itterate
-		for {
-			results, err := scroll.Do(context.Background())
-			if err == io.EOF {
-				return nil // all results retrieved
-			}
-			if err != nil {
-				c.log.Errorf("Scroll Error: %s", err.Error())
-				return err // something went wrong
-			}
-			// Send the hits to the hits channel
-			for _, hit := range results.Hits.Hits {
-				select {
-				case hits <- hit.Source:
-				case <-ctx.Done():
-					return ctx.Err()
+	for _, dest := range articles.Data {
+		// do not compare same documents
+		if source.DocId == dest.DocId {
+			continue
+		}
+		// do not compare same documents
+		if source.Url == dest.Url {
+			continue
+		}
+
+		start := time.Now()
+		// create the plagiarism detection interface
+		detector, _ := plagiarism.NewDetector(plagiarism.SetLang(strings.ToLower(source.Lang)), plagiarism.SetN(8))
+		// detect with extracted stopwords
+		if err := detector.DetectWithStopWords(source.Nlp.Stopwords, dest.Nlp.Stopwords); err == nil {
+			// save only if the score is higher than 0.25
+			if detector.Score >= 0.25 {
+				var a, b *articlesv2.Article
+				sourceTime, _ := time.Parse(time.RFC3339, source.Content.PublishedAt)
+				targetTime, _ := time.Parse(time.RFC3339, dest.Content.PublishedAt)
+
+				// set a,b as source and dest
+				a = source
+				b = dest
+
+				// swap direction if source time is after target time
+				if sourceTime.Sub(targetTime).Minutes() >= 0 {
+					a = dest
+					b = source
+
+					// multiple with -1
+					detector.Score = detector.Score * (-1)
 				}
+
+				c.log.Debugw(
+					"DetectWithStopWords",
+					"timeTaken", time.Since(start).Milliseconds(),
+					"score", detector.Score,
+					"similar", detector.Similar,
+					"total", detector.Total,
+					"stopwords", strings.Join(a.Nlp.Keywords, ", "),
+				)
+
+				// save relation to neo4j database
+				go relationships.CreateSimilar(context.Background(), c.neoClient, a.DocId, b.DocId, detector.Score)
 			}
 		}
-	})
+	}
 
-	for i := 0; i < SIZE; i++ {
+	// var buf bytes.Buffer
+	// if err := json.NewEncoder(&buf).Encode(query); err != nil {
+	// 	return err
+	// }
+
+	// res, err := c.es.Client.Search(
+	// 	c.es.Client.Search.WithIndex(c.index+"_"+strings.ToLower(lang)),
+	// 	c.es.Client.Search.WithContext(context.Background()),
+	// 	c.es.Client.Search.WithBody(&buf),
+	// 	c.es.Client.Search.WithSize(SIZE),
+	// 	c.es.Client.Search.WithScroll(time.Minute),
+	// )
+	// if err != nil {
+	// 	return err
+	// }
+
+	// var b bytes.Buffer
+	// b.ReadFrom(res.Body)
+	// first := b.String()
+
+	// // retrun on response error
+	// if res.IsError() {
+	// 	return errors.New(res.String())
+	// }
+
+	// res.Body.Close()
+
+	// c.log.Infoln(first)
+
+	/*
+		// create the elasticsearch query
+		query := elastic.NewBoolQuery()
+		queries := make([]elastic.Query, 0)
+		// query only within same language
+		queries = append(queries, elastic.NewQueryStringQuery(source.Lang).Field("lang"))
+		// query articles with similar keywords
+		queries = append(queries, elastic.NewQueryStringQuery(strings.Join(source.Nlp.Keywords, " ")).Field("nlp.keywords"))
+		// set query window from-now
+		queries = append(queries, elastic.NewRangeQuery("content.publishedAt").Gte(from.Format(time.RFC3339)).Lte(now.Format(time.RFC3339)))
+		query = query.Must(queries...)
+
+		// select the index to query
+		currentIndex := c.index
+
+		// count total potential similar articles
+		total, err := c.es.Client.Count(currentIndex).Query(query).Do(context.Background())
+		if err != nil {
+			c.log.Errorf("[SVC-COMPARE] Error counting total potential similar %s", err.Error())
+			return errors.Wrap(err, "failed to get potential similar")
+		}
+
+		if total == 0 {
+			// if there are no potential similar articles return
+			c.log.Debugf("[SVC-COMPARE] No similar articles found for DocId: %s", source.DocId)
+			return nil
+		}
+
+		// set size of the scroller
+		SIZE := 64
+
+		hits := make(chan json.RawMessage)
+		g, ctx := errgroup.WithContext(context.Background())
 		g.Go(func() error {
-			for hit := range hits {
-				var dest article.Document
-				err := json.Unmarshal(hit, &dest)
+			defer close(hits)
+			// Scroller
+			scroll := c.es.Client.Scroll(currentIndex).Query(query).Size(SIZE)
+			// Itterate
+			for {
+				results, err := scroll.Do(context.Background())
+				if err == io.EOF {
+					return nil // all results retrieved
+				}
 				if err != nil {
-					c.log.Errorf("Unmarshal Error: %s", err.Error())
-					continue
+					c.log.Errorf("Scroll Error: %s", err.Error())
+					return err // something went wrong
 				}
-
-				// do not compare same documents
-				if source.DocID == dest.DocID {
-					continue
-				}
-				// do not compare same documents
-				if source.URL == dest.URL {
-					continue
-				}
-
-				start := time.Now()
-				// create the plagiarism detection interface
-				detector, _ := plagiarism.NewDetector(plagiarism.SetLang(strings.ToLower(source.Lang)), plagiarism.SetN(8))
-				// detect with extracted stopwords
-				if err := detector.DetectWithStopWords(source.NLP.StopWords, dest.NLP.StopWords); err == nil {
-					// save only if the score is higher than 0.25
-					if detector.Score >= 0.25 {
-						var a, b article.Document
-						// set source and target article time to compare
-						sourceTime := source.Content.PublishedAt
-						targetTime := dest.Content.PublishedAt
-						// set a,b as source and dest
-						a = *source
-						b = dest
-						// swap direction if source time is after target time
-						if sourceTime.Sub(targetTime).Minutes() >= 0 {
-							a = dest
-							b = *source
-
-							// multiple with -1
-							detector.Score = detector.Score * (-1)
-						}
-
-						c.log.Debugw(
-							"DetectWithStopWords",
-							"timeTaken", time.Since(start),
-							"score", detector.Score,
-							"similar", detector.Similar,
-							"total", detector.Total,
-							"stopwords", strings.Join(a.NLP.Keywords, ", "),
-						)
-
-						// save relation to neo4j database
-						go nodes.CreateSimilar(context.Background(), c.neoClient, a, b, detector.Score)
+				// Send the hits to the hits channel
+				for _, hit := range results.Hits.Hits {
+					select {
+					case hits <- hit.Source:
+					case <-ctx.Done():
+						return ctx.Err()
 					}
 				}
 			}
-			return nil
 		})
-	}
 
-	// Check whether any goroutines failed.
-	if err := g.Wait(); err != nil {
-		c.log.Errorf("WaitGroup Error: %s", err.Error())
-	}
+		for i := 0; i < SIZE; i++ {
+			g.Go(func() error {
+				for hit := range hits {
+					var dest article.Document
+					err := json.Unmarshal(hit, &dest)
+					if err != nil {
+						c.log.Errorf("Unmarshal Error: %s", err.Error())
+						continue
+					}
+
+					// do not compare same documents
+					if source.DocID == dest.DocID {
+						continue
+					}
+					// do not compare same documents
+					if source.URL == dest.URL {
+						continue
+					}
+
+					start := time.Now()
+					// create the plagiarism detection interface
+					detector, _ := plagiarism.NewDetector(plagiarism.SetLang(strings.ToLower(source.Lang)), plagiarism.SetN(8))
+					// detect with extracted stopwords
+					if err := detector.DetectWithStopWords(source.NLP.StopWords, dest.NLP.StopWords); err == nil {
+						// save only if the score is higher than 0.25
+						if detector.Score >= 0.25 {
+							var a, b articlesv2.Article
+							// set source and target article time to compare
+							sourceTime := source.Content.PublishedAt
+							targetTime := dest.Content.PublishedAt
+							// set a,b as source and dest
+							a = *source
+							b = dest
+							// swap direction if source time is after target time
+							if sourceTime.Sub(targetTime).Minutes() >= 0 {
+								a = dest
+								b = *source
+
+								// multiple with -1
+								detector.Score = detector.Score * (-1)
+							}
+
+							c.log.Debugw(
+								"DetectWithStopWords",
+								"timeTaken", time.Since(start),
+								"score", detector.Score,
+								"similar", detector.Similar,
+								"total", detector.Total,
+								"stopwords", strings.Join(a.Nlp.Keywords, ", "),
+							)
+
+							// save relation to neo4j database
+							go relationships.CreateSimilar(context.Background(), c.neoClient, a.DocId, b.DocId, detector.Score)
+						}
+					}
+				}
+				return nil
+			})
+		}
+
+		// Check whether any goroutines failed.
+		if err := g.Wait(); err != nil {
+			c.log.Errorf("WaitGroup Error: %s", err.Error())
+		}
+
+	*/
 	return nil
 }

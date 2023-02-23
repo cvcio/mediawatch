@@ -52,7 +52,7 @@ var (
 type WorkerGroup struct {
 	ctx         context.Context
 	log         *zap.SugaredLogger
-	kafkaClient *kafka.KafkaGoClient
+	kafkaClient *kafka.KafkaClient
 	errChan     chan error
 
 	dbConn    *db.MongoDB
@@ -77,6 +77,7 @@ func (worker *WorkerGroup) Close() {
 func (worker *WorkerGroup) Consume() {
 	for {
 		timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("worker"))
+		//
 		// fetch the message from kafka topic
 		m, err := worker.kafkaClient.Consumer.FetchMessage(worker.ctx)
 		if err != nil {
@@ -114,13 +115,14 @@ func (worker *WorkerGroup) Consume() {
 		// on nil error the article exists
 		// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
 		// process the article
-		err = worker.ProcessArticle(msg)
-		if err != nil {
+		if err := worker.ProcessArticle(msg); err != nil {
 			worker.log.Debugf("[SVC-WORKER] ERRORED: %s - %s", msg.ScreenName, err.Error())
 			// send the error to channel
 			worker.errChan <- errors.Wrap(err, "failed process article")
+			continue
 		}
 		// }
+
 		// mark message as read (commit)
 		worker.Commit(m)
 		timer.ObserveDuration()
@@ -145,7 +147,7 @@ func (worker *WorkerGroup) Produce(msg kaf.Message) {
 // NewWorkerGroup implements a new WorkerGroup struct.
 func NewWorkerGroup(
 	log *zap.SugaredLogger,
-	kafkaClient *kafka.KafkaGoClient,
+	kafkaClient *kafka.KafkaClient,
 	errChan chan error,
 	dbConn *db.MongoDB,
 	esClient *es.Elastic,
@@ -251,7 +253,7 @@ func main() {
 	kafkaChan := make(chan error, 1)
 
 	// create a reader/writer kafka connection
-	kafkaGoClient := kafka.NewGoClient(
+	kafkaGoClient := kafka.NewKafkaClient(
 		true, true,
 		[]string{cfg.Kafka.Broker},
 		cfg.Kafka.WorkerTopic,
@@ -268,7 +270,7 @@ func main() {
 	)
 
 	// close connections on exit
-	defer worker.Close()
+	// defer worker.Close()
 
 	// run the worker
 	go func() {
@@ -320,6 +322,7 @@ func main() {
 		select {
 		case err := <-kafkaChan:
 			log.Errorf("[SVC-WORKER] error from kafka: %s", err.Error())
+			continue
 
 		case err := <-errSingals:
 			log.Errorf("[SVC-WORKER] Error: %s", err.Error())
@@ -451,16 +454,27 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 
 	// =========================================================================
 	// Save the Document to Elasticsearch
-	data, _ := json.Marshal(a)
-	if _, err := worker.esClient.Client.Index(
+	data, err := json.Marshal(a)
+	if err != nil {
+		worker.log.Debugf("[SVC-WORKER] json marshal error: %s", err.Error())
+		return errors.Wrap(err, "json marshal error")
+	}
+
+	index, err := worker.esClient.Client.Index(
 		worker.esIndex+"_"+strings.ToLower(a.Lang),
 		bytes.NewReader(data),
 		worker.esClient.Client.Index.WithDocumentID(a.DocId),
-	); err != nil {
+	)
+	if err != nil {
 		worker.log.Debugf("[SVC-WORKER] article indexing error: %s", err.Error())
 		return errors.Wrap(err, "index error")
 	}
 
+	// retrun on response error
+	if index.IsError() {
+		return errors.New(index.String())
+	}
+	index.Body.Close()
 	worker.log.Debugf("[SVC-WORKER] INDEXED: %s - %s", in.ScreenName, in.URL)
 
 	// =========================================================================
@@ -496,13 +510,15 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// =========================================================================
 	// Create a new nodeArticle
 	nArticle := &relationships.NodeArticle{}
+	nArticle.Uid = a.DocId
 	nArticle.DocId = a.DocId
 	nArticle.Lang = a.Lang
 	nArticle.CrawledAt = a.CrawledAt
 	nArticle.Url = a.Url
 	nArticle.Title = a.Content.Title
 	nArticle.PublishedAt = a.Content.PublishedAt
-	nArticle.ScreenName = a.Hostname
+	nArticle.ScreenName = feed.ScreenName
+	nArticle.Type = "article"
 
 	resNeo, err := relationships.CreateNodeArticle(worker.ctx, worker.neoClient, nArticle)
 	if err != nil {
@@ -543,7 +559,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// using the compare microservice.
 	go worker.Produce(kaf.Message{Value: []byte(b)})
 
-	worker.log.Debugf("[SVC-WORKER] SAVED:   %s - %s", in.ScreenName, resNeo)
+	worker.log.Debugf("[SVC-WORKER] SAVED: %s - %s", in.ScreenName, resNeo)
 
 	return nil
 }

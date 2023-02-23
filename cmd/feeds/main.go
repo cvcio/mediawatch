@@ -1030,7 +1030,7 @@ var FEEDS []string = []string{
 type ListenGroup struct {
 	ctx         context.Context
 	log         *zap.SugaredLogger
-	kafkaClient *kafka.KafkaGoClient
+	kafkaClient *kafka.KafkaClient
 	errChan     chan error
 }
 
@@ -1051,7 +1051,7 @@ func (worker *ListenGroup) Produce(msg kaf.Message) {
 // NewListenGroup implements a new ListenGroup struct.
 func NewListenGroup(
 	log *zap.SugaredLogger,
-	kafkaClient *kafka.KafkaGoClient,
+	kafkaClient *kafka.KafkaClient,
 	errChan chan error,
 ) *ListenGroup {
 	return &ListenGroup{
@@ -1108,7 +1108,7 @@ func main() {
 	kafkaChan := make(chan error, 1)
 
 	// create a reader/writer kafka connection
-	kafkaGoClient := kafka.NewGoClient(
+	kafkaGoClient := kafka.NewKafkaClient(
 		false, true,
 		[]string{cfg.Kafka.Broker},
 		"",
