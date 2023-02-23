@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -163,7 +164,7 @@ func main() {
 	targets := chunks(feeds.Data, cfg.Streamer.Chunks)
 
 	// run the tickers
-	go tick(log, worker, rdb, proxyClient, done, targets, cfg.Streamer.Init)
+	go tick(log, worker, rdb, proxyClient, done, targets, cfg.Streamer.Init, cfg.Streamer.Interval)
 
 	// ============================================================
 	// Set Channels
@@ -223,11 +224,12 @@ func main() {
 	}
 }
 
-func tick(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxyClient *http.Client, done chan bool, targets [][]*feed.Feed, init bool) {
+func tick(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxyClient *http.Client, done chan bool, targets [][]*feed.Feed, init bool, interval time.Duration) {
+	delay := interval / time.Duration(math.Ceil(float64(len(targets))/100))
 	for _, v := range targets {
-		ticker := NewTicker(log, worker, rdb, proxyClient, done, v, init)
+		ticker := NewTicker(log, worker, rdb, proxyClient, done, v, init, interval)
 		go ticker.Tick()
-		time.Sleep(time.Minute / 2)
+		time.Sleep(delay)
 	}
 }
 

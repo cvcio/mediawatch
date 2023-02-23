@@ -17,14 +17,15 @@ import (
 )
 
 type Ticker struct {
-	log     *zap.SugaredLogger
-	worker  *ListenGroup
-	rdb     *redis.RedisClient
-	proxy   *http.Client
-	ticker  time.Ticker
-	done    chan bool
-	targets []*feed.Feed
-	init    bool
+	log      *zap.SugaredLogger
+	worker   *ListenGroup
+	rdb      *redis.RedisClient
+	proxy    *http.Client
+	ticker   time.Ticker
+	done     chan bool
+	targets  []*feed.Feed
+	init     bool
+	interval time.Duration
 }
 
 type CacheLast struct {
@@ -34,16 +35,17 @@ type CacheLast struct {
 	LastArticleLink string    `json:"last_article_link"`
 }
 
-func NewTicker(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxy *http.Client, done chan bool, targets []*feed.Feed, init bool) *Ticker {
+func NewTicker(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxy *http.Client, done chan bool, targets []*feed.Feed, init bool, interval time.Duration) *Ticker {
 	return &Ticker{
-		log:     log,
-		worker:  worker,
-		rdb:     rdb,
-		proxy:   proxy,
-		ticker:  *time.NewTicker(time.Second * 600),
-		done:    done,
-		targets: targets,
-		init:    init,
+		log:      log,
+		worker:   worker,
+		rdb:      rdb,
+		proxy:    proxy,
+		ticker:   *time.NewTicker(interval),
+		done:     done,
+		targets:  targets,
+		init:     init,
+		interval: interval,
 	}
 }
 

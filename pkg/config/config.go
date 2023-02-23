@@ -132,12 +132,13 @@ type Config struct {
 		Key     string `envconfig:"STRIPE_KEY" default:""`
 	}
 	Streamer struct {
-		Init      bool   `envconfig:"STREAMER_INIT" default:"false"`
-		WithProxy bool   `envconfig:"STREAMER_WITH_PROXY" default:"false"`
-		Type      string `envconfig:"STREAMER_TYPE" default:"rss"`
-		Lang      string `envconfig:"STREAMER_LANG" default:"el"`
-		Size      int    `envconfig:"STREAMER_SIZE" default:"3000"`
-		Chunks    int    `envconfig:"STREAMER_CHUNKS" default:"100"`
+		Init      bool          `envconfig:"STREAMER_INIT" default:"false"`
+		WithProxy bool          `envconfig:"STREAMER_WITH_PROXY" default:"false"`
+		Type      string        `envconfig:"STREAMER_TYPE" default:"rss"`
+		Lang      string        `envconfig:"STREAMER_LANG" default:"el"`
+		Size      int           `envconfig:"STREAMER_SIZE" default:"3000"`
+		Chunks    int           `envconfig:"STREAMER_CHUNKS" default:"100"`
+		Interval  time.Duration `envconfig:"STREAMER_CHUNKS" default:"10m"`
 	}
 	Langs []string `envconfig:"LANGS" default:"el"`
 }
