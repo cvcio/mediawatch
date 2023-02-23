@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -117,9 +118,21 @@ func main() {
 
 	// ============================================================
 	// Get feeds list
-	feeds, err := feed.List(context.Background(), dbConn, feed.Status("active"), feed.Limit(1000))
+	feeds, err := feed.GetTargets(
+		context.Background(),
+		dbConn,
+		feed.Limit(cfg.Streamer.Size),
+		feed.Lang(strings.ToUpper(cfg.Streamer.Lang)),
+		feed.StreamType("twitter"),
+	)
 	if err != nil {
 		log.Fatalf("[SVC-LISTEN] error getting feeds list: %v", err)
+	}
+
+	log.Infof("[SVC-LISTEN] Loaded feeds: %d", len(feeds.Data))
+	if len(feeds.Data) == 0 {
+		log.Infof("[SVC-LISTEN] No feeds to listen, exiting.")
+		os.Exit(0)
 	}
 
 	// ============================================================
