@@ -3,7 +3,6 @@ package relationships
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/pkg/neo"
@@ -11,37 +10,7 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 )
 
-func getEntityType(entityType string) string {
-	switch strings.ToLower(entityType) {
-	case "feed":
-		return "Feed"
-	case "gpe":
-		return "GPE"
-	case "org":
-		return "Organization"
-	case "person":
-		return "Person"
-	case "author":
-		return "Author"
-	case "topic":
-		return "Topic"
-	default:
-		return "Article"
-	}
-}
-
-var nodeFeedTpl = `
-	MERGE (n:Feed {
-		feed_id: $feed_id,
-		name: $name, 
-		screen_name: $screen_name,
-		url: $url,
-		type: $type
-	})
-	ON CREATE SET n.uid = $uid
-	RETURN n.uid
-`
-
+// mergeNodeFeed transaction function.
 func mergeNodeFeed(f *feed.Feed) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		result, err := tx.Run(nodeFeedTpl, map[string]interface{}{
@@ -65,6 +34,7 @@ func mergeNodeFeed(f *feed.Feed) neo4j.TransactionWork {
 	}
 }
 
+// MergeNodeFeed upserts a feed in neo4j.
 func MergeNodeFeed(ctx context.Context, neoClient *neo.Neo, f *feed.Feed) (string, error) {
 	session := neoClient.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	defer session.Close()
@@ -75,55 +45,7 @@ func MergeNodeFeed(ctx context.Context, neoClient *neo.Neo, f *feed.Feed) (strin
 	return res.(string), nil
 }
 
-var nodeEntityTpl = `
-	MERGE (n:Entity {
-		label: $label,
-		type: $type
-	})
-	ON CREATE SET n.uid = $uid
-	RETURN n.uid
-`
-var nodeOrganizationTpl = `
-	MERGE (n:Organization {
-		label: $label,
-		type: $type
-	})
-	ON CREATE SET n.uid = $uid
-	RETURN n.uid
-`
-var nodeGPETpl = `
-	MERGE (n:GPE {
-		label: $label,
-		type: $type
-	})
-	ON CREATE SET n.uid = $uid
-	RETURN n.uid
-`
-var nodePersonTpl = `
-	MERGE (n:Person {
-		label: $label,
-		type: $type
-	})
-	ON CREATE SET n.uid = $uid
-	RETURN n.uid
-`
-var nodeTopicTpl = `
-	MERGE (n:Topic {
-		label: $label,
-		type: $type
-	})
-	ON CREATE SET n.uid = $uid
-	RETURN n.uid
-`
-var nodeAuthorTpl = `
-	MERGE (n:Author {
-		label: $label,
-		type: $type
-	})
-	ON CREATE SET n.uid = $uid
-	RETURN n.uid
-`
-
+// mergeNodeEntity transaction function.
 func mergeNodeEntity(label string, entityType string) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		template := nodeEntityTpl
@@ -157,6 +79,7 @@ func mergeNodeEntity(label string, entityType string) neo4j.TransactionWork {
 	}
 }
 
+// MergeNodeEntity upserts an entity in neo4j.
 func MergeNodeEntity(ctx context.Context, neoClient *neo.Neo, label string, entityType string) (string, error) {
 	session := neoClient.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	defer session.Close()
@@ -167,21 +90,7 @@ func MergeNodeEntity(ctx context.Context, neoClient *neo.Neo, label string, enti
 	return res.(string), nil
 }
 
-var nodeArticleTpl = `
-	MERGE (n:Article {
-		uid: $uid, 
-		doc_id: $doc_id,
-		lang: $lang,
-		crawled_at: datetime($crawled_at),
-		url: $url,
-		title: $title,
-		published_at: datetime($published_at),
-		screen_name: $screen_name
-	})
-	ON CREATE SET n.uid = $uid
-	RETURN n.uid
-`
-
+// createNodeArticle transaction function.
 func createNodeArticle(article *NodeArticle) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		result, err := tx.Run(nodeArticleTpl, map[string]interface{}{
@@ -207,6 +116,7 @@ func createNodeArticle(article *NodeArticle) neo4j.TransactionWork {
 	}
 }
 
+// CreateNodeArticle creates a new article node.
 func CreateNodeArticle(ctx context.Context, neoClient *neo.Neo, article *NodeArticle) (string, error) {
 	session := neoClient.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	defer session.Close()
@@ -217,65 +127,42 @@ func CreateNodeArticle(ctx context.Context, neoClient *neo.Neo, article *NodeArt
 	return res.(string), nil
 }
 
-var publishedAtTpl = `
-	MATCH (a:Article {uid: $source})
-	MATCH (b:Feed {uid: $dest})
-	MERGE (a)-[:PUBLISHED_AT]->(b)
-`
-
-func CreatePublishedAtTxFunc(source string, dest string) neo4j.TransactionWork {
+// createPublishedAt published_at transaction function.
+func createPublishedAt(source string, dest string) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		return tx.Run(publishedAtTpl, map[string]interface{}{"source": source, "dest": dest})
 	}
 }
 
-var authorOfTpl = `
-	MATCH (a:Author {uid: $source})
-	MATCH (b:Article {uid: $dest})
-	MERGE (a)-[:AUTHOR_OF]->(b)
-`
-
-func CreateAuthorOfTxFunc(source string, dest string) neo4j.TransactionWork {
+// createAuthorOf author_of transaction function.
+func createAuthorOf(source string, dest string) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		return tx.Run(authorOfTpl, map[string]interface{}{"source": source, "dest": dest})
 	}
 }
 
-var writesForTpl = `
-	MATCH (a:Author {uid: $source})
-	MATCH (b:Feed {uid: $dest})
-	MERGE (a)-[:WRITES_FOR]->(b)
-`
-
-func CreateWritesForTxFunc(source string, dest string) neo4j.TransactionWork {
+// createWritesFor writes_for transaction function.
+func createWritesFor(source string, dest string) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		return tx.Run(writesForTpl, map[string]interface{}{"source": source, "dest": dest})
 	}
 }
 
-var hasEntityTpl = `
-	MATCH (a:Article {uid: $source})
-	MATCH (b:Entity {uid: $dest})
-	MERGE (a)-[:HAS_ENTITY]-(b)
-`
-
-func CreateHasEntityTxFunc(source string, dest string) neo4j.TransactionWork {
+// createHasEntity has_entity transaction function.
+func createHasEntity(source string, dest string) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		return tx.Run(hasEntityTpl, map[string]interface{}{"source": source, "dest": dest})
 	}
 }
 
-var topicTpl = `
-	MATCH (a:Article {uid: $source})
-	MATCH (b:Topic {uid: $dest})
-	MERGE (a)-[:IN_TOPIC]-(b)
-`
-
-func CreateTopicTxFunc(source string, dest string) neo4j.TransactionWork {
+// createTopic in_topic transaction function.
+func createTopic(source string, dest string) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		return tx.Run(topicTpl, map[string]interface{}{"source": source, "dest": dest})
 	}
 }
+
+// MergeRel upserts a relationship between nodes.
 func MergeRel(ctx context.Context, neoClient *neo.Neo, source, dest, rel string) error {
 	session := neoClient.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	defer session.Close()
@@ -284,19 +171,36 @@ func MergeRel(ctx context.Context, neoClient *neo.Neo, source, dest, rel string)
 
 	switch rel {
 	case "PUBLISHED_AT":
-		f = CreatePublishedAtTxFunc(source, dest)
+		f = createPublishedAt(source, dest)
 	case "AUTHOR_OF":
-		f = CreateAuthorOfTxFunc(source, dest)
+		f = createAuthorOf(source, dest)
 	case "WRITES_FOR":
-		f = CreateWritesForTxFunc(source, dest)
+		f = createWritesFor(source, dest)
 	case "HAS_ENTITY":
-		f = CreateHasEntityTxFunc(source, dest)
+		f = createHasEntity(source, dest)
 	case "IN_TOPIC":
-		f = CreateTopicTxFunc(source, dest)
+		f = createTopic(source, dest)
 	}
 
 	if _, err := session.WriteTransaction(f); err != nil {
 		return err
 	}
 	return nil
+}
+
+// CreateSimilar creates a neo4j relationship between source and target articles.
+func CreateSimilar(ctx context.Context, neoClient *neo.Neo, source, dest string, score float64) error {
+	session := neoClient.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	defer session.Close()
+	if _, err := session.WriteTransaction(createSimilar(source, dest, score)); err != nil {
+		return err
+	}
+	return nil
+}
+
+// createSimilar similar_with transaction function.
+func createSimilar(source string, dest string, score float64) neo4j.TransactionWork {
+	return func(tx neo4j.Transaction) (interface{}, error) {
+		return tx.Run(similarTxFunc, map[string]interface{}{"source": source, "dest": dest, "score": score})
+	}
 }
