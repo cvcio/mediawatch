@@ -1,7 +1,6 @@
 package twitter
 
 import (
-	"log"
 	"net/url"
 
 	"github.com/ChimeraCoder/anaconda"
@@ -24,20 +23,15 @@ type StreamDemux struct {
 }
 
 // NewAPI creates a new anaconda instance.
-// Anaconda is a Twitter API Drivers (github.com/ChimeraCoder/anaconda).
 func NewAPI(consumerkey string, consumersecret string, accesstoken string, accesstokensecret string) (*anaconda.TwitterApi, error) {
-	// anaconda.SetConsumerKey(consumerkey)
-	// anaconda.SetConsumerSecret(consumersecret)
 	api := anaconda.NewTwitterApiWithCredentials(
 		accesstoken,
 		accesstokensecret,
 		consumerkey,
 		consumersecret,
 	)
-	// log.Print(api.Credentials)
 	if _, err := api.VerifyCredentials(); err != nil {
 		return nil, err
-		// log.Fatalf("[SVC-LISTEN] Bad Authorization Tokens. Please refer to https://apps.twitter.com/ for your Access Tokens: %s", err)
 	}
 	return api, nil
 }
@@ -97,10 +91,6 @@ func NewListener(tw *anaconda.TwitterApi, log *zap.SugaredLogger, opts ...Listen
 	return s, nil
 }
 
-//type Tweet struct {
-//anaconda.Tweet
-//}
-
 type ListenOpts func(*Listen) error
 
 func WithPublicStream(values map[string][]string) ListenOpts {
@@ -109,10 +99,6 @@ func WithPublicStream(values map[string][]string) ListenOpts {
 		s.stream = s.TwitterAPI.PublicStreamFilter(v)
 		return nil
 	}
-	//anaconda.Stream {
-	//return s.TwitterAPI.PublicStreamFilter(url.Values{values})
-	//"follow": ids,
-	//})
 }
 
 // Listen start the listener and send cathed urls to chan
@@ -148,13 +134,10 @@ func GetUsersLookup(twtt *anaconda.TwitterApi, users []string) ([]string, error)
 	for _, uu := range users {
 		twitterAccount, err := twtt.GetUsersShow(uu, url.Values{})
 		if err != nil {
-			log.Println(err)
 			continue
 		}
 		ids = append(ids, twitterAccount.IdStr)
 	}
-	// u, err :=
-	// ids := make([]string, 0)
 
 	return ids, nil
 }
