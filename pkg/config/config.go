@@ -131,8 +131,13 @@ type Config struct {
 		Enabled bool   `envconfig:"STRIPE_ENABLED" default:"true"`
 		Key     string `envconfig:"STRIPE_KEY" default:""`
 	}
-	RSSStreamer struct {
-		Init bool `envconfig:"RSS_STREAMER_INIT" default:"true"`
+	Streamer struct {
+		Init      bool   `envconfig:"STREAMER_INIT" default:"false"`
+		WithProxy bool   `envconfig:"STREAMER_WITH_PROXY" default:"false"`
+		Type      string `envconfig:"STREAMER_TYPE" default:"rss"`
+		Lang      string `envconfig:"STREAMER_LANG" default:"el"`
+		Size      int    `envconfig:"STREAMER_SIZE" default:"3000"`
+		Chunks    int    `envconfig:"STREAMER_CHUNKS" default:"100"`
 	}
 	Langs []string `envconfig:"LANGS" default:"el"`
 }
