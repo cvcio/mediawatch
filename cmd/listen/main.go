@@ -221,13 +221,7 @@ func main() {
 		select {
 		// Got Url from twitter
 		case u := <-tweetChan:
-			log.Infow(
-				"catched",
-				"tweetID", u.TweetID,
-				"user", u.ScreenName,
-				"timeCreated", u.CreatedAt,
-				"url", u.URL,
-			)
+			log.Infof("[SVC-LISTEN] New tweet from: %.16s %s", u.ScreenName, u.URL)
 
 			urlTweet, err := json.Marshal(&u)
 			if err != nil {
@@ -276,7 +270,6 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 		// Remove Twitter Share ID (i.e. /#.WpAW30E8tRc.twitter)
 		l, err := link.Parse(u.ExpandedURL)
 		if err != nil {
-			log.Error(err)
 			continue
 		}
 
