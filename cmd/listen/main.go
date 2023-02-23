@@ -302,20 +302,6 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 	}
 }
 
-// getIds list to listen.
-func getIds(feeds []*feed.Feed) []string {
-	twitterIDs := make([]string, 0)
-	for _, f := range feeds {
-		if f.TwitterIDStr != "" {
-			twitterIDs = append(twitterIDs, f.TwitterIDStr)
-		} else {
-			twitterIDs = append(twitterIDs,
-				strconv.FormatInt(f.TwitterID, 10))
-		}
-	}
-	return twitterIDs
-}
-
 // getUsernames list to listen.
 func getUsernames(feeds []*feed.Feed) []string {
 	twitterUsernames := make([]string, 0)
