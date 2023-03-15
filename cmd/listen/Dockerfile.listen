@@ -1,4 +1,4 @@
-FROM golang:1.16.13-alpine3.15
+FROM golang:1.18-alpine3.15
 ARG version
 
 # Install certificates and git
