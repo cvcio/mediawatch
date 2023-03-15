@@ -206,11 +206,25 @@ func main() {
 
 	log.Info("[SVC-WORKER] Connected to Elasticsearch")
 	log.Info("[SVC-WORKER] Check for elasticsearch indexes")
-
 	err = esClient.CreateElasticIndexWithLanguages(cfg.Elasticsearch.Index, cfg.Langs)
 	if err != nil {
 		log.Fatalf("[SVC-WORKER] Index in elasticsearch: %v", err)
 	}
+
+	// opts := article.NewOpts()
+	// opts.Keywords = "ΗΜΕΡΙΔΑ, ΣΥΝΤΑΚΤΩΝ, ΕΝΩΣΕΩΝ, ΕΚΠΡΟΣΩΠΟΙ, ΕΝΗΜΕΡΩΣΗΣ, ΠΕΡΙΦΕΡΕΙΑΚΑ"
+	// opts.Limit = 10
+	// opts.Scroll = true
+	// opts.Range.From = "now-2y"
+	// opts.Range.To = "now"
+
+	// data, err := article.Search(context.Background(), esClient, opts)
+	// if err != nil {
+	// 	log.Error(err)
+	// 	log.Fatalf("[SVC-WORKER] SCROLL: %v", err)
+	// }
+	// log.Infoln(len(data.Data), data.Pagination)
+	// log.Infoln(data)
 
 	// =========================================================================
 	// Start neo4j client

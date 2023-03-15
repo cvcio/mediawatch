@@ -76,17 +76,18 @@ func main() {
 	// =========================================================================
 	// Start elasticsearch
 	log.Info("main: Initialize Elasticsearch")
-	esClient, err := es.NewElastic(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
+	esClient, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
 	if err != nil {
-		log.Fatalf("main: Register Elasticsearch: %v", err)
+		log.Fatalf("[SVC-COMPARE] Register Elasticsearch: %v", err)
 	}
 
 	log.Info("main: Connected to Elasticsearch")
 	log.Info("main: Check for elasticsearch indexes")
-	err = es.CreateElasticIndexArticles(esClient, []string{cfg.Elasticsearch.Index})
+	err = esClient.CreateElasticIndexWithLanguages(cfg.Elasticsearch.Index, cfg.Langs)
 	if err != nil {
-		log.Fatalf("main: Index in elasticsearch: %v", err)
+		log.Fatalf("[SVC-WORKER] Index in elasticsearch: %v", err)
 	}
+
 	// =========================================================================
 	// Start neo4j client
 	log.Info("main: Initialize Neo4J")

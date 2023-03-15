@@ -3,58 +3,193 @@ package article
 import (
 	"encoding/json"
 	"strings"
+	"time"
 
-	articlesv2 "github.com/cvcio/mediawatch/internal/mediawatch/articles/v2"
-	commonv2 "github.com/cvcio/mediawatch/internal/mediawatch/common/v2"
+	"github.com/elastic/go-elasticsearch/v8/esapi"
 )
 
 type Opts struct {
-	Index string
-	Sort  struct {
-		By  string
-		Asc bool
-	}
-	From int
-	Size int
+	Index string `json:"index,omitempty"`
+	DocId string `json:"doc_id,omitempty"`
 
-	DocId string
+	Q         string `json:"q,omitempty"`
+	Title     string `json:"title,omitempty"`
+	Body      string `json:"body,omitempty"`
+	Tags      string `json:"tags,omitempty"`
+	Keywords  string `json:"keywords,omitempty"`
+	Topics    string `json:"topics,omitempty"`
+	Entities  string `json:"entities,omitempty"`
+	Authors   string `json:"authors,omitempty"`
+	Lang      string `json:"lang,omitempty"`
+	Feeds     string `json:"feeds,omitempty"`
+	Hostnames string `json:"hostnames,omitempty"`
 
-	Q        string
-	Title    string
-	Body     string
-	Tags     string
-	Topics   string
-	Authors  string
-	Langs    string
-	Feeds    string
-	Keywords string
+	CountCases  bool `json:"count_cases,omitempty"`
+	IncludeRels bool `json:"include_rels,omitempty"`
+
+	Skip   int  `json:"skip,omitempty"`
+	Limit  int  `json:"limit,omitempty"`
+	Scroll bool `json:"scrill,omitempty"`
+
+	Sort struct {
+		By  string `json:"by,omitempty"`
+		Asc bool   `json:"asc,omitempty"`
+	} `json:"sort,omitempty"`
 
 	Range struct {
-		By   string
-		From string
-		To   string
-	}
+		By   string `json:"by,omitempty"`
+		From string `json:"from,omitempty"`
+		To   string `json:"to,omitempty"`
+	} `json:"range,omitempty"`
 }
 
 func NewOpts() *Opts {
 	opts := new(Opts)
-	opts.From = 0
-	opts.Size = 48
-	opts.Langs = "EL"
+	opts.Skip = 0
+	opts.Limit = 48
 	opts.Range.From = "now-7d"
 	opts.Range.To = "now"
-	opts.Range.By = "content.publishedAt"
-	opts.Sort.By = "content.publishedAt"
+	opts.Range.By = "content.published_at"
+	opts.Sort.By = "content.published_at"
 	opts.Sort.Asc = false
-	opts.Index = "mediawatch_articles"
+	opts.Index = "mediawatch_articles_*"
+	opts.Scroll = false
 	return opts
 }
 
-func (opts *Opts) Query() *strings.Reader {
-	var b strings.Builder
-	b.WriteString("")
-	query := strings.NewReader(b.String())
-	return query
+func NewOptsForm(urlQuery func(string) string) *Opts {
+	opts := NewOpts()
+	return opts
+}
+
+func (o *Opts) Query() map[string]interface{} {
+	filter := []map[string]interface{}{}
+	must := []map[string]interface{}{}
+
+	if o.Q != "" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query": o.Q,
+			},
+		})
+	}
+	if o.Title != "" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query":  o.Title,
+				"fields": []string{"content.title"},
+			},
+		})
+	}
+	if o.Body != "" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query":  o.Body,
+				"fields": []string{"content.body"},
+			},
+		})
+	}
+	if o.Tags != "" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query":  o.Tags,
+				"fields": []string{"content.tags"},
+			},
+		})
+	}
+	if o.Keywords != "" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query":  o.Keywords,
+				"fields": []string{"nlp.keywords"},
+			},
+		})
+	}
+	if o.Topics != "" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query":  o.Topics,
+				"fields": []string{"nlp.topics.text"},
+			},
+		})
+	}
+	if o.Entities != "" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query":  o.Entities,
+				"fields": []string{"nlp.entities.text"},
+			},
+		})
+	}
+	if o.Authors != "" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query":  o.Authors,
+				"fields": []string{"content.authors"},
+			},
+		})
+	}
+	if o.Lang != "" {
+		must = append(must, map[string]interface{}{
+			"match": map[string]interface{}{
+				"lang": o.Lang,
+			},
+		})
+	}
+	if o.Feeds != "" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query":  o.Feeds,
+				"fields": []string{"screen_name"},
+			},
+		})
+	}
+	if o.Hostnames != "" {
+		must = append(must, map[string]interface{}{
+			"query_string": map[string]interface{}{
+				"query":  o.Hostnames,
+				"fields": []string{"hostname"},
+			},
+		})
+	}
+
+	if o.Range.From != "" && o.Range.To != "" {
+		filter = append(filter, map[string]interface{}{
+			"range": map[string]interface{}{
+				o.Range.By: map[string]interface{}{
+					"gte": o.Range.From,
+					"lte": o.Range.To,
+				},
+			},
+		})
+	} else {
+		if o.Range.From != "" {
+			filter = append(filter, map[string]interface{}{
+				"range": map[string]interface{}{
+					o.Range.By: map[string]interface{}{
+						"gte": o.Range.From,
+					},
+				},
+			})
+		}
+		if o.Range.To != "" {
+			filter = append(filter, map[string]interface{}{
+				"range": map[string]interface{}{
+					o.Range.By: map[string]interface{}{
+						"lte": o.Range.To,
+					},
+				},
+			})
+		}
+	}
+	return map[string]interface{}{
+		"query": map[string]interface{}{
+			"bool": map[string]interface{}{
+				"filter": filter,
+				"must":   must,
+			},
+		},
+	}
 }
 
 func Index(i string) func(*Opts) {
@@ -82,15 +217,15 @@ func sortAsc(i bool) func(*Opts) {
 	}
 }
 
-func From(i int) func(*Opts) {
+func Skip(i int) func(*Opts) {
 	return func(s *Opts) {
-		s.From = i
+		s.Skip = i
 	}
 }
 
-func Size(i int) func(*Opts) {
+func Limit(i int) func(*Opts) {
 	return func(s *Opts) {
-		s.Size = i
+		s.Limit = i
 	}
 }
 
@@ -130,21 +265,33 @@ func Topics(f string) func(*Opts) {
 	}
 }
 
+func Entities(f string) func(*Opts) {
+	return func(s *Opts) {
+		s.Entities = f
+	}
+}
+
 func Authors(f string) func(*Opts) {
 	return func(s *Opts) {
 		s.Authors = f
 	}
 }
 
-func Langs(f string) func(*Opts) {
+func Lang(f string) func(*Opts) {
 	return func(s *Opts) {
-		s.Langs = f
+		s.Lang = f
 	}
 }
 
 func Feeds(f string) func(*Opts) {
 	return func(s *Opts) {
 		s.Feeds = f
+	}
+}
+
+func Hostnames(f string) func(*Opts) {
+	return func(s *Opts) {
+		s.Hostnames = f
 	}
 }
 
@@ -180,38 +327,27 @@ func RangeTo(i string) func(*Opts) {
 	}
 }
 
-func ParseDocument(source map[string]interface{}) (*articlesv2.Article, error) {
-	doc := source["_source"].(map[string]interface{})
-	jsonString, err := json.Marshal(doc)
-	if err != nil {
-		return nil, err
+func (o *Opts) NewArticlesSearchQuery(es esapi.Search) []func(*esapi.SearchRequest) {
+	buf, _ := json.Marshal(o.Query())
+
+	opts := make([]func(*esapi.SearchRequest), 0)
+	opts = append(opts, esapi.Search.WithBody(es, strings.NewReader(string(buf))))
+	opts = append(opts, esapi.Search.WithIndex(es, o.Index))
+	opts = append(opts, esapi.Search.WithFrom(es, o.Skip))
+	opts = append(opts, esapi.Search.WithSize(es, o.Limit))
+	opts = append(opts, esapi.Search.WithTimeout(es, time.Second*30))
+	opts = append(opts, esapi.Search.WithTrackTotalHits(es, true))
+	if o.Scroll {
+		opts = append(opts, esapi.Search.WithScroll(es, time.Minute))
 	}
-	var data *articlesv2.Article
-	json.Unmarshal([]byte(jsonString), &data)
-	return data, nil
+	return opts
 }
 
-func ParseCount(source map[string]interface{}) (float64, error) {
-	count := source["count"].(float64)
-	return count, nil
-}
+func (o *Opts) NewArticlesCountQuery(es esapi.Count) []func(*esapi.CountRequest) {
+	buf, _ := json.Marshal(o.Query())
 
-func ParseDocuments(source map[string]interface{}) (*articlesv2.ArticlesResponse, error) {
-	var data articlesv2.ArticlesResponse
-	var docs []*articlesv2.Article
-
-	for _, hit := range source["hits"].(map[string]interface{})["hits"].([]interface{}) {
-		doc, err := ParseDocument(hit.(map[string]interface{}))
-		if err != nil {
-			continue
-		}
-		docs = append(docs, doc)
-	}
-
-	data.Data = docs
-	data.Pagination = &commonv2.Pagination{
-		Total: int64(source["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(float64)),
-	}
-
-	return &data, nil
+	opts := make([]func(*esapi.CountRequest), 0)
+	opts = append(opts, esapi.Count.WithBody(es, strings.NewReader(string(buf))))
+	opts = append(opts, esapi.Count.WithIndex(es, o.Index))
+	return opts
 }

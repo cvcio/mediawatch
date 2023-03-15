@@ -6,6 +6,7 @@ import (
 	"github.com/bufbuild/connect-go"
 	articlesv2 "github.com/cvcio/mediawatch/internal/mediawatch/articles/v2"
 	"github.com/cvcio/mediawatch/internal/mediawatch/articles/v2/articlesv2connect"
+	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
@@ -29,8 +30,13 @@ func NewArticlesHandler(cfg *config.Config, log *zap.SugaredLogger, mg *db.Mongo
 }
 
 // GetArticle return a single article.
-func (h *ArticlesHandler) GetArticle(ctx context.Context, req *connect.Request[articlesv2.ArticleRequest]) (*connect.Response[articlesv2.ArticleResponse], error) {
-	return connect.NewResponse(&articlesv2.ArticleResponse{}), nil
+func (h *ArticlesHandler) GetArticle(ctx context.Context, req *connect.Request[articlesv2.ArticleRequest]) (*connect.Response[articlesv2.Article], error) {
+	data, err := article.GetById(ctx, h.elastic, "mediawatch_articles_el", req.Msg.DocId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	data.Nlp.Stopwords = nil
+	return connect.NewResponse(data), nil
 }
 
 // GetArticles returns a list of aricles.

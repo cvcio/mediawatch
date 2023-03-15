@@ -68,7 +68,7 @@ type Config struct {
 		Host  string `envconfig:"ES_HOST" default:"http://localhost:9200"`
 		User  string `envconfig:"ES_USER" default:""`
 		Pass  string `envconfig:"ES_PASS" default:""`
-		Index string `envconfig:"ES_INDEX" default:"mediawatch_articles"`
+		Index string `envconfig:"ES_INDEX" default:"mediawatch_articles*"`
 	}
 	Neo struct {
 		URL  string `envconfig:"NEO_URL" default:"http://neo4j:neo4j@localhost:7474/db/data/"`

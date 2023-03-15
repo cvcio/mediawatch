@@ -52,22 +52,30 @@ message ArticleRequest {
 
 // ArticlesRequest
 message ArticlesRequest {
-    string doc_id = 1;
-    mediawatch.common.v2.SortBy sort = 2;
-    mediawatch.common.v2.RangeBy range = 3;
-    string index = 4;
-    bool cases = 5;
-    string q = 6;
-    string title = 7;
-    string body = 8;
-    string tags = 9;
+    string index = 1;
+    string doc_id = 2;
+
+    string q = 3;
+    string title = 4;
+    string body = 5;
+    string tags = 6;
+    string keywords = 7;
+    string topics = 8;
+    string entities = 9;
     string authors = 10;
     string lang = 11;
     string feeds = 12;
-    string keywords = 13;
-    int32 skip = 14;
-    int32 limit = 15;
-    bool include_rels = 16;
+    string hostnames = 13;
+    
+    bool count_cases = 14;
+    bool include_rels = 15;
+
+    int32 skip = 16;
+    int32 limit = 17;
+    bool scroll = 18;
+
+    mediawatch.common.v2.SortBy sort = 19;
+    mediawatch.common.v2.RangeBy range = 20;
 };
 
 // ArticleResponse
@@ -84,7 +92,7 @@ message ArticlesResponse {
 // ArticlesService
 service ArticlesService {
     // GetArticle
-    rpc GetArticle(ArticleRequest) returns (ArticleResponse) {};
+    rpc GetArticle(ArticleRequest) returns (Article) {};
 
     // GetArticles
     rpc GetArticles(ArticlesRequest) returns (ArticlesResponse) {};

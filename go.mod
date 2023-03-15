@@ -3,7 +3,7 @@ module github.com/cvcio/mediawatch
 require (
 	github.com/ChimeraCoder/anaconda v2.0.0+incompatible
 	github.com/amsokol/mongo-go-driver-protobuf v1.0.0-rc5
-	github.com/bufbuild/connect-go v1.2.0
+	github.com/bufbuild/connect-go v1.5.1
 	github.com/cvcio/go-plagiarism v0.2.2
 	github.com/cvcio/twitter v0.0.0-20221128174909-51ad0afadbb3
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -88,6 +88,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.3.0 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/xdg/scram v1.0.5 // indirect
 	github.com/xdg/stringprep v1.0.3 // indirect
 	go.uber.org/atomic v1.7.0 // indirect

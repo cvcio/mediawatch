@@ -289,38 +289,14 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 	// last 7 days
 	from := now.AddDate(0, 0, -7)
 
-	must := []map[string]interface{}{}
-	must = append(must, map[string]interface{}{
-		"match": map[string]interface{}{
-			"lang": lang,
-		},
-	})
-	filter := []map[string]interface{}{}
-	filter = append(filter, map[string]interface{}{
-		"range": map[string]interface{}{
-			"content.published_at": map[string]interface{}{
-				"gte": from.Format(time.RFC3339),
-				"lte": time.Now().Format(time.RFC3339),
-			},
-		},
-	})
-	filter = append(filter, map[string]interface{}{
-		"multi_match": map[string]interface{}{
-			"query":  strings.Join(source.Nlp.Keywords, " "),
-			"fields": []string{"nlp.keywords"},
-		},
-	})
+	opts := article.NewOpts()
+	opts.Index = c.index + "_" + strings.ToLower(lang)
+	opts.Lang = lang
+	opts.Range.From = from.Format(time.RFC3339)
+	opts.Range.To = time.Now().Format(time.RFC3339)
+	opts.Keywords = strings.Join(source.Nlp.Keywords, " ")
 
-	query := map[string]interface{}{
-		"query": map[string]interface{}{
-			"bool": map[string]interface{}{
-				"must":   must,
-				"filter": filter,
-			},
-		},
-	}
-
-	total, err := article.Count(context.Background(), c.es, c.index+"_"+strings.ToLower(lang), query)
+	total, err := article.Count(context.Background(), c.es, opts)
 	if err != nil {
 		c.log.Errorf("[SVC-COMPARE] Error counting total potential similar %s", err.Error())
 		return errors.Wrap(err, "failed to get potential similar")
@@ -331,8 +307,11 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 		c.log.Debugf("[SVC-COMPARE] No similar articles found for DocId: %s", source.DocId)
 		return nil
 	}
-
-	articles, err := article.Search(context.Background(), c.es, c.index+"_"+strings.ToLower(lang), query, 2000)
+	if total > 64 {
+		opts.Scroll = true
+		opts.Limit = 64
+	}
+	articles, err := article.Search(context.Background(), c.es, opts)
 	if err != nil {
 		return err
 	}

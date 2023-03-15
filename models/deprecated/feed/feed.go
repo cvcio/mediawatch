@@ -33,18 +33,18 @@ var (
 
 func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 	index := []mongo.IndexModel{
-		{
-			Keys: bson.M{
-				"screen_name": 1,
-			},
-			Options: options.Index().SetUnique(true), // {Unique: true},
-		},
-		{
-			Keys: bson.M{
-				"twitter_id": 1,
-			},
-			Options: options.Index().SetUnique(true), // {Unique: true},
-		},
+		// {
+		// 	Keys: bson.M{
+		// 		"screen_name": 1,
+		// 	},
+		// 	Options: options.Index().SetUnique(true), // {Unique: true},
+		// },
+		// {
+		// 	Keys: bson.M{
+		// 		"twitter_id": 1,
+		// 	},
+		// 	Options: options.Index().SetUnique(true), // {Unique: true},
+		// },
 		{
 			Keys: bsonx.Doc{
 				{Key: "screen_name", Value: bsonx.String("text")},
@@ -123,7 +123,6 @@ func DefaultOpts() ListOpts {
 	l.Limit = 24
 	l.Deleted = false
 	l.Status = ""
-	l.StreamType = "twitter"
 	l.Lang = "EL"
 	return l
 }

@@ -58,11 +58,26 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ============================================================
 	// Create cors middleware
 	cors := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowOriginFunc:  func(origin string) bool { return true },
-		AllowedMethods:   []string{"POST"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
+		AllowedOrigins:  []string{"*"},
+		AllowOriginFunc: func(origin string) bool { return true },
+		AllowedMethods: []string{
+			http.MethodHead,
+			http.MethodPost,
+		},
+		AllowedHeaders: []string{"*"},
+		ExposedHeaders: []string{
+			"Accept",
+			"Accept-Encoding",
+			"Accept-Post",
+			"Connect-Accept-Encoding",
+			"Connect-Content-Encoding",
+			"Content-Encoding",
+			"Grpc-Accept-Encoding",
+			"Grpc-Encoding",
+			"Grpc-Message",
+			"Grpc-Status",
+			"Grpc-Status-Details-Bin",
+		},
 		AllowCredentials: true,
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	})

@@ -1,10 +1,11 @@
 package article
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"time"
 
 	articlesv2 "github.com/cvcio/mediawatch/internal/mediawatch/articles/v2"
 	"github.com/cvcio/mediawatch/pkg/es"
@@ -36,20 +37,11 @@ func GetById(ctx context.Context, es *es.Elastic, index string, id string) (*art
 	return parsed, nil
 }
 
-func Count(ctx context.Context, es *es.Elastic, index string, body map[string]interface{}) (int64, error) {
-	if body == nil {
-		body = map[string]interface{}{}
-	}
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(body); err != nil {
-		return 0, err
-	}
+func Count(ctx context.Context, es *es.Elastic, opts *Opts) (int64, error) {
+	args := opts.NewArticlesCountQuery(es.Client.Count)
+	args = append(args, es.Client.Count.WithContext(ctx))
 
-	res, err := es.Client.Count(
-		es.Client.Count.WithIndex(index),
-		es.Client.Count.WithContext(ctx),
-		es.Client.Count.WithBody(&buf),
-	)
+	res, err := es.Client.Count(args...)
 	if err != nil {
 		return 0, err
 	}
@@ -71,21 +63,12 @@ func Count(ctx context.Context, es *es.Elastic, index string, body map[string]in
 	return int64(parsed), nil
 }
 
-func Search(ctx context.Context, es *es.Elastic, index string, body map[string]interface{}, size int) (*articlesv2.ArticlesResponse, error) {
-	if body == nil {
-		body = map[string]interface{}{}
-	}
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(body); err != nil {
-		return nil, err
-	}
+func Search(ctx context.Context, es *es.Elastic, opts *Opts) (*articlesv2.ArticlesResponse, error) {
+	args := opts.NewArticlesSearchQuery(es.Client.Search)
+	args = append(args, es.Client.Search.WithContext(ctx))
 
-	res, err := es.Client.Search(
-		es.Client.Search.WithIndex(index),
-		es.Client.Search.WithContext(ctx),
-		es.Client.Search.WithBody(&buf),
-		es.Client.Search.WithSize(size),
-	)
+	res, err := es.Client.Search(args...)
+
 	if err != nil {
 		return nil, err
 	}
@@ -97,15 +80,71 @@ func Search(ctx context.Context, es *es.Elastic, index string, body map[string]i
 		return nil, errors.New(res.String())
 	}
 
-	// // map data to interface
+	// map data to interface
 	var r map[string]interface{}
 	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
 		return nil, errors.New(res.String())
 	}
+
 	parsed, err := ParseDocuments(r)
 	if err != nil {
 		return nil, err
 	}
 
+	if _, ok := r["_scroll_id"]; !ok {
+		return parsed, nil
+	}
+
+	scrollId := r["_scroll_id"]
+	data, err := scroll(ctx, es, fmt.Sprintf("%s", scrollId))
+	if err != nil {
+		return nil, err
+	}
+	parsed.Data = append(parsed.Data, data...)
+
 	return parsed, nil
+}
+
+func scroll(ctx context.Context, es *es.Elastic, scrollId string) ([]*articlesv2.Article, error) {
+	var data []*articlesv2.Article
+
+	for {
+		res, err := es.Client.Scroll(
+			es.Client.Scroll.WithScrollID(scrollId),
+			es.Client.Scroll.WithScroll(time.Second*10),
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// retrun on response error
+		if res.IsError() {
+			return nil, errors.New(res.String())
+		}
+
+		// map data to interface
+		var r map[string]interface{}
+		if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+			return nil, errors.New(res.String())
+		}
+
+		res.Body.Close()
+
+		parsed, err := ParseDocuments(r)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := r["_scroll_id"]; !ok {
+			break
+		}
+		scrollId = fmt.Sprintf("%s", r["_scroll_id"])
+
+		if len(parsed.Data) < 1 {
+			break
+		}
+
+		data = append(data, parsed.Data...)
+	}
+	return data, nil
 }

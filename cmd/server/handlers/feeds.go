@@ -76,6 +76,8 @@ func (u *Feeds) List() http.HandlerFunc {
 			return
 		}
 
+		u.log.Println(data.Pagination)
+
 		render.JSON(w, r, &data)
 	}
 }
