@@ -3,7 +3,6 @@ package auth
 import (
 	"crypto/rsa"
 	"fmt"
-	"io/ioutil"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
@@ -46,15 +45,6 @@ type DefaultAuthenticator struct {
 	kf         KeyFunc
 	parser     *jwt.Parser
 }
-type JWTAuthenticator struct {
-	privateKey *rsa.PrivateKey
-	keyID      string
-	algorithm  string
-	kf         KeyFunc
-	parser     *jwt.Parser
-	// expose
-	Issuer string
-}
 
 // NewAuthenticator creates an *Authenticator for use. It will error if:
 // - The private key is nil.
@@ -91,53 +81,6 @@ func NewDefaultAuthenticator(key *rsa.PrivateKey, keyID, algorithm string, publi
 	}
 
 	return &a, nil
-}
-
-// NewJWTAuthenticator creates an *Authenticator for use. It will error if:
-// - The private key is nil.
-// - The public key func is nil.
-// - The key ID is blank.
-// - The specified algorithm is unsupported.
-func NewJWTAuthenticator(keyCertificate, keyID, algorithm, issuer string) (*JWTAuthenticator, error) {
-	// read private certificate file
-	keyContents, err := ioutil.ReadFile(keyCertificate)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading auth private key")
-	}
-
-	// parset rsa with jwt
-	key, err := jwt.ParseRSAPrivateKeyFromPEM(keyContents)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing auth private key")
-	}
-	// check for keyID
-	if keyID == "" {
-		return nil, errors.New("keyID cannot be blank")
-	}
-
-	// get jwt algorithm
-	if jwt.GetSigningMethod(algorithm) == nil {
-		return nil, errors.Errorf("unknown algorithm %v", algorithm)
-	}
-
-	// make lookup function
-	publicKeyFunc := NewSingleKeyFunc(keyID, key.Public().(*rsa.PublicKey))
-
-	// Create the token parser to use. The algorithm used to sign the JWT must be
-	// validated to avoid a critical vulnerability:
-	// https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
-	parser := jwt.Parser{
-		ValidMethods: []string{algorithm},
-	}
-
-	return &JWTAuthenticator{
-		privateKey: key,
-		keyID:      keyID,
-		algorithm:  algorithm,
-		kf:         publicKeyFunc,
-		parser:     &parser,
-		Issuer:     issuer,
-	}, nil
 }
 
 // GenerateToken generates a signed JWT token string representing the user Claims.

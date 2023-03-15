@@ -19,7 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ArticlesServiceClient interface {
 	// GetArticle
-	GetArticle(ctx context.Context, in *ArticleRequest, opts ...grpc.CallOption) (*Article, error)
+	GetArticle(ctx context.Context, in *ArticleRequest, opts ...grpc.CallOption) (*ArticleResponse, error)
 	// GetArticles
 	GetArticles(ctx context.Context, in *ArticlesRequest, opts ...grpc.CallOption) (*ArticlesResponse, error)
 	// StreamArticles
@@ -36,8 +36,8 @@ func NewArticlesServiceClient(cc grpc.ClientConnInterface) ArticlesServiceClient
 	return &articlesServiceClient{cc}
 }
 
-func (c *articlesServiceClient) GetArticle(ctx context.Context, in *ArticleRequest, opts ...grpc.CallOption) (*Article, error) {
-	out := new(Article)
+func (c *articlesServiceClient) GetArticle(ctx context.Context, in *ArticleRequest, opts ...grpc.CallOption) (*ArticleResponse, error) {
+	out := new(ArticleResponse)
 	err := c.cc.Invoke(ctx, "/mediawatch.articles.v2.ArticlesService/GetArticle", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (x *articlesServiceStreamRelatedArticlesClient) Recv() (*ArticleResponse, e
 // for forward compatibility
 type ArticlesServiceServer interface {
 	// GetArticle
-	GetArticle(context.Context, *ArticleRequest) (*Article, error)
+	GetArticle(context.Context, *ArticleRequest) (*ArticleResponse, error)
 	// GetArticles
 	GetArticles(context.Context, *ArticlesRequest) (*ArticlesResponse, error)
 	// StreamArticles
@@ -136,7 +136,7 @@ type ArticlesServiceServer interface {
 type UnimplementedArticlesServiceServer struct {
 }
 
-func (UnimplementedArticlesServiceServer) GetArticle(context.Context, *ArticleRequest) (*Article, error) {
+func (UnimplementedArticlesServiceServer) GetArticle(context.Context, *ArticleRequest) (*ArticleResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetArticle not implemented")
 }
 func (UnimplementedArticlesServiceServer) GetArticles(context.Context, *ArticlesRequest) (*ArticlesResponse, error) {

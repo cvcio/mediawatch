@@ -30,9 +30,9 @@ type CompareServiceClient interface {
 	// Single compares a single document by id with multiple auto-discovered
 	Single(context.Context, *connect_go.Request[v2.SingleRequest]) (*connect_go.Response[v2.SingleResponse], error)
 	// OneToMany compares a single document by id with multiple document ids provided
-	OneToMany(context.Context, *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error)
+	OneToMany(context.Context, *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.OneToManyResponse], error)
 	// ManyToMany compares a list of documents ids with multiple document ids provided
-	ManyToMany(context.Context, *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error)
+	ManyToMany(context.Context, *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.ManyToManyResponse], error)
 }
 
 // NewCompareServiceClient constructs a client for the mediawatch.compare.v2.CompareService service.
@@ -50,12 +50,12 @@ func NewCompareServiceClient(httpClient connect_go.HTTPClient, baseURL string, o
 			baseURL+"/mediawatch.compare.v2.CompareService/Single",
 			opts...,
 		),
-		oneToMany: connect_go.NewClient[v2.OneToManyRequest, v2.MultipleResponse](
+		oneToMany: connect_go.NewClient[v2.OneToManyRequest, v2.OneToManyResponse](
 			httpClient,
 			baseURL+"/mediawatch.compare.v2.CompareService/OneToMany",
 			opts...,
 		),
-		manyToMany: connect_go.NewClient[v2.ManyToManyRequest, v2.MultipleResponse](
+		manyToMany: connect_go.NewClient[v2.ManyToManyRequest, v2.ManyToManyResponse](
 			httpClient,
 			baseURL+"/mediawatch.compare.v2.CompareService/ManyToMany",
 			opts...,
@@ -66,8 +66,8 @@ func NewCompareServiceClient(httpClient connect_go.HTTPClient, baseURL string, o
 // compareServiceClient implements CompareServiceClient.
 type compareServiceClient struct {
 	single     *connect_go.Client[v2.SingleRequest, v2.SingleResponse]
-	oneToMany  *connect_go.Client[v2.OneToManyRequest, v2.MultipleResponse]
-	manyToMany *connect_go.Client[v2.ManyToManyRequest, v2.MultipleResponse]
+	oneToMany  *connect_go.Client[v2.OneToManyRequest, v2.OneToManyResponse]
+	manyToMany *connect_go.Client[v2.ManyToManyRequest, v2.ManyToManyResponse]
 }
 
 // Single calls mediawatch.compare.v2.CompareService.Single.
@@ -76,12 +76,12 @@ func (c *compareServiceClient) Single(ctx context.Context, req *connect_go.Reque
 }
 
 // OneToMany calls mediawatch.compare.v2.CompareService.OneToMany.
-func (c *compareServiceClient) OneToMany(ctx context.Context, req *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error) {
+func (c *compareServiceClient) OneToMany(ctx context.Context, req *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.OneToManyResponse], error) {
 	return c.oneToMany.CallUnary(ctx, req)
 }
 
 // ManyToMany calls mediawatch.compare.v2.CompareService.ManyToMany.
-func (c *compareServiceClient) ManyToMany(ctx context.Context, req *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error) {
+func (c *compareServiceClient) ManyToMany(ctx context.Context, req *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.ManyToManyResponse], error) {
 	return c.manyToMany.CallUnary(ctx, req)
 }
 
@@ -90,9 +90,9 @@ type CompareServiceHandler interface {
 	// Single compares a single document by id with multiple auto-discovered
 	Single(context.Context, *connect_go.Request[v2.SingleRequest]) (*connect_go.Response[v2.SingleResponse], error)
 	// OneToMany compares a single document by id with multiple document ids provided
-	OneToMany(context.Context, *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error)
+	OneToMany(context.Context, *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.OneToManyResponse], error)
 	// ManyToMany compares a list of documents ids with multiple document ids provided
-	ManyToMany(context.Context, *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error)
+	ManyToMany(context.Context, *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.ManyToManyResponse], error)
 }
 
 // NewCompareServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -127,10 +127,10 @@ func (UnimplementedCompareServiceHandler) Single(context.Context, *connect_go.Re
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.compare.v2.CompareService.Single is not implemented"))
 }
 
-func (UnimplementedCompareServiceHandler) OneToMany(context.Context, *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error) {
+func (UnimplementedCompareServiceHandler) OneToMany(context.Context, *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.OneToManyResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.compare.v2.CompareService.OneToMany is not implemented"))
 }
 
-func (UnimplementedCompareServiceHandler) ManyToMany(context.Context, *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error) {
+func (UnimplementedCompareServiceHandler) ManyToMany(context.Context, *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.ManyToManyResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.compare.v2.CompareService.ManyToMany is not implemented"))
 }

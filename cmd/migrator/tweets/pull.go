@@ -13,10 +13,10 @@ import (
 	"github.com/ChimeraCoder/anaconda"
 	enrich_pb "github.com/cvcio/mediawatch/internal/mediawatch/enrich/v2"
 	scrape_pb "github.com/cvcio/mediawatch/internal/mediawatch/scrape/v2"
-	"github.com/cvcio/mediawatch/models/deprecated/article"
+	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
-	"github.com/cvcio/mediawatch/models/deprecated/nodes"
 	"github.com/cvcio/mediawatch/models/link"
+	"github.com/cvcio/mediawatch/models/nodes"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/es"
@@ -306,7 +306,8 @@ func getTweets(s string, n int, id string, tweetChan chan link.CatchedURL) {
 					TwitterUserID:    t.User.Id,
 					TwitterUserIDStr: t.User.IdStr,
 					ScreenName:       t.User.ScreenName,
-					CreatedAt:        createdTime.Format(time.RFC3339),
+					CreatedAt:        createdTime.UTC(),
+					CreatedAtStr:     t.CreatedAt,
 				}
 			}
 		}
@@ -415,15 +416,15 @@ func (worker *WorkerGroup) articleProcess(in link.CatchedURL) error {
 	a.NLP.Summary = enrichResp.Data.Nlp.Summary
 	a.NLP.Keywords = enrichResp.Data.Nlp.Keywords
 	a.NLP.StopWords = enrichResp.Data.Nlp.Stopwords
-	// a.NLP.Topics = enrichResp.Data.Nlp.Topics
+	a.NLP.Topics = enrichResp.Data.Nlp.Topics
 	// a.NLP.Quotes = enrichResp.Data.Nlp.Quotes
 	// a.NLP.Claims = enrichResp.Data.Nlp.Claims
-	// for _, entity := range enrichResp.Data.Nlp.Entities {
-	// 	a.NLP.Entities = append(a.NLP.Entities, &article.Entity{
-	// 		EntityText: entity.EntityText,
-	// 		EntityType: entity.EntityType,
-	// 	})
-	// }
+	for _, entity := range enrichResp.Data.Nlp.Entities {
+		a.NLP.Entities = append(a.NLP.Entities, &article.Entity{
+			EntityText: entity.EntityText,
+			EntityType: entity.EntityType,
+		})
+	}
 
 	// =========================================================================
 	// Save the Document to Elasticsearch

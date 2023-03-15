@@ -9,10 +9,8 @@ message EnrichRequest {
 }
 
 message Entity {
-    string text = 1;
-    string type = 2;
-    double score = 3;
-    repeated int32 index = 4;
+    string entity_text = 1;
+    string entity_type = 2;
 }
 
 message NLP {
@@ -20,9 +18,9 @@ message NLP {
     repeated string keywords    = 2;
     repeated Entity entities    = 3;
     string          summary     = 4;
-    repeated Entity topics      = 5;
-    repeated Entity claims      = 6;
-    repeated Entity quotes      = 7;
+    repeated string topics      = 5;
+    repeated string claims      = 6;
+    repeated string quotes      = 7;
 }   
 
 message Data {

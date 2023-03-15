@@ -128,7 +128,7 @@ class Model:
                 "text-classification",
                 model=classifier,
                 tokenizer=tokenizer,
-                top_k=4,
+                return_all_scores=True,
                 device=-1,
             )
             if (tokenizer != None and classifier != None)
@@ -611,6 +611,7 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
         return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
 
 
+
     def NLP(self, data, context):
         """
         NLP gRPC endpoint
@@ -735,11 +736,12 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             )
 
         logging.info(
-            "Keywords ({}), Stopwords ({}), Entities ({}), Topics ({}), Quotes ({}), Claims ({})".format(
+            "Keywords ({}), Stopwords ({}), Entities ({}), Topics ({}) {}, Quotes ({}), Claims ({})".format(
                 len(output["nlp"]["keywords"]),
                 len(output["nlp"]["stopwords"]),
                 len(output["nlp"]["entities"]),
                 len(output["nlp"]["topics"]),
+                ", ".join(topics),
                 len(output["nlp"]["quotes"]),
                 len(output["nlp"]["claims"]),
             )

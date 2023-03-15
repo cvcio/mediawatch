@@ -25,9 +25,10 @@ message SimpleScrapeRequest {
 message ScrapeRequest {
     string feed        = 1;
     string url         = 2;
-    string lang        = 3;
-    string screen_name = 4;
-    string crawled_at  = 5;
+    string tweet_id    = 3;
+    string lang        = 4;
+    string screen_name = 5;
+    string crawled_at  = 6;
 }
 
 // Content of the Scraped Article or Stream

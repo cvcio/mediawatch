@@ -1,200 +1,73 @@
 package article
 
 import (
-	"encoding/json"
+	"context"
+	"strconv"
 	"strings"
-	"time"
 
-	"github.com/elastic/go-elasticsearch/v8/esapi"
+	"github.com/cvcio/mediawatch/pkg/es"
+	"github.com/olivere/elastic/v7"
 )
 
 type Opts struct {
-	Index string `json:"index,omitempty"`
-	DocId string `json:"doc_id,omitempty"`
+	Index string
+	Type  string
+	Sort  struct {
+		By  string
+		Asc bool
+	}
 
-	Q         string `json:"q,omitempty"`
-	Title     string `json:"title,omitempty"`
-	Body      string `json:"body,omitempty"`
-	Tags      string `json:"tags,omitempty"`
-	Keywords  string `json:"keywords,omitempty"`
-	Topics    string `json:"topics,omitempty"`
-	Entities  string `json:"entities,omitempty"`
-	Authors   string `json:"authors,omitempty"`
-	Lang      string `json:"lang,omitempty"`
-	Feeds     string `json:"feeds,omitempty"`
-	Hostnames string `json:"hostnames,omitempty"`
+	DataType int
+	Cases    bool
 
-	CountCases  bool `json:"count_cases,omitempty"`
-	IncludeRels bool `json:"include_rels,omitempty"`
+	Skip  int
+	Limit int
 
-	Skip   int  `json:"skip,omitempty"`
-	Limit  int  `json:"limit,omitempty"`
-	Scroll bool `json:"scrill,omitempty"`
+	DocID string
 
-	Sort struct {
-		By  string `json:"by,omitempty"`
-		Asc bool   `json:"asc,omitempty"`
-	} `json:"sort,omitempty"`
+	Q        string
+	Title    string
+	Body     string
+	Tags     string
+	Topics   string
+	Authors  string
+	Langs    string
+	Feeds    string
+	Keywords string
 
 	Range struct {
-		By   string `json:"by,omitempty"`
-		From string `json:"from,omitempty"`
-		To   string `json:"to,omitempty"`
-	} `json:"range,omitempty"`
+		By   string
+		From string
+		To   string
+	}
 }
 
-func NewOpts() *Opts {
-	opts := new(Opts)
-	opts.Skip = 0
-	opts.Limit = 48
-	opts.Range.From = "now-7d"
-	opts.Range.To = "now"
-	opts.Range.By = "content.published_at"
-	opts.Sort.By = "content.published_at"
-	opts.Sort.Asc = false
-	opts.Index = "mediawatch_articles_*"
-	opts.Scroll = false
-	return opts
-}
-
-func NewOptsForm(urlQuery func(string) string) *Opts {
-	opts := NewOpts()
-	return opts
-}
-
-func (o *Opts) Query() map[string]interface{} {
-	filter := []map[string]interface{}{}
-	must := []map[string]interface{}{}
-
-	if o.Q != "" {
-		must = append(must, map[string]interface{}{
-			"query_string": map[string]interface{}{
-				"query": o.Q,
-			},
-		})
-	}
-	if o.Title != "" {
-		must = append(must, map[string]interface{}{
-			"query_string": map[string]interface{}{
-				"query":  o.Title,
-				"fields": []string{"content.title"},
-			},
-		})
-	}
-	if o.Body != "" {
-		must = append(must, map[string]interface{}{
-			"query_string": map[string]interface{}{
-				"query":  o.Body,
-				"fields": []string{"content.body"},
-			},
-		})
-	}
-	if o.Tags != "" {
-		must = append(must, map[string]interface{}{
-			"query_string": map[string]interface{}{
-				"query":  o.Tags,
-				"fields": []string{"content.tags"},
-			},
-		})
-	}
-	if o.Keywords != "" {
-		must = append(must, map[string]interface{}{
-			"query_string": map[string]interface{}{
-				"query":  o.Keywords,
-				"fields": []string{"nlp.keywords"},
-			},
-		})
-	}
-	if o.Topics != "" {
-		must = append(must, map[string]interface{}{
-			"query_string": map[string]interface{}{
-				"query":  o.Topics,
-				"fields": []string{"nlp.topics.text"},
-			},
-		})
-	}
-	if o.Entities != "" {
-		must = append(must, map[string]interface{}{
-			"query_string": map[string]interface{}{
-				"query":  o.Entities,
-				"fields": []string{"nlp.entities.text"},
-			},
-		})
-	}
-	if o.Authors != "" {
-		must = append(must, map[string]interface{}{
-			"query_string": map[string]interface{}{
-				"query":  o.Authors,
-				"fields": []string{"content.authors"},
-			},
-		})
-	}
-	if o.Lang != "" {
-		must = append(must, map[string]interface{}{
-			"match": map[string]interface{}{
-				"lang": o.Lang,
-			},
-		})
-	}
-	if o.Feeds != "" {
-		must = append(must, map[string]interface{}{
-			"query_string": map[string]interface{}{
-				"query":  o.Feeds,
-				"fields": []string{"screen_name"},
-			},
-		})
-	}
-	if o.Hostnames != "" {
-		must = append(must, map[string]interface{}{
-			"query_string": map[string]interface{}{
-				"query":  o.Hostnames,
-				"fields": []string{"hostname"},
-			},
-		})
-	}
-
-	if o.Range.From != "" && o.Range.To != "" {
-		filter = append(filter, map[string]interface{}{
-			"range": map[string]interface{}{
-				o.Range.By: map[string]interface{}{
-					"gte": o.Range.From,
-					"lte": o.Range.To,
-				},
-			},
-		})
-	} else {
-		if o.Range.From != "" {
-			filter = append(filter, map[string]interface{}{
-				"range": map[string]interface{}{
-					o.Range.By: map[string]interface{}{
-						"gte": o.Range.From,
-					},
-				},
-			})
-		}
-		if o.Range.To != "" {
-			filter = append(filter, map[string]interface{}{
-				"range": map[string]interface{}{
-					o.Range.By: map[string]interface{}{
-						"lte": o.Range.To,
-					},
-				},
-			})
-		}
-	}
-	return map[string]interface{}{
-		"query": map[string]interface{}{
-			"bool": map[string]interface{}{
-				"filter": filter,
-				"must":   must,
-			},
-		},
-	}
+func newOpts() *Opts {
+	s := new(Opts)
+	s.Skip = 0
+	s.Limit = 48
+	s.Langs = "EL"
+	s.Cases = false
+	s.DataType = 1
+	s.Range.From = "now-7d"
+	s.Range.To = "now"
+	s.Range.By = "content.publishedAt"
+	s.Sort.By = "content.publishedAt"
+	s.Sort.Asc = false
+	s.Index = "mediawatch_articles"
+	s.Type = "document"
+	return s
 }
 
 func Index(i string) func(*Opts) {
 	return func(s *Opts) {
 		s.Index = i
+	}
+}
+
+func Type(i string) func(*Opts) {
+	return func(s *Opts) {
+		s.Type = i
 	}
 }
 
@@ -210,10 +83,20 @@ func sortBy(i string) func(*Opts) {
 		s.Sort.By = i
 	}
 }
-
 func sortAsc(i bool) func(*Opts) {
 	return func(s *Opts) {
 		s.Sort.Asc = i
+	}
+}
+
+func Cases(searchCases bool) func(*Opts) {
+	return func(s *Opts) {
+		s.Cases = searchCases
+	}
+}
+func DataType(d int) func(*Opts) {
+	return func(s *Opts) {
+		s.DataType = d
 	}
 }
 
@@ -229,9 +112,9 @@ func Limit(i int) func(*Opts) {
 	}
 }
 
-func DocId(q string) func(*Opts) {
+func DocID(q string) func(*Opts) {
 	return func(s *Opts) {
-		s.DocId = q
+		s.DocID = q
 	}
 }
 
@@ -265,36 +148,22 @@ func Topics(f string) func(*Opts) {
 	}
 }
 
-func Entities(f string) func(*Opts) {
-	return func(s *Opts) {
-		s.Entities = f
-	}
-}
-
 func Authors(f string) func(*Opts) {
 	return func(s *Opts) {
 		s.Authors = f
 	}
 }
 
-func Lang(f string) func(*Opts) {
+func Langs(f string) func(*Opts) {
 	return func(s *Opts) {
-		s.Lang = f
+		s.Langs = f
 	}
 }
-
 func Feeds(f string) func(*Opts) {
 	return func(s *Opts) {
 		s.Feeds = f
 	}
 }
-
-func Hostnames(f string) func(*Opts) {
-	return func(s *Opts) {
-		s.Hostnames = f
-	}
-}
-
 func Keywords(f string) func(*Opts) {
 	return func(s *Opts) {
 		s.Keywords = f
@@ -320,34 +189,246 @@ func RangeFrom(i string) func(*Opts) {
 		s.Range.From = i
 	}
 }
-
 func RangeTo(i string) func(*Opts) {
 	return func(s *Opts) {
 		s.Range.To = i
 	}
 }
 
-func (o *Opts) NewArticlesSearchQuery(es esapi.Search) []func(*esapi.SearchRequest) {
-	buf, _ := json.Marshal(o.Query())
+func NewSearch(urlQuery func(string) string) *Opts {
+	s := newOpts()
 
-	opts := make([]func(*esapi.SearchRequest), 0)
-	opts = append(opts, esapi.Search.WithBody(es, strings.NewReader(string(buf))))
-	opts = append(opts, esapi.Search.WithIndex(es, o.Index))
-	opts = append(opts, esapi.Search.WithFrom(es, o.Skip))
-	opts = append(opts, esapi.Search.WithSize(es, o.Limit))
-	opts = append(opts, esapi.Search.WithTimeout(es, time.Second*30))
-	opts = append(opts, esapi.Search.WithTrackTotalHits(es, true))
-	if o.Scroll {
-		opts = append(opts, esapi.Search.WithScroll(es, time.Minute))
+	if i, err := strconv.Atoi(urlQuery("limit")); err == nil {
+		if i < 0 {
+			i = 48
+		}
+		s.Limit = i
 	}
+
+	if i, err := strconv.Atoi(urlQuery("skip")); err == nil {
+		if i < 0 {
+			i = 0
+		}
+		s.Skip = i * s.Limit
+	}
+
+	if i := urlQuery("q"); i != "" {
+		s.Q = i
+	}
+
+	if i, err := strconv.Atoi(urlQuery("dataType")); err == nil {
+		s.DataType = i
+	}
+
+	if i := urlQuery("docId"); i != "" {
+		s.DocID = i
+	}
+
+	if i := urlQuery("title"); i != "" {
+		s.Title = i
+	}
+
+	if i := urlQuery("body"); i != "" {
+		s.Body = i
+	}
+
+	if i := urlQuery("tags"); i != "" {
+		s.Tags = i
+	}
+
+	if i := urlQuery("topics"); i != "" {
+		s.Topics = i
+	}
+
+	if i := urlQuery("authors"); i != "" {
+		s.Authors = i
+	}
+
+	if i := urlQuery("feeds"); i != "" {
+		s.Feeds = i
+	}
+
+	if i := urlQuery("keywords"); i != "" {
+		s.Keywords = i
+	}
+
+	if i := urlQuery("from"); i != "" {
+		s.Range.From = i
+	}
+
+	if i := urlQuery("to"); i != "" {
+		s.Range.To = i
+	}
+
+	if i := urlQuery("rangeBy"); i != "" {
+		s.Range.By = i
+	}
+
+	if i := urlQuery("sortBy"); i != "" {
+		s.Sort.By = i
+	}
+
+	if i := urlQuery("asc"); i != "" {
+		s.Sort.Asc = true
+	}
+
+	return s
+}
+
+func OptsFromURL(urlQuery func(string) string) []func(*Opts) {
+	opts := make([]func(*Opts), 0)
+
+	if i, err := strconv.Atoi(urlQuery("limit")); err == nil {
+		if i <= 0 {
+			i = 48
+		}
+		opts = append(opts, Limit(i))
+	}
+
+	if i, err := strconv.Atoi(urlQuery("skip")); err == nil {
+		if i < 0 {
+			i = 0
+		}
+		opts = append(opts, Skip(i))
+	}
+
+	if i, err := strconv.Atoi(urlQuery("dataType")); err == nil {
+		opts = append(opts, DataType(i))
+	}
+
+	if i := urlQuery("q"); i != "" {
+		opts = append(opts, Q(i))
+	}
+
+	if i := urlQuery("docId"); i != "" {
+		opts = append(opts, DocID(i))
+	}
+
+	if i := urlQuery("title"); i != "" {
+		opts = append(opts, Title(i))
+	}
+
+	if i := urlQuery("body"); i != "" {
+		opts = append(opts, Body(i))
+	}
+
+	if i := urlQuery("tags"); i != "" {
+		opts = append(opts, Tags(i))
+	}
+
+	if i := urlQuery("topics"); i != "" {
+		opts = append(opts, Topics(i))
+	}
+
+	if i := urlQuery("authors"); i != "" {
+		opts = append(opts, Authors(i))
+	}
+
+	if i := urlQuery("feeds"); i != "" {
+		opts = append(opts, Feeds(i))
+	}
+
+	if i := urlQuery("keywords"); i != "" {
+		opts = append(opts, Keywords(i))
+	}
+
+	if i := urlQuery("from"); i != "" {
+		opts = append(opts, RangeFrom(i))
+	}
+
+	if i := urlQuery("to"); i != "" {
+		opts = append(opts, RangeTo(i))
+	}
+
+	if i := urlQuery("rangeBy"); i != "" {
+		opts = append(opts, RangeBy(i))
+	}
+
+	if i := urlQuery("sortBy"); i != "" {
+		opts = append(opts, sortBy(i))
+	}
+
+	if i := urlQuery("asc"); i != "" {
+		opts = append(opts, sortAsc(true))
+	}
+
 	return opts
 }
 
-func (o *Opts) NewArticlesCountQuery(es esapi.Count) []func(*esapi.CountRequest) {
-	buf, _ := json.Marshal(o.Query())
+func (s *Opts) parse() []elastic.Query {
+	queries := make([]elastic.Query, 0)
 
-	opts := make([]func(*esapi.CountRequest), 0)
-	opts = append(opts, esapi.Count.WithBody(es, strings.NewReader(string(buf))))
-	opts = append(opts, esapi.Count.WithIndex(es, o.Index))
-	return opts
+	if s.DocID != "" {
+		queries = append(queries, elastic.NewQueryStringQuery(s.DocID).Field("docId"))
+	}
+	if s.Q != "" {
+		queries = append(queries, elastic.NewQueryStringQuery(s.Q))
+	}
+	if s.Title != "" {
+		queries = append(queries, elastic.NewQueryStringQuery(s.Title).Field("content.title"))
+	}
+	if s.Body != "" {
+		queries = append(queries, elastic.NewQueryStringQuery(s.Body).Field("content.body"))
+	}
+	if s.Tags != "" {
+		queries = append(queries, elastic.NewQueryStringQuery(s.Tags).Field("content.tags"))
+	}
+	if s.Topics != "" {
+		queries = append(queries, elastic.NewQueryStringQuery(s.Topics).Field("nlp.topics"))
+	}
+	if s.Authors != "" {
+		queries = append(queries, elastic.NewQueryStringQuery(s.Authors).Field("content.authors"))
+	}
+	if s.Langs != "" {
+		queries = append(queries, elastic.NewQueryStringQuery(s.Langs).Field("lang"))
+	}
+	if s.Feeds != "" {
+		f := strings.Split(s.Feeds, ",")
+		for i, v := range f {
+			if !strings.Contains(v, "*") {
+				f[i] = "*" + v + "*"
+			}
+		}
+		queries = append(queries, elastic.NewQueryStringQuery(strings.Join(f, " OR "))) // append(queries, elastic.NewTermsQuery("screen_name", strings.Split(s.Feeds, ",")))
+	}
+	if s.Keywords != "" {
+		queries = append(queries, elastic.NewQueryStringQuery(s.Keywords).Field("nlp.keywords"))
+	}
+
+	if s.Range.From != "" && s.Range.To != "" {
+		queries = append(queries, elastic.NewRangeQuery(s.Range.By).Gte(s.Range.From).Lte(s.Range.To))
+	} else {
+		if s.Range.From != "" {
+			queries = append(queries, elastic.NewRangeQuery(s.Range.By).Gte(s.Range.From))
+		}
+		if s.Range.To != "" {
+			queries = append(queries, elastic.NewRangeQuery(s.Range.By).Lte(s.Range.To))
+		}
+	}
+
+	return queries
+}
+
+func (s *Opts) Do(es *es.ES) (*elastic.SearchResult, error) {
+	// parse queries from search
+	queries := s.parse()
+
+	// create a bool query that MUST with the queries from url string
+	q := elastic.NewBoolQuery()
+	q = q.Filter(queries...)
+
+	// fmt.Println(q.Source())
+	// skip := 0
+	// if s.Skip > 0 {
+	// 	skip = s.Skip * s.Limit
+	// }
+
+	// currentIndexTime := time.Now()
+	// currentIndex := s.Index + currentIndexTime.Format("2006-01") + "," + s.Index + currentIndexTime.AddDate(0, -1, 0).Format("2006-01")
+
+	return es.Client.Search().
+		Index(s.Index).
+		Query(q).
+		From(s.Skip).Size(s.Limit).Sort(s.Sort.By, s.Sort.Asc).
+		Do(context.Background())
 }

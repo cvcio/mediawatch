@@ -8,9 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"syscall"
-	"time"
 
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/models/link"
@@ -32,7 +30,7 @@ import (
 type ListenGroup struct {
 	ctx         context.Context
 	log         *zap.SugaredLogger
-	kafkaClient *kafka.KafkaClient
+	kafkaClient *kafka.KafkaGoClient
 	errChan     chan error
 }
 
@@ -52,7 +50,7 @@ func (worker *ListenGroup) Produce(msg kaf.Message) {
 // NewListenGroup implements a new ListenGroup struct.
 func NewListenGroup(
 	log *zap.SugaredLogger,
-	kafkaClient *kafka.KafkaClient,
+	kafkaClient *kafka.KafkaGoClient,
 	errChan chan error,
 ) *ListenGroup {
 	return &ListenGroup{
@@ -61,6 +59,51 @@ func NewListenGroup(
 		kafkaClient,
 		errChan,
 	}
+}
+
+func removeRules(api *twitter.Twitter) (bool, error) {
+	rules, err := api.GetFilterStreamRules(nil)
+	if err != nil {
+		return false, err
+	}
+	var ids []string
+	for _, v := range rules.Data {
+		if v.Tag == "mediawatch-listener" {
+			ids = append(ids, v.ID)
+		}
+	}
+	if len(ids) > 0 {
+		rulesdel := new(twitter.Rules)
+		rulesdel.Delete = &twitter.RulesDelete{
+			Ids: ids,
+		}
+		deleted, err := api.PostFilterStreamRules(nil, rulesdel)
+		if err != nil {
+			return false, err
+		}
+		if deleted == nil {
+			return false, errors.New("Rules not deleted")
+		}
+	}
+	return true, nil
+}
+
+func addRules(api *twitter.Twitter, usernames []string) (bool, error) {
+	rules := new(twitter.Rules)
+	for _, v := range usernames {
+		rules.Add = append(rules.Add, &twitter.RulesData{
+			Value: v,
+			Tag:   "mediawatch-listener",
+		})
+	}
+	added, err := api.PostFilterStreamRules(nil, rules)
+	if err != nil {
+		return false, err
+	}
+	if added == nil {
+		return false, errors.New("Rules not added")
+	}
+	return true, nil
 }
 
 func main() {
@@ -96,7 +139,7 @@ func main() {
 	kafkaChan := make(chan error, 1)
 
 	// create a reader/writer kafka connection
-	kafkaGoClient := kafka.NewKafkaClient(
+	kafkaGoClient := kafka.NewGoClient(
 		false, true,
 		[]string{cfg.Kafka.Broker},
 		"",
@@ -118,21 +161,9 @@ func main() {
 
 	// ============================================================
 	// Get feeds list
-	feeds, err := feed.GetTargets(
-		context.Background(),
-		dbConn,
-		feed.Limit(cfg.Streamer.Size),
-		feed.Lang(strings.ToUpper(cfg.Streamer.Lang)),
-		feed.StreamType("twitter"),
-	)
+	feeds, err := feed.List(context.Background(), dbConn, feed.Status("active"), feed.Limit(1000))
 	if err != nil {
 		log.Fatalf("[SVC-LISTEN] error getting feeds list: %v", err)
-	}
-
-	log.Infof("[SVC-LISTEN] Loaded feeds: %d", len(feeds.Data))
-	if len(feeds.Data) == 0 {
-		log.Infof("[SVC-LISTEN] No feeds to listen, exiting.")
-		os.Exit(0)
 	}
 
 	// ============================================================
@@ -142,6 +173,9 @@ func main() {
 	// ============================================================
 	// Create a new twitter client
 	api, err := twitter.NewTwitter(cfg.Twitter.TwitterConsumerKey, cfg.Twitter.TwitterConsumerSecret)
+	// twitterAPIClient, err := twitter.NewAPI(cfg.Twitter.TwitterConsumerKey,
+	// 	cfg.Twitter.TwitterConsumerSecret, cfg.Twitter.TwitterAccessToken,
+	// 	cfg.Twitter.TwitterAccessTokenSecret)
 	if err != nil {
 		log.Fatalf("[SVC-LISTEN] Error connecting to twitter: %s", err.Error())
 	}
@@ -158,6 +192,11 @@ func main() {
 	if _, err := addRules(api, rules); err != nil {
 		log.Fatalf("[SVC-LISTEN] Error while adding filter stream rules: %s", err.Error())
 	}
+
+	// svc, err := twitter.NewListener(
+	// 	twitterAPIClient, log,
+	// 	twitter.WithPublicStream(map[string][]string{"follow": fIDs}),
+	// )
 
 	// Create a channel to send catched urls from tweets
 	tweetChan := make(chan link.CatchedURL, 1)
@@ -199,6 +238,8 @@ func main() {
 			handler(log, f, tweetChan)
 		}
 	}()
+	// Here we start listening for tweets given a handler function
+	// go svc.TweetListen(handler(log, tweetChan))
 
 	// Start the service listening for requests.
 	log.Info("[SVC-LISTEN] Ready to start")
@@ -206,7 +247,6 @@ func main() {
 		log.Infof("[SVC-LISTEN] Starting prometheus web server listening %s", cfg.GetPrometheusURL())
 		errSingals <- promHandler.ListenAndServe()
 	}()
-
 	// ========================================
 	// Shutdown
 	//
@@ -221,7 +261,13 @@ func main() {
 		select {
 		// Got Url from twitter
 		case u := <-tweetChan:
-			log.Infof("[SVC-LISTEN] New tweet from: %.16s %s", u.ScreenName, u.URL)
+			log.Infow(
+				"catched",
+				"tweetID", u.TweetID,
+				"user", u.ScreenName,
+				"timeCreated", u.CreatedAtStr,
+				"url", u.URL,
+			)
 
 			urlTweet, err := json.Marshal(&u)
 			if err != nil {
@@ -232,6 +278,7 @@ func main() {
 
 		case err := <-kafkaChan:
 			log.Errorf("[SVC-LISTEN] error from kafka: %v", err)
+			os.Exit(1)
 
 		case err := <-errSingals:
 			// Got Error from twitter stream
@@ -252,6 +299,58 @@ func main() {
 	}
 }
 
+// getIds list to listen
+func getIds(feeds []*feed.Feed) []string {
+	twitterIDs := make([]string, 0)
+	for _, f := range feeds {
+		if f.TwitterIDStr != "" {
+			twitterIDs = append(twitterIDs, f.TwitterIDStr)
+		} else {
+			twitterIDs = append(twitterIDs,
+				strconv.FormatInt(f.TwitterID, 10))
+		}
+	}
+	return twitterIDs
+}
+
+// getUsernames list to listen
+func getUsernames(feeds []*feed.Feed) []string {
+	twitterUsernames := make([]string, 0)
+	for _, f := range feeds {
+		if f.ScreenName != "" {
+			twitterUsernames = append(twitterUsernames, f.ScreenName)
+		}
+	}
+	return twitterUsernames
+}
+
+func splitFrom512(input []string) []string {
+	var output []string
+	current := ""
+	for _, v := range input {
+		s := "from:" + v
+		if len(current) <= 512-(4+len(s)) {
+			current += s + " OR "
+		} else {
+			if current[len(current)-4:] == " OR " {
+				current = current[0 : len(current)-4]
+			}
+			output = append(output, current)
+			current = ""
+		}
+	}
+	return output
+}
+
+func getUserNameFromTweet(authorId string, users []*twitter.User) string {
+	for _, v := range users {
+		if v.ID == authorId {
+			return v.UserName
+		}
+	}
+	return ""
+}
+
 // handler handles incoming tweets
 func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.CatchedURL) {
 	for _, v := range t.MatchingRules {
@@ -270,6 +369,7 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 		// Remove Twitter Share ID (i.e. /#.WpAW30E8tRc.twitter)
 		l, err := link.Parse(u.ExpandedURL)
 		if err != nil {
+			log.Error(err)
 			continue
 		}
 
@@ -289,95 +389,9 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 			TwitterUserID:    authorID,
 			TwitterUserIDStr: t.Data.AuthorID,
 			ScreenName:       getUserNameFromTweet(t.Data.AuthorID, t.Includes.Users),
-			CreatedAt:        createdAt.Format(time.RFC3339),
+			CreatedAt:        createdAt,
+			CreatedAtStr:     t.Data.CreatedAt,
 		}
 		tweetChan <- messsage
 	}
-}
-
-// getUsernames list to listen.
-func getUsernames(feeds []*feed.Feed) []string {
-	twitterUsernames := make([]string, 0)
-	for _, f := range feeds {
-		if f.ScreenName != "" {
-			twitterUsernames = append(twitterUsernames, f.ScreenName)
-		}
-	}
-	return twitterUsernames
-}
-
-// split screen names into string with max length 512 chars.
-func splitFrom512(input []string) []string {
-	var output []string
-	current := ""
-	for _, v := range input {
-		s := "from:" + v
-		if len(current) <= 512-(4+len(s)) {
-			current += s + " OR "
-		} else {
-			if current[len(current)-4:] == " OR " {
-				current = current[0 : len(current)-4]
-			}
-			output = append(output, current)
-			current = ""
-		}
-	}
-	return output
-}
-
-// retrieve screen name from tweet response.
-func getUserNameFromTweet(authorId string, users []*twitter.User) string {
-	for _, v := range users {
-		if v.ID == authorId {
-			return v.UserName
-		}
-	}
-	return ""
-}
-
-// remove twitter api rules.
-func removeRules(api *twitter.Twitter) (bool, error) {
-	rules, err := api.GetFilterStreamRules(nil)
-	if err != nil {
-		return false, err
-	}
-	var ids []string
-	for _, v := range rules.Data {
-		if v.Tag == "mediawatch-listener" {
-			ids = append(ids, v.ID)
-		}
-	}
-	if len(ids) > 0 {
-		rulesdel := new(twitter.Rules)
-		rulesdel.Delete = &twitter.RulesDelete{
-			Ids: ids,
-		}
-		deleted, err := api.PostFilterStreamRules(nil, rulesdel)
-		if err != nil {
-			return false, err
-		}
-		if deleted == nil {
-			return false, errors.New("Rules not deleted")
-		}
-	}
-	return true, nil
-}
-
-// add twitter api rules.
-func addRules(api *twitter.Twitter, usernames []string) (bool, error) {
-	rules := new(twitter.Rules)
-	for _, v := range usernames {
-		rules.Add = append(rules.Add, &twitter.RulesData{
-			Value: v,
-			Tag:   "mediawatch-listener",
-		})
-	}
-	added, err := api.PostFilterStreamRules(nil, rules)
-	if err != nil {
-		return false, err
-	}
-	if added == nil {
-		return false, errors.New("Rules not added")
-	}
-	return true, nil
 }

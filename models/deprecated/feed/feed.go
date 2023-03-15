@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -33,18 +32,18 @@ var (
 
 func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 	index := []mongo.IndexModel{
-		// {
-		// 	Keys: bson.M{
-		// 		"screen_name": 1,
-		// 	},
-		// 	Options: options.Index().SetUnique(true), // {Unique: true},
-		// },
-		// {
-		// 	Keys: bson.M{
-		// 		"twitter_id": 1,
-		// 	},
-		// 	Options: options.Index().SetUnique(true), // {Unique: true},
-		// },
+		{
+			Keys: bson.M{
+				"screen_name": 1,
+			},
+			Options: options.Index().SetUnique(true), // {Unique: true},
+		},
+		{
+			Keys: bson.M{
+				"twitter_id": 1,
+			},
+			Options: options.Index().SetUnique(true), // {Unique: true},
+		},
 		{
 			Keys: bsonx.Doc{
 				{Key: "screen_name", Value: bsonx.String("text")},
@@ -67,13 +66,11 @@ func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 }
 
 type ListOpts struct {
-	Limit      int
-	Offset     int
-	Q          string
-	Deleted    bool
-	Status     string
-	StreamType string
-	Lang       string
+	Limit   int
+	Offset  int
+	Q       string
+	Deleted bool
+	Status  string
 }
 
 func Limit(i int) func(*ListOpts) {
@@ -105,25 +102,12 @@ func Status(s string) func(*ListOpts) {
 	}
 }
 
-func StreamType(s string) func(*ListOpts) {
-	return func(l *ListOpts) {
-		l.StreamType = s
-	}
-}
-
-func Lang(s string) func(*ListOpts) {
-	return func(l *ListOpts) {
-		l.Lang = strings.ToUpper(s)
-	}
-}
-
 func DefaultOpts() ListOpts {
 	l := ListOpts{}
 	l.Offset = 0
 	l.Limit = 24
 	l.Deleted = false
 	l.Status = ""
-	l.Lang = "EL"
 	return l
 }
 
@@ -147,15 +131,11 @@ func List(ctx context.Context, dbConn *db.MongoDB, optionsList ...func(*ListOpts
 	if opts.Status != "" {
 		filter["status"] = opts.Status
 	}
-	if opts.StreamType != "" {
-		filter["stream_type"] = opts.StreamType
-	}
-	if opts.Lang != "" {
-		filter["lang"] = opts.Lang
-	}
 	if opts.Q != "" {
 		filter["$text"] = bson.M{"$search": opts.Q}
 	}
+
+	// filter["status"] = "pending"
 
 	d := new(FeedsList)
 
@@ -294,9 +274,6 @@ func Update(ctx context.Context, dbConn *db.MongoDB, id string, upd *UpdateFeed,
 	}
 	if upd.RSS != nil {
 		fields["rss"] = *upd.RSS
-	}
-	if upd.StreamType != nil {
-		fields["stream_type"] = *upd.StreamType
 	}
 	if upd.MetaClasses != nil {
 		fields["meta_classes"] = *upd.MetaClasses
@@ -468,56 +445,4 @@ func GetPagination(ctx context.Context, dbConn *db.MongoDB, filter bson.M, limit
 	}
 
 	return &res, nil
-}
-
-func GetTargets(ctx context.Context, dbConn *db.MongoDB, optionsList ...func(*ListOpts)) (*FeedsList, error) {
-	ctx, span := trace.StartSpan(ctx, "model.feed.GetTargets")
-	defer span.End()
-
-	filter := bson.M{
-		"deleted": false,
-		"status":  "active",
-	}
-
-	opts := DefaultOpts()
-	for _, o := range optionsList {
-		o(&opts)
-	}
-
-	if opts.StreamType != "" {
-		filter["stream_type"] = opts.StreamType
-	}
-	if opts.Lang != "" {
-		filter["lang"] = opts.Lang
-	}
-
-	d := new(FeedsList)
-
-	findOptions := options.Find()
-	findOptions.SetLimit(int64(opts.Limit))
-	findOptions.SetSkip(int64(opts.Offset))
-	findOptions.SetSort(bson.D{{"_id", -1}})
-
-	f := func(collection *mongo.Collection) error {
-		c, err := collection.Find(ctx, filter, findOptions)
-		if err != nil {
-			return err
-		}
-		defer c.Close(ctx)
-		for c.Next(ctx) {
-			var f Feed
-			err := c.Decode(&f)
-			if err != nil {
-				return err
-			}
-			d.Data = append(d.Data, &f)
-		}
-		return nil
-	}
-
-	if err := dbConn.Execute(ctx, feedsCollection, f); err != nil {
-		return nil, errors.Wrap(err, "db.feeds.find()")
-	}
-
-	return d, nil
 }

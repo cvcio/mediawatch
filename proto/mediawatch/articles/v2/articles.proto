@@ -22,8 +22,8 @@ message Content {
     repeated string tags = 7;
     repeated string categories = 8;
     
-    string published_at = 9;
-    string edited_at = 10;
+    google.protobuf.Timestamp published_at = 9;
+    google.protobuf.Timestamp edited_at = 10;
 };
 
 // Article
@@ -31,52 +31,28 @@ message Article {
     int64 uid = 1;
     string doc_id = 2;
     string lang = 3;
-    string hostname = 4;
+    string screen_name = 4;
     string url = 5;
-    string feed_id = 6;
+    int64 tweet_id = 6;
+    string tweet_id_str = 7;
     
-    Content content = 7;
-    mediawatch.enrich.v2.NLP nlp = 8;
-    mediawatch.feeds.v2.Feed feed = 9;
-    
-    string crawled_at = 10;
-    int64 rel_count = 11;
-    string screen_name = 12;
+    Content content = 8;
+    mediawatch.enrich.v2.NLP nlp = 9;
+    mediawatch.feeds.v2.Feed feed = 10;
+    // Metrics metrics = 11;
+
+    google.protobuf.Timestamp crawled_at = 12;
 };
 
 // ArticleRequest
 message ArticleRequest {
     string doc_id = 1;
-    bool include_rels = 2;
+    string url = 2;
+    string tweet_id_str = 3;
 };
 
 // ArticlesRequest
-message ArticlesRequest {
-    string index = 1;
-    string doc_id = 2;
-
-    string q = 3;
-    string title = 4;
-    string body = 5;
-    string tags = 6;
-    string keywords = 7;
-    string topics = 8;
-    string entities = 9;
-    string authors = 10;
-    string lang = 11;
-    string feeds = 12;
-    string hostnames = 13;
-    
-    bool count_cases = 14;
-    bool include_rels = 15;
-
-    int32 skip = 16;
-    int32 limit = 17;
-    bool scroll = 18;
-
-    mediawatch.common.v2.SortBy sort = 19;
-    mediawatch.common.v2.RangeBy range = 20;
-};
+message ArticlesRequest {};
 
 // ArticleResponse
 message ArticleResponse {
@@ -92,7 +68,7 @@ message ArticlesResponse {
 // ArticlesService
 service ArticlesService {
     // GetArticle
-    rpc GetArticle(ArticleRequest) returns (Article) {};
+    rpc GetArticle(ArticleRequest) returns (ArticleResponse) {};
 
     // GetArticles
     rpc GetArticles(ArticlesRequest) returns (ArticlesResponse) {};

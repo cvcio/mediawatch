@@ -1,8 +1,6 @@
 package feed
 
 import (
-	"net/url"
-	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -27,7 +25,6 @@ type Feed struct {
 	TwitterIDStr        string `json:"twitter_id_str,omitempty" bson:"twitter_id_str"`
 	TwitterProfileImage string `json:"twitter_profile_image,omitempty" bson:"twitter_profile_image"`
 	RSS                 string `json:"rss,omitempty" bson:"rss"`
-	StreamType          string `json:"stream_type,omitempty" bson:"stream_type"`
 
 	// Info
 	Email                string `json:"email,omitempty" bson:"email"`
@@ -79,7 +76,6 @@ type UpdateFeed struct {
 	Lang                 *string      `json:"lang" bson:"lang"`
 	URL                  *string      `json:"url" bson:"url"`
 	RSS                  *string      `json:"rss" bson:"rss"`
-	StreamType           *string      `json:"stream_type,omitempty" bson:"stream_type"`
 	MetaClasses          *MetaClasses `json:"meta_classes,omitempty" bson:"meta_classes,omitempty"`
 	Status               *string      `json:"status" bson:"status"`
 	TestURL              *string      `json:"testURL" bson:"testURL"`
@@ -115,13 +111,4 @@ type TestData struct {
 	Title       string    `json:"title,omitempty" bson:"title,omitempty"`
 	Body        string    `json:"body,omitempty" bson:"body,omitempty"`
 	PublishedAt time.Time `json:"publishedAt,omitempty" bson:"publishedAt,omitempty"`
-}
-
-func (f *Feed) Hostname() string {
-	u, err := url.Parse(f.URL)
-	if err != nil {
-		return f.URL
-	}
-	h := strings.TrimPrefix(u.Hostname(), "www")
-	return strings.TrimPrefix(h, ".")
 }

@@ -42,7 +42,7 @@ def extract_keywords(doc):
 
 def extract_entities(doc):
     entities = [
-        {"text": normalize_keyword(w.text), "type": w.label_, "index": [w.start, w.end]}
+        {"entity_text": normalize_keyword(w.text), "entity_type": w.label_}
         for w in doc.ents
         if w.label_ in ["GPE", "ORG", "PRESON"]
     ]
@@ -108,7 +108,6 @@ def extract_claims(doc, stopwords, per=0.25):
     for word in word_frequencies.keys():
         word_frequencies[word] = word_frequencies[word] / max_frequency
     sentence_tokens = [sent for sent in doc.sents]
-
     sentence_scores = {}
     for sent in sentence_tokens:
         for word in sent:
@@ -120,14 +119,12 @@ def extract_claims(doc, stopwords, per=0.25):
 
     select_length = int(len(sentence_tokens) * per)
     summary = nlargest(select_length, sentence_scores, key=sentence_scores.get)
-    if len(summary) == 0:
-        return []
 
-    claims = [{"text": word.text, "type": "claim", "index": [word.start, word.end], "score": sentence_scores[word]} for word in summary]
-    claims = [{"text": c["text"].strip(), "type": c["type"], "index": c["index"], "score": c["score"]} for c in claims]
-    claims = [{"text": c["text"][0].upper() + c["text"][1:], "type": c["type"], "index": c["index"], "score": c["score"]} for c in claims]
+    claims = [word.text for word in summary]
+    claims = list(set(claims))
+    claims = [claim[0].upper() + claim[1:] for claim in claims]
 
-    return claims
+    return [claim.strip() for claim in claims]
 
 
 def extract_topics(body, pipeline):
@@ -138,14 +135,11 @@ def extract_topics(body, pipeline):
             padding=True,
             truncation=True,
             max_length=512,
-            top_k=4,
-        )
+            return_all_scores=True,
+        )[0]
     except:
         pass
-    topics = [
-        {"text": x["label"], "type": "topic", "score": x["score"]}
-        for x in topics if x["score"] > 0.2
-    ] if len(topics) > 0 else []
+    topics = [x["label"] for x in topics if x["score"] > 0.2] if len(topics) > 0 else []
     return topics
 
 
@@ -210,21 +204,18 @@ def sentence_similarity(sent1, sent2, stopwords):
 def extract_quotes(body):
     # ([\"'“«‹])(.*?)(\1|[\”»›])
     expressions = [
-        r"([\"'«‹])((.*?))(\1|[\»›])",
-        r"([“])((.*?))([”])",
-        r"([«])((.*?))([»])",
-        r"([‹])((.*?))([›])",
+        r"([\"'«‹])(.*?)(\1|[\»›])",
+        r"([“])(.*?)([”])",
+        r"([«])(.*?)([»])",
+        r"([‹])(.*?)([›])",
     ]
     quotes = []
     for expression in expressions:
-        regex = re.finditer(expression, body)
-        for group in regex:
-            if group:
-                size = len(group.group().split())
-                if size > 2 and size <= 48:
-                    quotes.append({
-                        "text": normalize_text(group.group()),
-                        "type": "quote",
-                        "index": [group.start(), group.end()]
-                    })
-    return quotes
+        groups = re.findall(expression, body)
+        for quote in groups:
+            size = len(quote[1].split())
+            if size > 2 and size <= 48:
+                quotes.append(quote[1])
+
+    quotes = [normalize_text(quote) for quote in quotes]
+    return list(set(quotes))

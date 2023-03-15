@@ -33,7 +33,7 @@ func API(
 	log *logrus.Logger,
 	registry *prometheus.Registry,
 	db *db.MongoDB,
-	es *es.Elastic,
+	es *es.ES,
 	neoClient *neo.Neo,
 	mw []func(http.Handler) http.Handler,
 	authenticator auth.Authenticator,
@@ -87,8 +87,24 @@ func API(
 		log.Fatal(err)
 	}
 
-	a := NewArticlesHandler(log, db, es, neoClient, scrape)
-	c := NewCasesHandler(log, db, es, neoClient)
+	a := Articles{
+		ES:     es,
+		DB:     db,
+		Neo:    neoClient,
+		log:    log,
+		scrape: scrape,
+	}
+
+	c := Cases{
+		ES:  es,
+		Neo: neoClient,
+		log: log,
+	}
+
+	// err = article.EnsureIndex(context.Background(), f.DB)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	r := Reports{
 		DB:  db,

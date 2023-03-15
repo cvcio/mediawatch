@@ -10,8 +10,7 @@ enum Status {
     STATUS_SUSPENDED = 3;
     STATUS_CLOSED = 4;
     STATUS_DELETED = 5;
-    STATUS_OFFLINE = 6;
-};
+}
 
 // StreamType Enumeration
 enum StreamType {
@@ -19,8 +18,7 @@ enum StreamType {
     STREAM_TYPE_OTHER = 1;
     STREAM_TYPE_TWITTER = 2;
     STREAM_TYPE_RSS = 3;
-};
-
+}
 // Locality Enumeration
 enum Locality {
     LOCALITY_UNSPECIFIED = 0;
@@ -29,8 +27,7 @@ enum Locality {
     LOCALITY_NATIONAL = 3;
     LOCALITY_INTERNATIONAL = 4;
     LOCALITY_MIXED = 5;
-};
-
+}
 // BusinessType Enumeration
 enum BusinessType {
     BUSINESS_TYPE_UNSPECIFIED = 0;
@@ -39,7 +36,7 @@ enum BusinessType {
     BUSINESS_TYPE_ORGANIZATION = 3;
     BUSINESS_TYPE_BLOG = 4;
     BUSINESS_TYPE_PORTAL = 5;
-};
+}
 
 // ContentType Enumeration
 enum ContentType {
@@ -53,7 +50,7 @@ enum ContentType {
     CONTENT_TYPE_SPORTS = 7;
     CONTENT_TYPE_RELIGION = 8;
     CONTENT_TYPE_MIXED = 9;
-};
+}
 
 // PoliticalOrientation Enumeration
 enum PoliticalOrientation {
@@ -65,7 +62,7 @@ enum PoliticalOrientation {
     POLITICAL_ORIENTATION_CENTER_RIGHT = 5;
     POLITICAL_ORIENTATION_RIGHT = 6;
     POLITICAL_ORIENTATION_FAR_RIGHT = 7;
-};
+}
 
 // Tier Enumeration
 enum Tier {
@@ -76,27 +73,15 @@ enum Tier {
     TIER_BROADCASTING_TV = 4;
     TIER_BROADCASTING_RADIO = 5;
     TIER_MIXED = 6;
-};
-
+}
 // Pagination
 message Pagination {
     int64 total = 1;
     int64 pages = 2;
-};
+}
 
 // ResponseWithMessage
 message ResponseWithMessage {
     string status = 1;
     string message = 2;
-};
-
-message SortBy {
-    string by = 1;
-    bool asc = 2;
-};
-
-message RangeBy {
-    string by = 1;
-    string from = 2;
-    string to = 3;
-};
+}
