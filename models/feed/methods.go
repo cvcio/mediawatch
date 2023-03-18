@@ -48,9 +48,46 @@ func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 	return nil
 }
 
-func Get()           {}
-func GetById()       {}
-func GetByUserName() {}
+// Get returns a single feed by feed query.
+func Get(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (*feedsv2.Feed, error) {
+	filter := bson.M{}
+
+	opts := DefaultOpts()
+	for _, o := range optionsList {
+		o(&opts)
+	}
+
+	if opts.Id != "" {
+		oid, err := primitive.ObjectIDFromHex(opts.Id)
+		if err != nil {
+			return nil, db.ErrInvalid
+		}
+
+		filter["_id"] = oid
+	}
+
+	if opts.Hostname != "" {
+		filter["hostname"] = opts.Hostname
+	}
+
+	if opts.UserName != "" {
+		filter["username"] = opts.UserName
+	}
+
+	var data *feedsv2.Feed
+	f := func(collection *mongo.Collection) error {
+		return collection.FindOne(ctx, filter).Decode(&data)
+	}
+	if err := mg.Execute(ctx, feedsCollection, f); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, db.ErrNotFound
+		}
+
+		return nil, errors.Wrap(err, fmt.Sprintf("db.feeds.findOne(%s)", db.Query(filter)))
+	}
+
+	return data, nil
+}
 
 // GetFeedsStreamList returns a list of all active streams by feed query.
 func GetFeedsStreamList(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) ([]*feedsv2.Feed, error) {

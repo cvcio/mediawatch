@@ -6,7 +6,10 @@ import "strings"
 type ListOpts struct {
 	Limit        int
 	Offset       int
+	Id           string
 	Q            string
+	UserName     string
+	Hostname     string
 	StreamStatus int
 	StreamType   int
 	Lang         string
@@ -25,6 +28,10 @@ func DefaultOpts() ListOpts {
 	l.Country = ""
 	l.SortKey = "_id"
 	l.SortOrder = -1
+	l.Id = ""
+	l.Q = ""
+	l.UserName = ""
+	l.Hostname = ""
 	return l
 }
 
@@ -44,9 +51,26 @@ func Offset(i int) func(*ListOpts) {
 	}
 }
 
+func Id(i string) func(*ListOpts) {
+	return func(l *ListOpts) {
+		l.Id = i
+	}
+}
 func Q(i string) func(*ListOpts) {
 	return func(l *ListOpts) {
 		l.Q = i
+	}
+}
+
+func UserName(i string) func(*ListOpts) {
+	return func(l *ListOpts) {
+		l.UserName = i
+	}
+}
+
+func Hostname(i string) func(*ListOpts) {
+	return func(l *ListOpts) {
+		l.Hostname = i
 	}
 }
 
