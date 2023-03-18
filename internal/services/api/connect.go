@@ -115,7 +115,11 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ...
 	mux := http.NewServeMux()
 	// feeds
-	feedsHandler := handlers.NewFeedsHandler(cfg, log, mongo, elastic, authenticator)
+	feedsHandler, err := handlers.NewFeedsHandler(cfg, log, mongo, elastic, authenticator)
+	if err != nil {
+		log.Errorf("[SERVER] Error while creating feeds collection: %s", err.Error())
+		return err
+	}
 	muxFeedsPath, muxFeedsHandler := feedsv2connect.NewFeedServiceHandler(feedsHandler)
 	mux.Handle(muxFeedsPath, muxFeedsHandler)
 

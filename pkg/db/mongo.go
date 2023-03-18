@@ -33,10 +33,13 @@ var (
 	ErrInvalid = errors.New("invalid request")
 
 	// ErrInvalidDBProvided wrong database
-	// ErrInvalidDBProvided = errors.New("invalid DB provided")
+	ErrInvalidDBProvided = errors.New("invalid DB provided")
 
 	// ErrConnectionFailed connection error
 	ErrConnectionFailed = errors.New("connection failed")
+
+	// ErrExists document exists error
+	ErrExists = errors.New("document exists")
 )
 
 // MongoDB client struct.
