@@ -48,11 +48,106 @@ func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 	return nil
 }
 
-func Get()           {}
-func GetById()       {}
-func GetByUserName() {}
-func GetTargets()    {}
-func List()          {}
+// Get returns a single feed by feed query.
+func Get(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (*feedsv2.Feed, error) {
+	filter := bson.M{}
+
+	opts := DefaultOpts()
+	for _, o := range optionsList {
+		o(&opts)
+	}
+
+	if opts.Id != "" {
+		oid, err := primitive.ObjectIDFromHex(opts.Id)
+		if err != nil {
+			return nil, db.ErrInvalid
+		}
+
+		filter["_id"] = oid
+	}
+
+	if opts.Hostname != "" {
+		filter["hostname"] = opts.Hostname
+	}
+
+	if opts.UserName != "" {
+		filter["username"] = opts.UserName
+	}
+
+	var data *feedsv2.Feed
+	f := func(collection *mongo.Collection) error {
+		return collection.FindOne(ctx, filter).Decode(&data)
+	}
+	if err := mg.Execute(ctx, feedsCollection, f); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, db.ErrNotFound
+		}
+
+		return nil, errors.Wrap(err, fmt.Sprintf("db.feeds.findOne(%s)", db.Query(filter)))
+	}
+
+	return data, nil
+}
+
+// GetFeedsStreamList returns a list of all active streams by feed query.
+func GetFeedsStreamList(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) ([]*feedsv2.Feed, error) {
+	filter := bson.M{}
+
+	opts := DefaultOpts()
+	for _, o := range optionsList {
+		o(&opts)
+	}
+
+	if opts.Lang != "" {
+		filter["localization.lang"] = opts.Lang
+	}
+
+	if opts.Country != "" {
+		filter["localization.country"] = opts.Country
+	}
+
+	if opts.StreamType > 0 {
+		filter["stream.streamtype"] = opts.StreamType
+	}
+
+	if opts.StreamStatus > 0 {
+		filter["stream.streamstatus"] = opts.StreamStatus
+	}
+
+	findOptions := options.Find()
+	findOptions.SetLimit(int64(opts.Limit))
+	findOptions.SetSkip(int64(opts.Offset))
+	findOptions.SetSort(bson.M{
+		opts.SortKey: opts.SortOrder,
+	})
+
+	data := make([]*feedsv2.Feed, 0)
+
+	f := func(collection *mongo.Collection) error {
+		c, err := collection.Find(ctx, filter, findOptions)
+		if err != nil {
+			return err
+		}
+		defer c.Close(ctx)
+		for c.Next(ctx) {
+			var f feedsv2.Feed
+			err := c.Decode(&f)
+			if err != nil {
+				return err
+			}
+			data = append(data, &f)
+		}
+		return nil
+	}
+
+	if err := mg.Execute(ctx, feedsCollection, f); err != nil {
+		return nil, errors.Wrap(err, "db.feeds.find()")
+	}
+
+	return data, nil
+}
+
+func List() {}
 
 // Create creates a new feed.
 func Create(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) (*feedsv2.Feed, error) {

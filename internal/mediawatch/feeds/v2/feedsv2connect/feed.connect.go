@@ -41,7 +41,7 @@ type FeedServiceClient interface {
 	// delete a feed
 	DeleteFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v21.ResponseWithMessage], error)
 	// get the stream list
-	GetFeedsStreamList(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedStreamList], error)
+	GetFeedsStreamList(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error)
 }
 
 // NewFeedServiceClient constructs a client for the mediawatch.feeds.v2.FeedService service. By
@@ -84,7 +84,7 @@ func NewFeedServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts
 			baseURL+"/mediawatch.feeds.v2.FeedService/DeleteFeed",
 			opts...,
 		),
-		getFeedsStreamList: connect_go.NewClient[v2.QueryFeed, v2.FeedStreamList](
+		getFeedsStreamList: connect_go.NewClient[v2.QueryFeed, v2.FeedList](
 			httpClient,
 			baseURL+"/mediawatch.feeds.v2.FeedService/GetFeedsStreamList",
 			opts...,
@@ -100,7 +100,7 @@ type feedServiceClient struct {
 	updateFeed           *connect_go.Client[v2.Feed, v21.ResponseWithMessage]
 	updateFeedWithFields *connect_go.Client[v2.FeedWithFields, v21.ResponseWithMessage]
 	deleteFeed           *connect_go.Client[v2.Feed, v21.ResponseWithMessage]
-	getFeedsStreamList   *connect_go.Client[v2.QueryFeed, v2.FeedStreamList]
+	getFeedsStreamList   *connect_go.Client[v2.QueryFeed, v2.FeedList]
 }
 
 // CreateFeed calls mediawatch.feeds.v2.FeedService.CreateFeed.
@@ -134,7 +134,7 @@ func (c *feedServiceClient) DeleteFeed(ctx context.Context, req *connect_go.Requ
 }
 
 // GetFeedsStreamList calls mediawatch.feeds.v2.FeedService.GetFeedsStreamList.
-func (c *feedServiceClient) GetFeedsStreamList(ctx context.Context, req *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedStreamList], error) {
+func (c *feedServiceClient) GetFeedsStreamList(ctx context.Context, req *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error) {
 	return c.getFeedsStreamList.CallUnary(ctx, req)
 }
 
@@ -153,7 +153,7 @@ type FeedServiceHandler interface {
 	// delete a feed
 	DeleteFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v21.ResponseWithMessage], error)
 	// get the stream list
-	GetFeedsStreamList(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedStreamList], error)
+	GetFeedsStreamList(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error)
 }
 
 // NewFeedServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -228,6 +228,6 @@ func (UnimplementedFeedServiceHandler) DeleteFeed(context.Context, *connect_go.R
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.DeleteFeed is not implemented"))
 }
 
-func (UnimplementedFeedServiceHandler) GetFeedsStreamList(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedStreamList], error) {
+func (UnimplementedFeedServiceHandler) GetFeedsStreamList(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.GetFeedsStreamList is not implemented"))
 }
