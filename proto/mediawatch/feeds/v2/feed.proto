@@ -130,6 +130,8 @@ message QueryFeed {
     mediawatch.common.v2.Status stream_status = 9;
 
     string q = 10;
+    string user_name = 11;
+    string hostname = 12;
 }
 
 service FeedService {

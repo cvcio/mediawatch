@@ -51,7 +51,22 @@ func (h *FeedsHandler) CreateFeed(ctx context.Context, req *connect.Request[feed
 
 // GetFeed returns a single feed.
 func (h *FeedsHandler) GetFeed(ctx context.Context, req *connect.Request[feedsv2.QueryFeed]) (*connect.Response[feedsv2.Feed], error) {
-	return connect.NewResponse(&feedsv2.Feed{}), nil
+	h.log.Debugf("GetFeed Request Message: %+v", req.Msg)
+	// TODO: parse claims and authorization tokens
+
+	data, err := feed.Get(ctx, h.mg,
+		feed.Id(req.Msg.Id),
+		feed.Hostname(req.Msg.Hostname),
+		feed.UserName(req.Msg.UserName),
+	)
+
+	if err != nil {
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to retrieve feed"))
+		h.log.Errorf("Internal: %s", err.Error())
+		return nil, errorMessage
+	}
+
+	return connect.NewResponse(data), nil
 }
 
 // GetFeeds return a list of feeds.
