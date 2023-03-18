@@ -71,7 +71,19 @@ func (h *FeedsHandler) UpdateFeedWithFields(ctx context.Context, req *connect.Re
 
 // DeleteFeed deletes a single article.
 func (h *FeedsHandler) DeleteFeed(ctx context.Context, req *connect.Request[feedsv2.Feed]) (*connect.Response[commonv2.ResponseWithMessage], error) {
-	return connect.NewResponse(&commonv2.ResponseWithMessage{}), nil
+	h.log.Debugf("DeleteFeed Request Message: %+v", req.Msg)
+	// TODO: parse claims and authorization tokens
+
+	if err := feed.Delete(ctx, h.mg, req.Msg); err != nil {
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to delete feed"))
+		h.log.Errorf("Internal: %s", err.Error())
+		return nil, errorMessage
+	}
+
+	return connect.NewResponse(&commonv2.ResponseWithMessage{
+		Status:  "ok",
+		Message: "feed deleted",
+	}), nil
 }
 
 // GetFeedsStreamList returns a stream list.

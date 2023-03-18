@@ -88,4 +88,30 @@ func Create(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) (*feedsv2.F
 }
 
 func Update() {}
-func Delete() {}
+
+// Delete deletes a feed.
+func Delete(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) error {
+	oid, err := primitive.ObjectIDFromHex(feed.Id)
+	if err != nil {
+		return db.ErrInvalidID
+	}
+
+	filter := bson.M{"_id": oid}
+
+	f := func(collection *mongo.Collection) error {
+		c, err := collection.DeleteOne(ctx, filter)
+		if c.DeletedCount == 0 {
+			return db.ErrNotFound
+		}
+		return err
+	}
+
+	if err := mg.Execute(ctx, feedsCollection, f); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return db.ErrNotFound
+		}
+		return errors.Wrap(err, fmt.Sprintf("db.feeds.delete(%v)", db.Query(filter)))
+	}
+
+	return nil
+}
