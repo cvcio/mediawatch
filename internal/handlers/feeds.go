@@ -71,7 +71,24 @@ func (h *FeedsHandler) GetFeed(ctx context.Context, req *connect.Request[feedsv2
 
 // GetFeeds return a list of feeds.
 func (h *FeedsHandler) GetFeeds(ctx context.Context, req *connect.Request[feedsv2.QueryFeed]) (*connect.Response[feedsv2.FeedList], error) {
-	return connect.NewResponse(&feedsv2.FeedList{}), nil
+	h.log.Debugf("GetFeed Request Message: %+v", req.Msg)
+	// TODO: parse claims and authorization tokens
+
+	data, err := feed.List(ctx, h.mg,
+		feed.Q(req.Msg.Q),
+		feed.StreamStatus(int(req.Msg.StreamStatus.Number())),
+		feed.StreamType(int(req.Msg.StreamType.Number())),
+		feed.Lang(req.Msg.Lang),
+		feed.Country(req.Msg.Country),
+	)
+
+	if err != nil {
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to retrieve feed"))
+		h.log.Errorf("Internal: %s", err.Error())
+		return nil, errorMessage
+	}
+
+	return connect.NewResponse(data), nil
 }
 
 // UpdateFeed updates a single feed.
