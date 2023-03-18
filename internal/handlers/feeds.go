@@ -87,6 +87,27 @@ func (h *FeedsHandler) DeleteFeed(ctx context.Context, req *connect.Request[feed
 }
 
 // GetFeedsStreamList returns a stream list.
-func (h *FeedsHandler) GetFeedsStreamList(ctx context.Context, req *connect.Request[feedsv2.QueryFeed]) (*connect.Response[feedsv2.FeedStreamList], error) {
-	return connect.NewResponse(&feedsv2.FeedStreamList{}), nil
+func (h *FeedsHandler) GetFeedsStreamList(ctx context.Context, req *connect.Request[feedsv2.QueryFeed]) (*connect.Response[feedsv2.FeedList], error) {
+	h.log.Debugf("GetFeedsStreamList Request Message: %+v", req.Msg)
+	// TODO: parse claims and authorization tokens
+
+	if req.Msg.StreamType != commonv2.StreamType_STREAM_TYPE_RSS && req.Msg.StreamType != commonv2.StreamType_STREAM_TYPE_TWITTER {
+		return nil, connect.NewError(connect.CodeInternal, errors.Errorf("only twitter and rss streams are supported"))
+	}
+
+	data, err := feed.GetFeedsStreamList(ctx, h.mg,
+		// return only active streams
+		feed.StreamStatus(int(commonv2.Status_STATUS_ACTIVE.Number())),
+		feed.StreamType(int(req.Msg.StreamType.Number())),
+		feed.Lang(req.Msg.Lang),
+	)
+	if err != nil {
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to retrieve feeds stream list"))
+		h.log.Errorf("Internal: %s", err.Error())
+		return nil, errorMessage
+	}
+
+	return connect.NewResponse(&feedsv2.FeedList{
+		Data: data,
+	}), nil
 }
