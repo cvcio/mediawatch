@@ -65,7 +65,7 @@ func Create(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) (*feedsv2.F
 		if err != nil {
 			we, _ := err.(mongo.WriteException)
 			if we.WriteErrors[0].Code == 11000 {
-				return db.ErrInvalid
+				return db.ErrExists
 			}
 
 			return err

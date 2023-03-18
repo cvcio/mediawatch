@@ -12,6 +12,7 @@ import (
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/es"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -26,13 +27,26 @@ type FeedsHandler struct {
 }
 
 // NewFeedsHandler returns a new FeedsHandler service.
-func NewFeedsHandler(cfg *config.Config, log *zap.SugaredLogger, mg *db.MongoDB, elastic *es.Elastic, authenticator *auth.JWTAuthenticator) *FeedsHandler {
-	return &FeedsHandler{log: log, mg: mg, elastic: elastic, authenticator: authenticator}
+func NewFeedsHandler(cfg *config.Config, log *zap.SugaredLogger, mg *db.MongoDB, elastic *es.Elastic, authenticator *auth.JWTAuthenticator) (*FeedsHandler, error) {
+	if err := feed.EnsureIndex(context.Background(), mg); err != nil {
+		return nil, err
+	}
+	return &FeedsHandler{log: log, mg: mg, elastic: elastic, authenticator: authenticator}, nil
 }
 
 // CreateFeed creates a new feed.
 func (h *FeedsHandler) CreateFeed(ctx context.Context, req *connect.Request[feedsv2.Feed]) (*connect.Response[feedsv2.Feed], error) {
-	return connect.NewResponse(&feedsv2.Feed{}), nil
+	h.log.Debugf("CreateFeed Request Message: %+v", req.Msg)
+	// TODO: parse claims and authorization tokens
+
+	f, err := feed.Create(ctx, h.mg, req.Msg)
+	if err != nil {
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to create feed"))
+		h.log.Errorf("Internal: %s", err.Error())
+		return nil, errorMessage
+	}
+
+	return connect.NewResponse(f), nil
 }
 
 // GetFeed returns a single feed.
