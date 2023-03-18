@@ -80,6 +80,7 @@ func (h *FeedsHandler) GetFeeds(ctx context.Context, req *connect.Request[feedsv
 		feed.StreamType(int(req.Msg.StreamType.Number())),
 		feed.Lang(req.Msg.Lang),
 		feed.Country(req.Msg.Country),
+		feed.Limit(int(req.Msg.Limit)),
 	)
 
 	if err != nil {

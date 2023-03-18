@@ -208,8 +208,9 @@ func GetPagination(ctx context.Context, mg *MongoDB, filter bson.M, limit int, c
 		}
 
 		res["total"] = total
-		res["pages"] = int64(math.Ceil(float64(total) / float64(limit)))
-
+		if limit > 0 {
+			res["pages"] = int64(math.Ceil(float64(total) / float64(limit)))
+		}
 		return nil
 	}
 
