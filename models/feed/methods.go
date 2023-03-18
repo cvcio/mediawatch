@@ -97,6 +97,7 @@ func Update(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) error {
 
 	// create the fields to update
 	fields := make(bson.M)
+	feed.UpdatedAt = time.Now().Format(time.RFC3339)
 
 	return nil
 }

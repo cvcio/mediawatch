@@ -61,10 +61,13 @@ func (h *FeedsHandler) GetFeeds(ctx context.Context, req *connect.Request[feedsv
 
 // UpdateFeed updates a single feed.
 func (h *FeedsHandler) UpdateFeed(ctx context.Context, req *connect.Request[feedsv2.Feed]) (*connect.Response[commonv2.ResponseWithMessage], error) {
-	// TODO: parse claims
+	h.log.Debugf("UpdateFeed Request Message: %+v", req.Msg)
+	// TODO: parse claims and authorization tokens
 
 	if err := feed.Update(ctx, h.mg, req.Msg); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to update feed"))
+		h.log.Errorf("Internal: %s", err.Error())
+		return nil, errorMessage
 	}
 
 	return connect.NewResponse(&commonv2.ResponseWithMessage{
