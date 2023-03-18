@@ -87,5 +87,18 @@ func Create(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) (*feedsv2.F
 	return feed, nil
 }
 
-func Update() {}
+// Update updates a feed.
+func Update(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) error {
+	// convert id string to ObjectId
+	oid, err := primitive.ObjectIDFromHex(feed.Id)
+	if err != nil {
+		return db.ErrInvalidID
+	}
+
+	// create the fields to update
+	fields := make(bson.M)
+
+	return nil
+}
+
 func Delete() {}
