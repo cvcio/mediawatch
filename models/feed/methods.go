@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	commonv2 "github.com/cvcio/mediawatch/internal/mediawatch/common/v2"
 	feedsv2 "github.com/cvcio/mediawatch/internal/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/pkg/errors"
@@ -146,7 +147,84 @@ func GetFeedsStreamList(ctx context.Context, mg *db.MongoDB, optionsList ...func
 
 	return data, nil
 }
-func List() {}
+
+// List returns a list of feeds by feed query.
+func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (*feedsv2.FeedList, error) {
+	filter := bson.M{}
+
+	opts := DefaultOpts()
+	for _, o := range optionsList {
+		o(&opts)
+	}
+
+	if opts.Lang != "" {
+		filter["localization.lang"] = opts.Lang
+	}
+
+	if opts.Country != "" {
+		filter["localization.country"] = opts.Country
+	}
+
+	if opts.StreamType > 0 {
+		filter["stream.streamtype"] = opts.StreamType
+	}
+
+	if opts.StreamStatus > 0 {
+		filter["stream.streamstatus"] = opts.StreamStatus
+	}
+
+	if opts.Q != "" {
+		filter["$text"] = bson.M{"$search": opts.Q}
+	}
+
+	findOptions := options.Find()
+	findOptions.SetLimit(int64(opts.Limit))
+	findOptions.SetSkip(int64(opts.Offset))
+	findOptions.SetSort(bson.M{
+		opts.SortKey: opts.SortOrder,
+	})
+
+	data := make([]*feedsv2.Feed, 0)
+	pagination := &commonv2.Pagination{}
+
+	p, err := db.GetPagination(ctx, mg, filter, opts.Limit, feedsCollection)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := p["total"]; ok {
+		pagination.Total = p["total"].(int64)
+	}
+	if _, ok := p["pages"]; ok {
+		pagination.Pages = p["pages"].(int64)
+	}
+
+	f := func(collection *mongo.Collection) error {
+		c, err := collection.Find(ctx, filter, findOptions)
+		if err != nil {
+			return err
+		}
+		defer c.Close(ctx)
+		for c.Next(ctx) {
+			var f feedsv2.Feed
+			err := c.Decode(&f)
+			if err != nil {
+				return err
+			}
+			data = append(data, &f)
+		}
+		return nil
+	}
+
+	if err := mg.Execute(ctx, feedsCollection, f); err != nil {
+		return nil, errors.Wrap(err, "db.feeds.find()")
+	}
+
+	return &feedsv2.FeedList{
+		Data:       data,
+		Pagination: pagination,
+	}, nil
+}
 
 // Create creates a new feed.
 func Create(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) (*feedsv2.Feed, error) {
