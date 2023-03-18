@@ -44,14 +44,8 @@ message Article {
     string screen_name = 12;
 };
 
-// ArticleRequest
-message ArticleRequest {
-    string doc_id = 1;
-    bool include_rels = 2;
-};
-
-// ArticlesRequest
-message ArticlesRequest {
+// QueryArticle
+message QueryArticle {
     string index = 1;
     string doc_id = 2;
 
@@ -78,13 +72,8 @@ message ArticlesRequest {
     mediawatch.common.v2.RangeBy range = 20;
 };
 
-// ArticleResponse
-message ArticleResponse {
-    Article data = 1;
-};
-
 // ArticlesResponse
-message ArticlesResponse {
+message ArticleList {
     repeated Article data = 1;
     mediawatch.common.v2.Pagination pagination = 2;
 };
@@ -92,14 +81,14 @@ message ArticlesResponse {
 // ArticlesService
 service ArticlesService {
     // GetArticle
-    rpc GetArticle(ArticleRequest) returns (Article) {};
+    rpc GetArticle(QueryArticle) returns (Article) {};
 
     // GetArticles
-    rpc GetArticles(ArticlesRequest) returns (ArticlesResponse) {};
+    rpc GetArticles(QueryArticle) returns (ArticleList) {};
 
     // StreamArticles
-    rpc StreamArticles(ArticlesRequest) returns (stream ArticleResponse);
+    rpc StreamArticles(QueryArticle) returns (stream ArticleList);
 
     // StreamRelatedArticles
-    rpc StreamRelatedArticles(ArticlesRequest) returns (stream ArticleResponse);
+    rpc StreamRelatedArticles(QueryArticle) returns (stream ArticleList);
 };

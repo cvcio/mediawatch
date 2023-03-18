@@ -5,7 +5,7 @@ package mediawatch.feeds.v2;
 // third party imports
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
-import "tagger/tagger.proto";
+// import "tagger/tagger.proto";
 
 // mediawatch specific imports
 import "mediawatch/common/v2/common.proto";
@@ -71,7 +71,7 @@ message FeedMeta {
 
 message Feed {
     // UUID as a string
-    string id = 1 [(tagger.tags) = "bson:\"_id,omitempty\""];
+    string id = 1;
     // UUID string representation
     string uuid = 2;
     // Feed creation datetime in RFC3339 format

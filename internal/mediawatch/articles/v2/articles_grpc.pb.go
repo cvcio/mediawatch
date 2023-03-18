@@ -19,13 +19,13 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ArticlesServiceClient interface {
 	// GetArticle
-	GetArticle(ctx context.Context, in *ArticleRequest, opts ...grpc.CallOption) (*Article, error)
+	GetArticle(ctx context.Context, in *QueryArticle, opts ...grpc.CallOption) (*Article, error)
 	// GetArticles
-	GetArticles(ctx context.Context, in *ArticlesRequest, opts ...grpc.CallOption) (*ArticlesResponse, error)
+	GetArticles(ctx context.Context, in *QueryArticle, opts ...grpc.CallOption) (*ArticleList, error)
 	// StreamArticles
-	StreamArticles(ctx context.Context, in *ArticlesRequest, opts ...grpc.CallOption) (ArticlesService_StreamArticlesClient, error)
+	StreamArticles(ctx context.Context, in *QueryArticle, opts ...grpc.CallOption) (ArticlesService_StreamArticlesClient, error)
 	// StreamRelatedArticles
-	StreamRelatedArticles(ctx context.Context, in *ArticlesRequest, opts ...grpc.CallOption) (ArticlesService_StreamRelatedArticlesClient, error)
+	StreamRelatedArticles(ctx context.Context, in *QueryArticle, opts ...grpc.CallOption) (ArticlesService_StreamRelatedArticlesClient, error)
 }
 
 type articlesServiceClient struct {
@@ -36,7 +36,7 @@ func NewArticlesServiceClient(cc grpc.ClientConnInterface) ArticlesServiceClient
 	return &articlesServiceClient{cc}
 }
 
-func (c *articlesServiceClient) GetArticle(ctx context.Context, in *ArticleRequest, opts ...grpc.CallOption) (*Article, error) {
+func (c *articlesServiceClient) GetArticle(ctx context.Context, in *QueryArticle, opts ...grpc.CallOption) (*Article, error) {
 	out := new(Article)
 	err := c.cc.Invoke(ctx, "/mediawatch.articles.v2.ArticlesService/GetArticle", in, out, opts...)
 	if err != nil {
@@ -45,8 +45,8 @@ func (c *articlesServiceClient) GetArticle(ctx context.Context, in *ArticleReque
 	return out, nil
 }
 
-func (c *articlesServiceClient) GetArticles(ctx context.Context, in *ArticlesRequest, opts ...grpc.CallOption) (*ArticlesResponse, error) {
-	out := new(ArticlesResponse)
+func (c *articlesServiceClient) GetArticles(ctx context.Context, in *QueryArticle, opts ...grpc.CallOption) (*ArticleList, error) {
+	out := new(ArticleList)
 	err := c.cc.Invoke(ctx, "/mediawatch.articles.v2.ArticlesService/GetArticles", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (c *articlesServiceClient) GetArticles(ctx context.Context, in *ArticlesReq
 	return out, nil
 }
 
-func (c *articlesServiceClient) StreamArticles(ctx context.Context, in *ArticlesRequest, opts ...grpc.CallOption) (ArticlesService_StreamArticlesClient, error) {
+func (c *articlesServiceClient) StreamArticles(ctx context.Context, in *QueryArticle, opts ...grpc.CallOption) (ArticlesService_StreamArticlesClient, error) {
 	stream, err := c.cc.NewStream(ctx, &ArticlesService_ServiceDesc.Streams[0], "/mediawatch.articles.v2.ArticlesService/StreamArticles", opts...)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (c *articlesServiceClient) StreamArticles(ctx context.Context, in *Articles
 }
 
 type ArticlesService_StreamArticlesClient interface {
-	Recv() (*ArticleResponse, error)
+	Recv() (*ArticleList, error)
 	grpc.ClientStream
 }
 
@@ -78,15 +78,15 @@ type articlesServiceStreamArticlesClient struct {
 	grpc.ClientStream
 }
 
-func (x *articlesServiceStreamArticlesClient) Recv() (*ArticleResponse, error) {
-	m := new(ArticleResponse)
+func (x *articlesServiceStreamArticlesClient) Recv() (*ArticleList, error) {
+	m := new(ArticleList)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (c *articlesServiceClient) StreamRelatedArticles(ctx context.Context, in *ArticlesRequest, opts ...grpc.CallOption) (ArticlesService_StreamRelatedArticlesClient, error) {
+func (c *articlesServiceClient) StreamRelatedArticles(ctx context.Context, in *QueryArticle, opts ...grpc.CallOption) (ArticlesService_StreamRelatedArticlesClient, error) {
 	stream, err := c.cc.NewStream(ctx, &ArticlesService_ServiceDesc.Streams[1], "/mediawatch.articles.v2.ArticlesService/StreamRelatedArticles", opts...)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (c *articlesServiceClient) StreamRelatedArticles(ctx context.Context, in *A
 }
 
 type ArticlesService_StreamRelatedArticlesClient interface {
-	Recv() (*ArticleResponse, error)
+	Recv() (*ArticleList, error)
 	grpc.ClientStream
 }
 
@@ -110,8 +110,8 @@ type articlesServiceStreamRelatedArticlesClient struct {
 	grpc.ClientStream
 }
 
-func (x *articlesServiceStreamRelatedArticlesClient) Recv() (*ArticleResponse, error) {
-	m := new(ArticleResponse)
+func (x *articlesServiceStreamRelatedArticlesClient) Recv() (*ArticleList, error) {
+	m := new(ArticleList)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -123,29 +123,29 @@ func (x *articlesServiceStreamRelatedArticlesClient) Recv() (*ArticleResponse, e
 // for forward compatibility
 type ArticlesServiceServer interface {
 	// GetArticle
-	GetArticle(context.Context, *ArticleRequest) (*Article, error)
+	GetArticle(context.Context, *QueryArticle) (*Article, error)
 	// GetArticles
-	GetArticles(context.Context, *ArticlesRequest) (*ArticlesResponse, error)
+	GetArticles(context.Context, *QueryArticle) (*ArticleList, error)
 	// StreamArticles
-	StreamArticles(*ArticlesRequest, ArticlesService_StreamArticlesServer) error
+	StreamArticles(*QueryArticle, ArticlesService_StreamArticlesServer) error
 	// StreamRelatedArticles
-	StreamRelatedArticles(*ArticlesRequest, ArticlesService_StreamRelatedArticlesServer) error
+	StreamRelatedArticles(*QueryArticle, ArticlesService_StreamRelatedArticlesServer) error
 }
 
 // UnimplementedArticlesServiceServer should be embedded to have forward compatible implementations.
 type UnimplementedArticlesServiceServer struct {
 }
 
-func (UnimplementedArticlesServiceServer) GetArticle(context.Context, *ArticleRequest) (*Article, error) {
+func (UnimplementedArticlesServiceServer) GetArticle(context.Context, *QueryArticle) (*Article, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetArticle not implemented")
 }
-func (UnimplementedArticlesServiceServer) GetArticles(context.Context, *ArticlesRequest) (*ArticlesResponse, error) {
+func (UnimplementedArticlesServiceServer) GetArticles(context.Context, *QueryArticle) (*ArticleList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetArticles not implemented")
 }
-func (UnimplementedArticlesServiceServer) StreamArticles(*ArticlesRequest, ArticlesService_StreamArticlesServer) error {
+func (UnimplementedArticlesServiceServer) StreamArticles(*QueryArticle, ArticlesService_StreamArticlesServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamArticles not implemented")
 }
-func (UnimplementedArticlesServiceServer) StreamRelatedArticles(*ArticlesRequest, ArticlesService_StreamRelatedArticlesServer) error {
+func (UnimplementedArticlesServiceServer) StreamRelatedArticles(*QueryArticle, ArticlesService_StreamRelatedArticlesServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamRelatedArticles not implemented")
 }
 
@@ -161,7 +161,7 @@ func RegisterArticlesServiceServer(s grpc.ServiceRegistrar, srv ArticlesServiceS
 }
 
 func _ArticlesService_GetArticle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ArticleRequest)
+	in := new(QueryArticle)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -173,13 +173,13 @@ func _ArticlesService_GetArticle_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: "/mediawatch.articles.v2.ArticlesService/GetArticle",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArticlesServiceServer).GetArticle(ctx, req.(*ArticleRequest))
+		return srv.(ArticlesServiceServer).GetArticle(ctx, req.(*QueryArticle))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ArticlesService_GetArticles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ArticlesRequest)
+	in := new(QueryArticle)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -191,13 +191,13 @@ func _ArticlesService_GetArticles_Handler(srv interface{}, ctx context.Context, 
 		FullMethod: "/mediawatch.articles.v2.ArticlesService/GetArticles",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ArticlesServiceServer).GetArticles(ctx, req.(*ArticlesRequest))
+		return srv.(ArticlesServiceServer).GetArticles(ctx, req.(*QueryArticle))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ArticlesService_StreamArticles_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ArticlesRequest)
+	m := new(QueryArticle)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func _ArticlesService_StreamArticles_Handler(srv interface{}, stream grpc.Server
 }
 
 type ArticlesService_StreamArticlesServer interface {
-	Send(*ArticleResponse) error
+	Send(*ArticleList) error
 	grpc.ServerStream
 }
 
@@ -213,12 +213,12 @@ type articlesServiceStreamArticlesServer struct {
 	grpc.ServerStream
 }
 
-func (x *articlesServiceStreamArticlesServer) Send(m *ArticleResponse) error {
+func (x *articlesServiceStreamArticlesServer) Send(m *ArticleList) error {
 	return x.ServerStream.SendMsg(m)
 }
 
 func _ArticlesService_StreamRelatedArticles_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ArticlesRequest)
+	m := new(QueryArticle)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func _ArticlesService_StreamRelatedArticles_Handler(srv interface{}, stream grpc
 }
 
 type ArticlesService_StreamRelatedArticlesServer interface {
-	Send(*ArticleResponse) error
+	Send(*ArticleList) error
 	grpc.ServerStream
 }
 
@@ -234,7 +234,7 @@ type articlesServiceStreamRelatedArticlesServer struct {
 	grpc.ServerStream
 }
 
-func (x *articlesServiceStreamRelatedArticlesServer) Send(m *ArticleResponse) error {
+func (x *articlesServiceStreamRelatedArticlesServer) Send(m *ArticleList) error {
 	return x.ServerStream.SendMsg(m)
 }
 

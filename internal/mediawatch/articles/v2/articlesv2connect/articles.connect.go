@@ -28,13 +28,13 @@ const (
 // ArticlesServiceClient is a client for the mediawatch.articles.v2.ArticlesService service.
 type ArticlesServiceClient interface {
 	// GetArticle
-	GetArticle(context.Context, *connect_go.Request[v2.ArticleRequest]) (*connect_go.Response[v2.Article], error)
+	GetArticle(context.Context, *connect_go.Request[v2.QueryArticle]) (*connect_go.Response[v2.Article], error)
 	// GetArticles
-	GetArticles(context.Context, *connect_go.Request[v2.ArticlesRequest]) (*connect_go.Response[v2.ArticlesResponse], error)
+	GetArticles(context.Context, *connect_go.Request[v2.QueryArticle]) (*connect_go.Response[v2.ArticleList], error)
 	// StreamArticles
-	StreamArticles(context.Context, *connect_go.Request[v2.ArticlesRequest]) (*connect_go.ServerStreamForClient[v2.ArticleResponse], error)
+	StreamArticles(context.Context, *connect_go.Request[v2.QueryArticle]) (*connect_go.ServerStreamForClient[v2.ArticleList], error)
 	// StreamRelatedArticles
-	StreamRelatedArticles(context.Context, *connect_go.Request[v2.ArticlesRequest]) (*connect_go.ServerStreamForClient[v2.ArticleResponse], error)
+	StreamRelatedArticles(context.Context, *connect_go.Request[v2.QueryArticle]) (*connect_go.ServerStreamForClient[v2.ArticleList], error)
 }
 
 // NewArticlesServiceClient constructs a client for the mediawatch.articles.v2.ArticlesService
@@ -47,22 +47,22 @@ type ArticlesServiceClient interface {
 func NewArticlesServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) ArticlesServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &articlesServiceClient{
-		getArticle: connect_go.NewClient[v2.ArticleRequest, v2.Article](
+		getArticle: connect_go.NewClient[v2.QueryArticle, v2.Article](
 			httpClient,
 			baseURL+"/mediawatch.articles.v2.ArticlesService/GetArticle",
 			opts...,
 		),
-		getArticles: connect_go.NewClient[v2.ArticlesRequest, v2.ArticlesResponse](
+		getArticles: connect_go.NewClient[v2.QueryArticle, v2.ArticleList](
 			httpClient,
 			baseURL+"/mediawatch.articles.v2.ArticlesService/GetArticles",
 			opts...,
 		),
-		streamArticles: connect_go.NewClient[v2.ArticlesRequest, v2.ArticleResponse](
+		streamArticles: connect_go.NewClient[v2.QueryArticle, v2.ArticleList](
 			httpClient,
 			baseURL+"/mediawatch.articles.v2.ArticlesService/StreamArticles",
 			opts...,
 		),
-		streamRelatedArticles: connect_go.NewClient[v2.ArticlesRequest, v2.ArticleResponse](
+		streamRelatedArticles: connect_go.NewClient[v2.QueryArticle, v2.ArticleList](
 			httpClient,
 			baseURL+"/mediawatch.articles.v2.ArticlesService/StreamRelatedArticles",
 			opts...,
@@ -72,29 +72,29 @@ func NewArticlesServiceClient(httpClient connect_go.HTTPClient, baseURL string, 
 
 // articlesServiceClient implements ArticlesServiceClient.
 type articlesServiceClient struct {
-	getArticle            *connect_go.Client[v2.ArticleRequest, v2.Article]
-	getArticles           *connect_go.Client[v2.ArticlesRequest, v2.ArticlesResponse]
-	streamArticles        *connect_go.Client[v2.ArticlesRequest, v2.ArticleResponse]
-	streamRelatedArticles *connect_go.Client[v2.ArticlesRequest, v2.ArticleResponse]
+	getArticle            *connect_go.Client[v2.QueryArticle, v2.Article]
+	getArticles           *connect_go.Client[v2.QueryArticle, v2.ArticleList]
+	streamArticles        *connect_go.Client[v2.QueryArticle, v2.ArticleList]
+	streamRelatedArticles *connect_go.Client[v2.QueryArticle, v2.ArticleList]
 }
 
 // GetArticle calls mediawatch.articles.v2.ArticlesService.GetArticle.
-func (c *articlesServiceClient) GetArticle(ctx context.Context, req *connect_go.Request[v2.ArticleRequest]) (*connect_go.Response[v2.Article], error) {
+func (c *articlesServiceClient) GetArticle(ctx context.Context, req *connect_go.Request[v2.QueryArticle]) (*connect_go.Response[v2.Article], error) {
 	return c.getArticle.CallUnary(ctx, req)
 }
 
 // GetArticles calls mediawatch.articles.v2.ArticlesService.GetArticles.
-func (c *articlesServiceClient) GetArticles(ctx context.Context, req *connect_go.Request[v2.ArticlesRequest]) (*connect_go.Response[v2.ArticlesResponse], error) {
+func (c *articlesServiceClient) GetArticles(ctx context.Context, req *connect_go.Request[v2.QueryArticle]) (*connect_go.Response[v2.ArticleList], error) {
 	return c.getArticles.CallUnary(ctx, req)
 }
 
 // StreamArticles calls mediawatch.articles.v2.ArticlesService.StreamArticles.
-func (c *articlesServiceClient) StreamArticles(ctx context.Context, req *connect_go.Request[v2.ArticlesRequest]) (*connect_go.ServerStreamForClient[v2.ArticleResponse], error) {
+func (c *articlesServiceClient) StreamArticles(ctx context.Context, req *connect_go.Request[v2.QueryArticle]) (*connect_go.ServerStreamForClient[v2.ArticleList], error) {
 	return c.streamArticles.CallServerStream(ctx, req)
 }
 
 // StreamRelatedArticles calls mediawatch.articles.v2.ArticlesService.StreamRelatedArticles.
-func (c *articlesServiceClient) StreamRelatedArticles(ctx context.Context, req *connect_go.Request[v2.ArticlesRequest]) (*connect_go.ServerStreamForClient[v2.ArticleResponse], error) {
+func (c *articlesServiceClient) StreamRelatedArticles(ctx context.Context, req *connect_go.Request[v2.QueryArticle]) (*connect_go.ServerStreamForClient[v2.ArticleList], error) {
 	return c.streamRelatedArticles.CallServerStream(ctx, req)
 }
 
@@ -102,13 +102,13 @@ func (c *articlesServiceClient) StreamRelatedArticles(ctx context.Context, req *
 // service.
 type ArticlesServiceHandler interface {
 	// GetArticle
-	GetArticle(context.Context, *connect_go.Request[v2.ArticleRequest]) (*connect_go.Response[v2.Article], error)
+	GetArticle(context.Context, *connect_go.Request[v2.QueryArticle]) (*connect_go.Response[v2.Article], error)
 	// GetArticles
-	GetArticles(context.Context, *connect_go.Request[v2.ArticlesRequest]) (*connect_go.Response[v2.ArticlesResponse], error)
+	GetArticles(context.Context, *connect_go.Request[v2.QueryArticle]) (*connect_go.Response[v2.ArticleList], error)
 	// StreamArticles
-	StreamArticles(context.Context, *connect_go.Request[v2.ArticlesRequest], *connect_go.ServerStream[v2.ArticleResponse]) error
+	StreamArticles(context.Context, *connect_go.Request[v2.QueryArticle], *connect_go.ServerStream[v2.ArticleList]) error
 	// StreamRelatedArticles
-	StreamRelatedArticles(context.Context, *connect_go.Request[v2.ArticlesRequest], *connect_go.ServerStream[v2.ArticleResponse]) error
+	StreamRelatedArticles(context.Context, *connect_go.Request[v2.QueryArticle], *connect_go.ServerStream[v2.ArticleList]) error
 }
 
 // NewArticlesServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -144,18 +144,18 @@ func NewArticlesServiceHandler(svc ArticlesServiceHandler, opts ...connect_go.Ha
 // UnimplementedArticlesServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedArticlesServiceHandler struct{}
 
-func (UnimplementedArticlesServiceHandler) GetArticle(context.Context, *connect_go.Request[v2.ArticleRequest]) (*connect_go.Response[v2.Article], error) {
+func (UnimplementedArticlesServiceHandler) GetArticle(context.Context, *connect_go.Request[v2.QueryArticle]) (*connect_go.Response[v2.Article], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.articles.v2.ArticlesService.GetArticle is not implemented"))
 }
 
-func (UnimplementedArticlesServiceHandler) GetArticles(context.Context, *connect_go.Request[v2.ArticlesRequest]) (*connect_go.Response[v2.ArticlesResponse], error) {
+func (UnimplementedArticlesServiceHandler) GetArticles(context.Context, *connect_go.Request[v2.QueryArticle]) (*connect_go.Response[v2.ArticleList], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.articles.v2.ArticlesService.GetArticles is not implemented"))
 }
 
-func (UnimplementedArticlesServiceHandler) StreamArticles(context.Context, *connect_go.Request[v2.ArticlesRequest], *connect_go.ServerStream[v2.ArticleResponse]) error {
+func (UnimplementedArticlesServiceHandler) StreamArticles(context.Context, *connect_go.Request[v2.QueryArticle], *connect_go.ServerStream[v2.ArticleList]) error {
 	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.articles.v2.ArticlesService.StreamArticles is not implemented"))
 }
 
-func (UnimplementedArticlesServiceHandler) StreamRelatedArticles(context.Context, *connect_go.Request[v2.ArticlesRequest], *connect_go.ServerStream[v2.ArticleResponse]) error {
+func (UnimplementedArticlesServiceHandler) StreamRelatedArticles(context.Context, *connect_go.Request[v2.QueryArticle], *connect_go.ServerStream[v2.ArticleList]) error {
 	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.articles.v2.ArticlesService.StreamRelatedArticles is not implemented"))
 }

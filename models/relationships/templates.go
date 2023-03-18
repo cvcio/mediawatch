@@ -104,3 +104,9 @@ var similarTxFunc = `
 	MATCH (b:Article {uid: $dest})
 	MERGE (a)-[:SIMILAR_WITH { score: $score }]->(b)
 `
+
+// CountSimilarTpl Count Single Node relationships
+var CountSimilarTpl = `
+	MATCH (a:Article { doc_id: $doc_id })-[r:SIMILAR_WITH]-(b:Article)
+	RETURN count(r) as count
+`

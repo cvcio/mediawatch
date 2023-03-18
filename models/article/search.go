@@ -29,7 +29,7 @@ type Opts struct {
 
 	Skip   int  `json:"skip,omitempty"`
 	Limit  int  `json:"limit,omitempty"`
-	Scroll bool `json:"scrill,omitempty"`
+	Scroll bool `json:"-"`
 
 	Sort struct {
 		By  string `json:"by,omitempty"`
@@ -46,7 +46,7 @@ type Opts struct {
 func NewOpts() *Opts {
 	opts := new(Opts)
 	opts.Skip = 0
-	opts.Limit = 48
+	opts.Limit = 24
 	opts.Range.From = "now-7d"
 	opts.Range.To = "now"
 	opts.Range.By = "content.published_at"
@@ -57,8 +57,9 @@ func NewOpts() *Opts {
 	return opts
 }
 
-func NewOptsForm(urlQuery func(string) string) *Opts {
+func NewOptsForm(j []byte) *Opts {
 	opts := NewOpts()
+	json.Unmarshal(j, &opts)
 	return opts
 }
 
@@ -335,10 +336,10 @@ func (o *Opts) NewArticlesSearchQuery(es esapi.Search) []func(*esapi.SearchReque
 	opts = append(opts, esapi.Search.WithIndex(es, o.Index))
 	opts = append(opts, esapi.Search.WithFrom(es, o.Skip))
 	opts = append(opts, esapi.Search.WithSize(es, o.Limit))
-	opts = append(opts, esapi.Search.WithTimeout(es, time.Second*30))
+	opts = append(opts, esapi.Search.WithTimeout(es, time.Second*10))
 	opts = append(opts, esapi.Search.WithTrackTotalHits(es, true))
 	if o.Scroll {
-		opts = append(opts, esapi.Search.WithScroll(es, time.Minute))
+		opts = append(opts, esapi.Search.WithScroll(es, time.Second*10))
 	}
 	return opts
 }

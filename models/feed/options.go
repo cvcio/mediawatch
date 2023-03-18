@@ -1,12 +1,16 @@
 package feed
 
+import "strings"
+
 // ListOpts implements feed's list options stuct.
 type ListOpts struct {
-	Limit   int
-	Offset  int
-	Q       string
-	Deleted bool
-	Status  string
+	Limit      int
+	Offset     int
+	Q          string
+	Deleted    bool
+	Status     string
+	StreamType string
+	Lang       string
 }
 
 func DefaultOpts() ListOpts {
@@ -15,6 +19,8 @@ func DefaultOpts() ListOpts {
 	l.Limit = 24
 	l.Deleted = false
 	l.Status = ""
+	l.StreamType = ""
+	l.Lang = "EL"
 	return l
 }
 
@@ -49,5 +55,17 @@ func Deleted() func(*ListOpts) {
 func Status(s string) func(*ListOpts) {
 	return func(l *ListOpts) {
 		l.Status = s
+	}
+}
+
+func StreamType(s string) func(*ListOpts) {
+	return func(l *ListOpts) {
+		l.StreamType = s
+	}
+}
+
+func Lang(s string) func(*ListOpts) {
+	return func(l *ListOpts) {
+		l.Lang = strings.ToUpper(s)
 	}
 }

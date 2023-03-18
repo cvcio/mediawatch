@@ -63,7 +63,7 @@ func Count(ctx context.Context, es *es.Elastic, opts *Opts) (int64, error) {
 	return int64(parsed), nil
 }
 
-func Search(ctx context.Context, es *es.Elastic, opts *Opts) (*articlesv2.ArticlesResponse, error) {
+func Search(ctx context.Context, es *es.Elastic, opts *Opts) (*articlesv2.ArticleList, error) {
 	args := opts.NewArticlesSearchQuery(es.Client.Search)
 	args = append(args, es.Client.Search.WithContext(ctx))
 

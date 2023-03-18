@@ -14,6 +14,7 @@ import (
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/es"
+	"github.com/cvcio/mediawatch/pkg/neo"
 	"github.com/rs/cors"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
@@ -44,6 +45,16 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 		return err
 	}
 	log.Debugf("[SERVER] Elasticsearch connected on: %s", cfg.GetElasticsearchURL())
+
+	// =========================================================================
+	// Neo4J
+	neoClient, err := neo.NewNeo(cfg.Neo.BOLT, cfg.Neo.User, cfg.Neo.Pass)
+	if err != nil {
+		log.Errorf("[SERVER] Neo4J connection failed with error: %", err.Error())
+		return err
+	}
+	log.Debugf("[SERVER] Neo4J connected on: %s", cfg.Neo.BOLT)
+	defer neoClient.Client.Close()
 
 	// Create authenticator
 	authenticator, err := auth.NewJWTAuthenticator(cfg.Auth.PrivateKeyFile, cfg.Auth.KeyID, cfg.Auth.Algorithm, cfg.Auth.Authorizer)
@@ -109,7 +120,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	mux.Handle(muxFeedsPath, muxFeedsHandler)
 
 	// articles
-	articlesHandler := handlers.NewArticlesHandler(cfg, log, mongo, elastic, authenticator)
+	articlesHandler := handlers.NewArticlesHandler(cfg, log, mongo, elastic, neoClient, authenticator)
 	muxArticlesPath, muxArticlesHandler := articlesv2connect.NewArticlesServiceHandler(articlesHandler)
 	mux.Handle(muxArticlesPath, muxArticlesHandler)
 

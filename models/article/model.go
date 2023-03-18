@@ -28,8 +28,8 @@ func ParseCount(source map[string]interface{}) (float64, error) {
 	return count, nil
 }
 
-func ParseDocuments(source map[string]interface{}) (*articlesv2.ArticlesResponse, error) {
-	var data articlesv2.ArticlesResponse
+func ParseDocuments(source map[string]interface{}) (*articlesv2.ArticleList, error) {
+	var data articlesv2.ArticleList
 	var docs []*articlesv2.Article
 
 	for _, hit := range source["hits"].(map[string]interface{})["hits"].([]interface{}) {

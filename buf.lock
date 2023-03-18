@@ -4,8 +4,8 @@ deps:
   - remote: buf.build
     owner: googleapis
     repository: googleapis
-    commit: 80720a488c9a414bb8d4a9f811084989
+    commit: c0ec788bbbb747fca594a1e2347edd4e
   - remote: buf.build
     owner: srikrsna
     repository: protoc-gen-gotag
-    commit: 04b38c6f540d4d2fa9cfd49ae01ae73b
+    commit: 7a85d3ad2e7642c198480e92bf730c14
