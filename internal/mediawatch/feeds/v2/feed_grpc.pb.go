@@ -32,7 +32,7 @@ type FeedServiceClient interface {
 	// delete a feed
 	DeleteFeed(ctx context.Context, in *Feed, opts ...grpc.CallOption) (*v2.ResponseWithMessage, error)
 	// get the stream list
-	GetFeedsStreamList(ctx context.Context, in *QueryFeed, opts ...grpc.CallOption) (*FeedStreamList, error)
+	GetFeedsStreamList(ctx context.Context, in *QueryFeed, opts ...grpc.CallOption) (*FeedList, error)
 }
 
 type feedServiceClient struct {
@@ -97,8 +97,8 @@ func (c *feedServiceClient) DeleteFeed(ctx context.Context, in *Feed, opts ...gr
 	return out, nil
 }
 
-func (c *feedServiceClient) GetFeedsStreamList(ctx context.Context, in *QueryFeed, opts ...grpc.CallOption) (*FeedStreamList, error) {
-	out := new(FeedStreamList)
+func (c *feedServiceClient) GetFeedsStreamList(ctx context.Context, in *QueryFeed, opts ...grpc.CallOption) (*FeedList, error) {
+	out := new(FeedList)
 	err := c.cc.Invoke(ctx, "/mediawatch.feeds.v2.FeedService/GetFeedsStreamList", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ type FeedServiceServer interface {
 	// delete a feed
 	DeleteFeed(context.Context, *Feed) (*v2.ResponseWithMessage, error)
 	// get the stream list
-	GetFeedsStreamList(context.Context, *QueryFeed) (*FeedStreamList, error)
+	GetFeedsStreamList(context.Context, *QueryFeed) (*FeedList, error)
 }
 
 // UnimplementedFeedServiceServer should be embedded to have forward compatible implementations.
@@ -148,7 +148,7 @@ func (UnimplementedFeedServiceServer) UpdateFeedWithFields(context.Context, *Fee
 func (UnimplementedFeedServiceServer) DeleteFeed(context.Context, *Feed) (*v2.ResponseWithMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteFeed not implemented")
 }
-func (UnimplementedFeedServiceServer) GetFeedsStreamList(context.Context, *QueryFeed) (*FeedStreamList, error) {
+func (UnimplementedFeedServiceServer) GetFeedsStreamList(context.Context, *QueryFeed) (*FeedList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFeedsStreamList not implemented")
 }
 

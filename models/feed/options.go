@@ -4,23 +4,34 @@ import "strings"
 
 // ListOpts implements feed's list options stuct.
 type ListOpts struct {
-	Limit      int
-	Offset     int
-	Q          string
-	Deleted    bool
-	Status     string
-	StreamType string
-	Lang       string
+	Limit        int
+	Offset       int
+	Id           string
+	Q            string
+	UserName     string
+	Hostname     string
+	StreamStatus int
+	StreamType   int
+	Lang         string
+	Country      string
+	SortKey      string
+	SortOrder    int
 }
 
 func DefaultOpts() ListOpts {
 	l := ListOpts{}
 	l.Offset = 0
 	l.Limit = 24
-	l.Deleted = false
-	l.Status = ""
-	l.StreamType = ""
-	l.Lang = "EL"
+	l.StreamStatus = 0
+	l.StreamType = 0
+	l.Lang = ""
+	l.Country = ""
+	l.SortKey = "_id"
+	l.SortOrder = -1
+	l.Id = ""
+	l.Q = ""
+	l.UserName = ""
+	l.Hostname = ""
 	return l
 }
 
@@ -40,25 +51,36 @@ func Offset(i int) func(*ListOpts) {
 	}
 }
 
+func Id(i string) func(*ListOpts) {
+	return func(l *ListOpts) {
+		l.Id = i
+	}
+}
 func Q(i string) func(*ListOpts) {
 	return func(l *ListOpts) {
 		l.Q = i
 	}
 }
 
-func Deleted() func(*ListOpts) {
+func UserName(i string) func(*ListOpts) {
 	return func(l *ListOpts) {
-		l.Deleted = true
+		l.UserName = i
 	}
 }
 
-func Status(s string) func(*ListOpts) {
+func Hostname(i string) func(*ListOpts) {
 	return func(l *ListOpts) {
-		l.Status = s
+		l.Hostname = i
 	}
 }
 
-func StreamType(s string) func(*ListOpts) {
+func StreamStatus(s int) func(*ListOpts) {
+	return func(l *ListOpts) {
+		l.StreamStatus = s
+	}
+}
+
+func StreamType(s int) func(*ListOpts) {
 	return func(l *ListOpts) {
 		l.StreamType = s
 	}
@@ -67,5 +89,23 @@ func StreamType(s string) func(*ListOpts) {
 func Lang(s string) func(*ListOpts) {
 	return func(l *ListOpts) {
 		l.Lang = strings.ToUpper(s)
+	}
+}
+
+func Country(s string) func(*ListOpts) {
+	return func(l *ListOpts) {
+		l.Country = s
+	}
+}
+
+func SortKey(i string) func(*ListOpts) {
+	return func(l *ListOpts) {
+		l.SortKey = i
+	}
+}
+
+func SortOrder(s int) func(*ListOpts) {
+	return func(l *ListOpts) {
+		l.SortOrder = s
 	}
 }

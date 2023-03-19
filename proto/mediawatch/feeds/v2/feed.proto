@@ -116,9 +116,11 @@ message FeedWithFields {
 
 message QueryFeed {
     string id = 1;
-    int64 limit = 2;
-    int64 page = 3;
-    string sort_order = 4;
+
+    int32 limit = 2;
+    int32 offset = 3;
+
+    int32 sort_order = 4;
     string sort_key = 5;
 
     string country = 6;
@@ -126,6 +128,10 @@ message QueryFeed {
 
     mediawatch.common.v2.StreamType stream_type = 8;
     mediawatch.common.v2.Status stream_status = 9;
+
+    string q = 10;
+    string user_name = 11;
+    string hostname = 12;
 }
 
 service FeedService {
@@ -142,5 +148,5 @@ service FeedService {
     // delete a feed
     rpc DeleteFeed (Feed) returns (mediawatch.common.v2.ResponseWithMessage) {};
     // get the stream list
-    rpc GetFeedsStreamList (QueryFeed) returns (FeedStreamList) {};
+    rpc GetFeedsStreamList (QueryFeed) returns (FeedList) {};
 }

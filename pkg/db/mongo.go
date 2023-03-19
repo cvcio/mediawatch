@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"math"
 	"time"
 
 	codecs "github.com/amsokol/mongo-go-driver-protobuf"
@@ -192,4 +194,29 @@ func DefaultOpts() ListOpts {
 
 func NewListOpts() []func(*ListOpts) {
 	return make([]func(*ListOpts), 0)
+}
+
+// GetPagination paginate documents with query
+func GetPagination(ctx context.Context, mg *MongoDB, filter bson.M, limit int, collection string) (map[string]interface{}, error) {
+	res := map[string]interface{}{}
+
+	// count total documents with query
+	f := func(collection *mongo.Collection) error {
+		total, err := collection.CountDocuments(ctx, filter)
+		if err != nil {
+			return err
+		}
+
+		res["total"] = total
+		if limit > 0 {
+			res["pages"] = int64(math.Ceil(float64(total) / float64(limit)))
+		}
+		return nil
+	}
+
+	if err := mg.Execute(ctx, collection, f); err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("db.%s.Count(%v)", collection, filter))
+	}
+
+	return res, nil
 }
