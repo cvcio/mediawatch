@@ -74,7 +74,7 @@ func Get(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (*
 	}
 
 	if opts.UserName != "" {
-		filter["username"] = opts.UserName
+		filter["user_name"] = opts.UserName
 	}
 
 	var data *feedsv2.Feed
@@ -110,11 +110,11 @@ func GetFeedsStreamList(ctx context.Context, mg *db.MongoDB, optionsList ...func
 	}
 
 	if opts.StreamType > 0 {
-		filter["stream.streamtype"] = opts.StreamType
+		filter["stream.stream_type"] = opts.StreamType
 	}
 
 	if opts.StreamStatus > 0 {
-		filter["stream.streamstatus"] = opts.StreamStatus
+		filter["stream.stream_status"] = opts.StreamStatus
 	}
 
 	findOptions := options.Find()
@@ -168,11 +168,11 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 	}
 
 	if opts.StreamType > 0 {
-		filter["stream.streamtype"] = opts.StreamType
+		filter["stream.stream_type"] = opts.StreamType
 	}
 
 	if opts.StreamStatus > 0 {
-		filter["stream.streamstatus"] = opts.StreamStatus
+		filter["stream.streams_tatus"] = opts.StreamStatus
 	}
 
 	if opts.Q != "" {
