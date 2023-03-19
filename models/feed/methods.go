@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/bsonx"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const feedsCollection = "v2_feeds"
@@ -229,7 +230,8 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 
 // Create creates a new feed.
 func Create(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) (*feedsv2.Feed, error) {
-	feed.CreatedAt = time.Now().Format(time.RFC3339)
+	now := time.Now().Truncate(time.Millisecond)
+	feed.CreatedAt = timestamppb.New(now)
 
 	f := func(collection *mongo.Collection) error {
 		inserted, err := collection.InsertOne(ctx, &feed) // (&u)
@@ -267,9 +269,11 @@ func Update(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) error {
 		return db.ErrInvalidID
 	}
 
+	now := time.Now().Truncate(time.Millisecond)
+
 	// create the fields to update
 	fields := make(bson.M)
-	fields["updated_at"] = time.Now().Format(time.RFC3339)
+	fields["updated_at"] = timestamppb.New(now)
 
 	m := make(map[string]interface{})
 	j, err := json.Marshal(feed)

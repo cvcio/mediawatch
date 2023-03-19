@@ -73,9 +73,9 @@ message Feed {
     // UUID as a string
     string id = 1 [(tagger.tags) = "bson:\"_id,omitempty\""];
     // Feed creation datetime in RFC3339 format
-    string created_at = 2 [(tagger.tags) = "bson:\"created_at,omitempty\""];
+    google.protobuf.Timestamp created_at = 2 [(tagger.tags) = "bson:\"created_at,omitempty\""];
     // Feed update datetime in RFC3339 format
-    string updated_at = 3 [(tagger.tags) = "bson:\"updated_at,omitempty\""];
+    google.protobuf.Timestamp updated_at = 3 [(tagger.tags) = "bson:\"updated_at,omitempty\""];
     // Name of the feed
     string name = 4 ;
     // Twitter user_name of the feed (if appliccable)
