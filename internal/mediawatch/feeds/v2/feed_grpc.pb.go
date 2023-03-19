@@ -27,8 +27,6 @@ type FeedServiceClient interface {
 	GetFeeds(ctx context.Context, in *QueryFeed, opts ...grpc.CallOption) (*FeedList, error)
 	// update a feed
 	UpdateFeed(ctx context.Context, in *Feed, opts ...grpc.CallOption) (*v2.ResponseWithMessage, error)
-	// update feed with fields
-	UpdateFeedWithFields(ctx context.Context, in *FeedWithFields, opts ...grpc.CallOption) (*v2.ResponseWithMessage, error)
 	// delete a feed
 	DeleteFeed(ctx context.Context, in *Feed, opts ...grpc.CallOption) (*v2.ResponseWithMessage, error)
 	// get the stream list
@@ -79,15 +77,6 @@ func (c *feedServiceClient) UpdateFeed(ctx context.Context, in *Feed, opts ...gr
 	return out, nil
 }
 
-func (c *feedServiceClient) UpdateFeedWithFields(ctx context.Context, in *FeedWithFields, opts ...grpc.CallOption) (*v2.ResponseWithMessage, error) {
-	out := new(v2.ResponseWithMessage)
-	err := c.cc.Invoke(ctx, "/mediawatch.feeds.v2.FeedService/UpdateFeedWithFields", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *feedServiceClient) DeleteFeed(ctx context.Context, in *Feed, opts ...grpc.CallOption) (*v2.ResponseWithMessage, error) {
 	out := new(v2.ResponseWithMessage)
 	err := c.cc.Invoke(ctx, "/mediawatch.feeds.v2.FeedService/DeleteFeed", in, out, opts...)
@@ -118,8 +107,6 @@ type FeedServiceServer interface {
 	GetFeeds(context.Context, *QueryFeed) (*FeedList, error)
 	// update a feed
 	UpdateFeed(context.Context, *Feed) (*v2.ResponseWithMessage, error)
-	// update feed with fields
-	UpdateFeedWithFields(context.Context, *FeedWithFields) (*v2.ResponseWithMessage, error)
 	// delete a feed
 	DeleteFeed(context.Context, *Feed) (*v2.ResponseWithMessage, error)
 	// get the stream list
@@ -141,9 +128,6 @@ func (UnimplementedFeedServiceServer) GetFeeds(context.Context, *QueryFeed) (*Fe
 }
 func (UnimplementedFeedServiceServer) UpdateFeed(context.Context, *Feed) (*v2.ResponseWithMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateFeed not implemented")
-}
-func (UnimplementedFeedServiceServer) UpdateFeedWithFields(context.Context, *FeedWithFields) (*v2.ResponseWithMessage, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateFeedWithFields not implemented")
 }
 func (UnimplementedFeedServiceServer) DeleteFeed(context.Context, *Feed) (*v2.ResponseWithMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteFeed not implemented")
@@ -235,24 +219,6 @@ func _FeedService_UpdateFeed_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FeedService_UpdateFeedWithFields_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FeedWithFields)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(FeedServiceServer).UpdateFeedWithFields(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/mediawatch.feeds.v2.FeedService/UpdateFeedWithFields",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FeedServiceServer).UpdateFeedWithFields(ctx, req.(*FeedWithFields))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _FeedService_DeleteFeed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Feed)
 	if err := dec(in); err != nil {
@@ -311,10 +277,6 @@ var FeedService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateFeed",
 			Handler:    _FeedService_UpdateFeed_Handler,
-		},
-		{
-			MethodName: "UpdateFeedWithFields",
-			Handler:    _FeedService_UpdateFeedWithFields_Handler,
 		},
 		{
 			MethodName: "DeleteFeed",

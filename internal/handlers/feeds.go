@@ -104,14 +104,9 @@ func (h *FeedsHandler) UpdateFeed(ctx context.Context, req *connect.Request[feed
 	}
 
 	return connect.NewResponse(&commonv2.ResponseWithMessage{
-		Status:  "OK",
-		Message: "UPDATE",
+		Status:  "ok",
+		Message: "feed updated",
 	}), nil
-}
-
-// UpdateFeedWithFields updates a single feed with given feilds.
-func (h *FeedsHandler) UpdateFeedWithFields(ctx context.Context, req *connect.Request[feedsv2.FeedWithFields]) (*connect.Response[commonv2.ResponseWithMessage], error) {
-	return connect.NewResponse(&commonv2.ResponseWithMessage{}), nil
 }
 
 // DeleteFeed deletes a single article.

@@ -14,17 +14,17 @@ import "mediawatch/common/v2/common.proto";
 message FeedStream {
     // stream key to select, can be the twitter_id of the feed in case 
     // stream type is STREAM_TYPE_TWITTER, otherwise an ATOM/RSS feed url. 
-    string stream_target = 1;
+    string stream_target = 1 [(tagger.tags) = "bson:\"stream_target,omitempty\""];
     // stream type, can be other, twitter or rss
     // currently only twitter is supported
-    mediawatch.common.v2.StreamType stream_type = 2;
+    mediawatch.common.v2.StreamType stream_type = 2 [(tagger.tags) = "bson:\"stream_type,omitempty\""];
     // common status (see common.proto)
-    mediawatch.common.v2.Status stream_status = 3;
+    mediawatch.common.v2.Status stream_status = 3 [(tagger.tags) = "bson:\"stream_status,omitempty\""];
 }
 
 // FeedDOM Model
 message FeedDOM {
-    string dom_type = 1;
+    string dom_type = 1 [(tagger.tags) = "bson:\"dom_type,omitempty\""];
     string api = 2;
     string title = 3;
     string excerpt = 4;
@@ -33,9 +33,9 @@ message FeedDOM {
     string sources = 7;
     string tags = 8;
     string categories = 9;
-    string published_at = 10;
-    string edited_at = 11;
-    string timezone_offset = 12;
+    string published_at = 10 [(tagger.tags) = "bson:\"published_at,omitempty\""];
+    string edited_at = 11 [(tagger.tags) = "bson:\"edited_at,omitempty\""];
+    string timezone_offset = 12 [(tagger.tags) = "bson:\"timezone_offset,omitempty\""];
     string img = 13;
 }
 
@@ -57,33 +57,33 @@ message FeedMeta {
     // as suggested by ioanna archontaki (phd@uoa)
     // the purpose of these meta is to correlate feeds
     // by their political context
-    mediawatch.common.v2.BusinessType business_type = 2;
-    string business_owner = 3;
+    mediawatch.common.v2.BusinessType business_type = 2 [(tagger.tags) = "bson:\"business_type,omitempty\""];
+    string business_owner = 3 [(tagger.tags) = "bson:\"business_owner,omitempty\""];
     // if the business is registered or not in a 
     // public business registry, association, etc.
-    bool business_registered = 4;
-    mediawatch.common.v2.ContentType content_type = 5;
-    mediawatch.common.v2.PoliticalOrientation political_orientation = 6;
-    string political_affiliation = 7;
+    bool business_registered = 4 [(tagger.tags) = "bson:\"business_registered,omitempty\""];
+    mediawatch.common.v2.ContentType content_type = 5 [(tagger.tags) = "bson:\"content_type,omitempty\""];
+    mediawatch.common.v2.PoliticalOrientation political_orientation = 6 [(tagger.tags) = "bson:\"political_orientation,omitempty\""];
+    string political_affiliation = 7 [(tagger.tags) = "bson:\"political_affiliation,omitempty\""];
     mediawatch.common.v2.Tier tier = 8;
-    string registry_id = 9;
+    string registry_id = 9 [(tagger.tags) = "bson:\"registry_id,omitempty\""];
 }
 
 message Feed {
     // UUID as a string
     string id = 1 [(tagger.tags) = "bson:\"_id,omitempty\""];
     // Feed creation datetime in RFC3339 format
-    string created_at = 2;
+    string created_at = 2 [(tagger.tags) = "bson:\"created_at,omitempty\""];
     // Feed update datetime in RFC3339 format
-    string updated_at = 3;
+    string updated_at = 3 [(tagger.tags) = "bson:\"updated_at,omitempty\""];
     // Name of the feed
-    string name = 4;
+    string name = 4 ;
     // Twitter user_name of the feed (if appliccable)
-    string user_name = 5;
+    string user_name = 5 [(tagger.tags) = "bson:\"user_name,omitempty\""];
     // A small description of the feed
     string description = 6;
     // Twitter id_str of the feed (if appliccable)
-    string twitter_id = 7;
+    string twitter_id = 7 [(tagger.tags) = "bson:\"twitter_id,omitempty\""];
     // Twitter profile_image_url of the feed (if appliccable), or favicon url
     string icon = 8;
     // Base url of the feed, including trailing slash `/`
@@ -143,8 +143,6 @@ service FeedService {
     rpc GetFeeds (QueryFeed) returns (FeedList) {};
     // update a feed
     rpc UpdateFeed (Feed) returns (mediawatch.common.v2.ResponseWithMessage) {};
-    // update feed with fields
-    rpc UpdateFeedWithFields (FeedWithFields) returns (mediawatch.common.v2.ResponseWithMessage) {};
     // delete a feed
     rpc DeleteFeed (Feed) returns (mediawatch.common.v2.ResponseWithMessage) {};
     // get the stream list
