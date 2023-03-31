@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/bufbuild/connect-go"
 	"github.com/cvcio/mediawatch/internal/handlers"
 	"github.com/cvcio/mediawatch/internal/mediawatch/articles/v2/articlesv2connect"
 	"github.com/cvcio/mediawatch/internal/mediawatch/feeds/v2/feedsv2connect"
@@ -120,12 +121,12 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 		log.Errorf("[SERVER] Error while creating feeds collection: %s", err.Error())
 		return err
 	}
-	muxFeedsPath, muxFeedsHandler := feedsv2connect.NewFeedServiceHandler(feedsHandler)
+	muxFeedsPath, muxFeedsHandler := feedsv2connect.NewFeedServiceHandler(feedsHandler, connect.WithCompressMinBytes(1024*100))
 	mux.Handle(muxFeedsPath, muxFeedsHandler)
 
 	// articles
 	articlesHandler := handlers.NewArticlesHandler(cfg, log, mongo, elastic, neoClient, authenticator)
-	muxArticlesPath, muxArticlesHandler := articlesv2connect.NewArticlesServiceHandler(articlesHandler)
+	muxArticlesPath, muxArticlesHandler := articlesv2connect.NewArticlesServiceHandler(articlesHandler, connect.WithCompressMinBytes(1024*100))
 	mux.Handle(muxArticlesPath, muxArticlesHandler)
 
 	// ============================================================
