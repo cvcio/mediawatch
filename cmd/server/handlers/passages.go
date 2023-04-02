@@ -6,9 +6,9 @@ import (
 
 	"github.com/cvcio/mediawatch/models/passage"
 
-	scrape_pb "github.com/cvcio/mediawatch/internal/mediawatch/scrape/v2"
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/db"
+	scrape_pb "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
 	"github.com/cvcio/mediawatch/pkg/web"
 	"github.com/go-chi/render"
 	"github.com/sirupsen/logrus"

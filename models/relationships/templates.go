@@ -52,7 +52,7 @@ var nodeFeedTpl = `
 	MERGE (n:Feed {
 		feed_id: $feed_id,
 		name: $name, 
-		screen_name: $screen_name,
+		hostname: $hostname,
 		url: $url,
 		type: $type
 	})
@@ -68,7 +68,7 @@ var nodeArticleTpl = `
 		url: $url,
 		title: $title,
 		published_at: datetime($published_at),
-		screen_name: $screen_name
+		hostname: $hostname
 	})
 	ON CREATE SET n.uid = $uid
 	RETURN n.uid

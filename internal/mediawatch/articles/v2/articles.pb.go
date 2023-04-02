@@ -7,9 +7,9 @@
 package articlesv2
 
 import (
-	v22 "github.com/cvcio/mediawatch/internal/mediawatch/common/v2"
-	v2 "github.com/cvcio/mediawatch/internal/mediawatch/enrich/v2"
-	v21 "github.com/cvcio/mediawatch/internal/mediawatch/feeds/v2"
+	v22 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
+	v2 "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
+	v21 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	_ "google.golang.org/protobuf/types/known/timestamppb"

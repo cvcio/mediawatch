@@ -3,8 +3,8 @@ package article
 import (
 	"encoding/json"
 
-	articlesv2 "github.com/cvcio/mediawatch/internal/mediawatch/articles/v2"
-	commonv2 "github.com/cvcio/mediawatch/internal/mediawatch/common/v2"
+	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 )
 
 type ArticlesData struct {

@@ -7,7 +7,7 @@
 package feedsv2
 
 import (
-	v2 "github.com/cvcio/mediawatch/internal/mediawatch/common/v2"
+	v2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	_ "github.com/srikrsna/protoc-gen-gotag/tagger"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"

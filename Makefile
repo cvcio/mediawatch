@@ -5,7 +5,8 @@ BRANCH:=$(shell git rev-parse --abbrev-ref HEAD)
 POD=$(shell kubectl get pod -l app=mongo -o jsonpath='{.items[0].metadata.name}')
 CONTAINER=$(shell docker ps -f name=mongo -f label=app=mediawatch -q)
 BUF_VERSION:=1.8.0
-SERVICES=enrich scraper server compare worker listen
+SERVICES=api compare enrich feeds listen scraper worker
+
 keys:
 	openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
 
@@ -36,7 +37,7 @@ buf-generate-py:
 		--exclude-path proto/mediawatch/scrape \
 		.  
 buf-clean:
-	rm -rf internal/tagger
+	rm -rf pkg/tagger
 	rm -rf cmd/enrich/enrich/tagger
 
 buf-update:

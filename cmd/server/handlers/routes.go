@@ -12,11 +12,11 @@ import (
 	"github.com/cvcio/mediawatch/pkg/twillio"
 	"github.com/prometheus/client_golang/prometheus"
 
-	scrape_pb "github.com/cvcio/mediawatch/internal/mediawatch/scrape/v2"
 	"github.com/cvcio/mediawatch/models/deprecated/account"
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/models/organization"
 	"github.com/cvcio/mediawatch/pkg/es"
+	scrape_pb "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
 	"github.com/cvcio/mediawatch/pkg/mid"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"

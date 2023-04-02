@@ -11,11 +11,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cvcio/mediawatch/models/deprecated/feed"
+	"github.com/cvcio/mediawatch/models/feed"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/kafka"
 	"github.com/cvcio/mediawatch/pkg/logger"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
+	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
@@ -76,17 +78,14 @@ func main() {
 	// Set Logger
 	// ============================================================
 	log := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
-	log.Info("[SVC-FEEDS] Starting")
 
 	// ============================================================
 	// Mongo
 	// ============================================================
-	log.Info("[SVC-FEEDS] Initialize Mongo")
 	dbConn, err := db.NewMongoDB(cfg.Mongo.URL, cfg.Mongo.Path, cfg.Mongo.DialTimeout)
 	if err != nil {
-		log.Fatalf("[SVC-FEEDS] Register DB: %v", err)
+		log.Fatalf("Register DB: %v", err)
 	}
-	log.Info("[SVC-FEEDS] Connected to Mongo")
 	defer dbConn.Close()
 
 	// ============================================================
@@ -94,9 +93,8 @@ func main() {
 	// ============================================================
 	rdb, err := redis.NewRedisClient(context.Background(), cfg.GetRedisURL(), "")
 	if err != nil {
-		log.Fatalf("[SVC-FEEDS] Error connecting to Redis: %s", err.Error())
+		log.Fatalf("Error connecting to Redis: %s", err.Error())
 	}
-	log.Info("[SVC-FEEDS] Connected to Redis")
 	defer rdb.Close()
 
 	// ============================================================
@@ -137,20 +135,20 @@ func main() {
 
 	// ============================================================
 	// Get feeds list
-	feeds, err := feed.GetTargets(
+	feeds, err := feed.GetFeedsStreamList(
 		context.Background(),
 		dbConn,
 		feed.Limit(cfg.Streamer.Size),
 		feed.Lang(strings.ToUpper(cfg.Streamer.Lang)),
-		feed.StreamType("rss"),
+		feed.StreamType(int(commonv2.StreamType_STREAM_TYPE_RSS)),
 	)
 	if err != nil {
-		log.Fatalf("[SVC-FEEDS] error getting feeds list: %v", err)
+		log.Fatalf("error getting feeds list: %v", err)
 	}
 
-	log.Infof("[SVC-FEEDS] Loaded feeds: %d", len(feeds.Data))
-	if len(feeds.Data) == 0 {
-		log.Infof("[SVC-FEEDS] No feeds to listen, exiting.")
+	log.Debugf("Loaded feeds: %d", len(feeds))
+	if len(feeds) == 0 {
+		log.Infof("No feeds to listen, exiting.")
 		os.Exit(0)
 	}
 
@@ -161,7 +159,7 @@ func main() {
 	defer close(done)
 
 	// create chunks
-	targets := chunks(feeds.Data, cfg.Streamer.Chunks)
+	targets := chunks(feeds, cfg.Streamer.Chunks)
 
 	// run the tickers
 	go tick(log, worker, rdb, proxyClient, done, targets, cfg.Streamer.Init, cfg.Streamer.Interval)
@@ -183,9 +181,8 @@ func main() {
 	}
 
 	// Start the service listening for requests.
-	log.Info("[SVC-FEEDS] Ready to start")
+	log.Info("Ready to start")
 	go func() {
-		log.Infof("[SVC-FEEDS] Starting prometheus web server listening %s", cfg.GetPrometheusURL())
 		errSingals <- promHandler.ListenAndServe()
 	}()
 
@@ -203,28 +200,28 @@ func main() {
 		select {
 		case err := <-kafkaChan:
 			// Ignore the Error
-			log.Errorf("[SVC-FEEDS] Error from kafka: %v", err)
+			log.Errorf("Error from kafka: %v", err)
 
 		case err := <-errSingals:
 			// Got Error from stream
-			log.Errorf("[SVC-FEEDS] Error while streaming tweets: %s", err.Error())
+			log.Errorf("Error while streaming tweets: %s", err.Error())
 			os.Exit(1)
 
 		case s := <-osSignals:
-			log.Debugf("[SVC-FEEDS] Listen shutdown signal: %s", s)
+			log.Debugf("Listen shutdown signal: %s", s)
 
 			// Asking prometheus to shutdown and load shed.
 			if err := promHandler.Shutdown(context.Background()); err != nil {
-				log.Errorf("[SVC-COMPARE] Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
+				log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
 				if err := promHandler.Close(); err != nil {
-					log.Fatalf("[SVC-COMPARE] Could not stop http server: %v", err)
+					log.Fatalf("Could not stop http server: %v", err)
 				}
 			}
 		}
 	}
 }
 
-func tick(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxyClient *http.Client, done chan bool, targets [][]*feed.Feed, init bool, interval time.Duration) {
+func tick(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxyClient *http.Client, done chan bool, targets [][]*feedsv2.Feed, init bool, interval time.Duration) {
 	delay := interval / time.Duration(math.Ceil(float64(len(targets))/100))
 	for _, v := range targets {
 		ticker := NewTicker(log, worker, rdb, proxyClient, done, v, init, interval)
@@ -233,8 +230,8 @@ func tick(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, p
 	}
 }
 
-func chunks(feeds []*feed.Feed, size int) [][]*feed.Feed {
-	var chunks [][]*feed.Feed
+func chunks(feeds []*feedsv2.Feed, size int) [][]*feedsv2.Feed {
+	var chunks [][]*feedsv2.Feed
 	for i := 0; i < len(feeds); i += size {
 		d := i + size
 		if d > len(feeds) {

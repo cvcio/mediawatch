@@ -4,22 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cvcio/mediawatch/models/deprecated/feed"
+	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/neo"
 	"github.com/google/uuid"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
 )
 
 // mergeNodeFeed transaction function.
-func mergeNodeFeed(f *feed.Feed) neo4j.TransactionWork {
+func mergeNodeFeed(f *feedsv2.Feed) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
 		result, err := tx.Run(nodeFeedTpl, map[string]interface{}{
-			"feed_id":     f.ID.Hex(),
-			"name":        f.Name,
-			"screen_name": f.ScreenName,
-			"url":         f.URL,
-			"type":        "feed",
-			"uid":         uuid.New().String(),
+			"feed_id":  f.Id,
+			"name":     f.Name,
+			"hostname": f.Hostname,
+			"url":      f.Url,
+			"type":     "feed",
+			"uid":      uuid.New().String(),
 		})
 
 		if err != nil {
@@ -30,12 +30,12 @@ func mergeNodeFeed(f *feed.Feed) neo4j.TransactionWork {
 			return result.Record().Values[0], nil
 		}
 
-		return nil, fmt.Errorf("feed %s record didn't create: %s", f.ScreenName, result.Err().Error())
+		return nil, fmt.Errorf("feed %s record didn't create: %s", f.Hostname, result.Err().Error())
 	}
 }
 
 // MergeNodeFeed upserts a feed in neo4j.
-func MergeNodeFeed(ctx context.Context, neoClient *neo.Neo, f *feed.Feed) (string, error) {
+func MergeNodeFeed(ctx context.Context, neoClient *neo.Neo, f *feedsv2.Feed) (string, error) {
 	session := neoClient.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
 	defer session.Close()
 	res, err := session.WriteTransaction(mergeNodeFeed(f))
@@ -101,7 +101,7 @@ func createNodeArticle(article *NodeArticle) neo4j.TransactionWork {
 			"url":          article.Url,
 			"title":        article.Title,
 			"published_at": article.PublishedAt,
-			"screen_name":  article.ScreenName,
+			"hostname":     article.Hostname,
 		})
 
 		if err != nil {

@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	scrape_pb "github.com/cvcio/mediawatch/internal/mediawatch/scrape/v2"
 	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/es"
+	scrape_pb "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
 	"github.com/cvcio/mediawatch/pkg/neo"
 	"github.com/cvcio/mediawatch/pkg/web"
 	"github.com/go-chi/render"

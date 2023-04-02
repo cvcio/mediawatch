@@ -64,12 +64,13 @@ func Parse(URL string) (string, error) {
 }
 
 type CatchedURL struct {
-	ID               string `json:"docId"`
-	URL              string `json:"url"`
-	TweetID          int64  `json:"tweet_id"`
-	TwitterUserID    int64  `json:"twitter_user_id"`
-	TwitterUserIDStr string `json:"twitter_user_id_str"`
-	ScreenName       string `json:"screen_name"`
-	CreatedAt        string `json:"created_at"`
-	Title            string `json:"title"`
+	DocId         string `json:"docId"`
+	Type          string `json:"type"`
+	Url           string `json:"url"`
+	TweetId       string `json:"tweet_id"`
+	TwitterUserId string `json:"twitter_user_id"`
+	UserName      string `json:"user_name"`
+	Hostname      string `json:"hostname"`
+	CreatedAt     string `json:"created_at"`
+	Title         string `json:"title"`
 }

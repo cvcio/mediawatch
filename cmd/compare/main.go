@@ -20,13 +20,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/cvcio/go-plagiarism"
-	articlesv2 "github.com/cvcio/mediawatch/internal/mediawatch/articles/v2"
 	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/models/relationships"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/es"
 	"github.com/cvcio/mediawatch/pkg/kafka"
 	"github.com/cvcio/mediawatch/pkg/logger"
+	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
 	"github.com/cvcio/mediawatch/pkg/neo"
 	kaf "github.com/segmentio/kafka-go"
 )

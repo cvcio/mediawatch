@@ -4,14 +4,14 @@ import (
 	"context"
 
 	"github.com/bufbuild/connect-go"
-	commonv2 "github.com/cvcio/mediawatch/internal/mediawatch/common/v2"
-	feedsv2 "github.com/cvcio/mediawatch/internal/mediawatch/feeds/v2"
-	"github.com/cvcio/mediawatch/internal/mediawatch/feeds/v2/feedsv2connect"
 	"github.com/cvcio/mediawatch/models/feed"
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/es"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
+	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
+	"github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2/feedsv2connect"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -80,7 +80,6 @@ func (h *FeedsHandler) GetFeeds(ctx context.Context, req *connect.Request[feedsv
 		feed.StreamType(int(req.Msg.StreamType.Number())),
 		feed.Lang(req.Msg.Lang),
 		feed.Country(req.Msg.Country),
-		feed.Limit(int(req.Msg.Limit)),
 	)
 
 	if err != nil {

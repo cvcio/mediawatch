@@ -11,10 +11,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/x/bsonx"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
-	accountsv2 "github.com/cvcio/mediawatch/internal/mediawatch/accounts/v2"
-	commonv2 "github.com/cvcio/mediawatch/internal/mediawatch/common/v2"
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/pkg/errors"
@@ -446,69 +443,6 @@ func OTP(max int) string {
 		b[i] = table[int(b[i])%len(table)]
 	}
 	return string(b)
-}
-
-// Create returns account object on succesfull insert
-func CreateV2(ctx context.Context, mg *db.MongoDB, a *accountsv2.Account) (*accountsv2.Account, error) {
-	res := a
-
-	now := time.Now().Truncate(time.Millisecond)
-	res.CreatedAt = timestamppb.New(now)
-	res.UpdatedAt = timestamppb.New(now)
-	res.LastLoginAt = nil
-
-	res.Status = commonv2.Status_STATUS_PENDING
-	// res.Role = append(res.Role, accountsv2.Role_ROLE_USER)
-	res.Email = strings.ToLower(res.Email)
-
-	f := func(collection *mongo.Collection) error {
-		inserted, err := collection.InsertOne(ctx, &res) // (&u)
-		// Normally we would return ErrDuplicateKey in this scenario but we do not want
-		// to leak to an unauthenticated user which emails are in the system.
-		if err != nil {
-			we, _ := err.(mongo.WriteException)
-			if we.WriteErrors[0].Code == 11000 {
-				return db.ErrInvalid
-			}
-
-			return err
-		}
-
-		if oid, ok := inserted.InsertedID.(primitive.ObjectID); ok {
-			res.Id = oid.Hex()
-		} else {
-			return db.ErrInvalid
-		}
-
-		return nil
-
-	}
-	if err := mg.Execute(ctx, accountsCollection, f); err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("db.accounts.Create(%s)", a.Email))
-	}
-
-	return res, nil
-}
-
-// GetByEmail returns account object from accounts collection if exists, otherwise an error
-func GetByEmailV2(ctx context.Context, mg *db.MongoDB, email string) (*accountsv2.Account, error) {
-	filter := bson.M{"email": email, "deleted": false}
-
-	var res accountsv2.Account
-	f := func(accountsCollection *mongo.Collection) error {
-		return accountsCollection.FindOne(ctx, filter).Decode(&res) // (q).One(&u)
-	}
-
-	if err := mg.Execute(ctx, accountsCollection, f); err != nil {
-		// Normally we would return ErrNotFound in this scenario but we do not want
-		// to leak to an unauthenticated user which emails are in the system.
-		if err == mongo.ErrNoDocuments {
-			return nil, db.ErrNotFound
-		}
-		return nil, errors.Wrap(err, fmt.Sprintf("db.accounts.GetByEmail(%s)", err))
-	}
-
-	return &res, nil
 }
 
 func ValidMailAddress(address string) (string, error) {

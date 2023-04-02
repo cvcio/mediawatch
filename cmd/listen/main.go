@@ -7,17 +7,18 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/cvcio/mediawatch/models/deprecated/feed"
+	"github.com/cvcio/mediawatch/models/feed"
 	"github.com/cvcio/mediawatch/models/link"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/kafka"
 	"github.com/cvcio/mediawatch/pkg/logger"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
+	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/twitter"
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
@@ -77,16 +78,13 @@ func main() {
 	// ** LOGGER
 	// Create a reusable zap logger
 	log := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
-	log.Info("[SVC-LISTEN] Starting")
 
 	// ============================================================
 	// Start Mongo
-	log.Info("[SVC-LISTEN] Initialize Mongo")
 	dbConn, err := db.NewMongoDB(cfg.Mongo.URL, cfg.Mongo.Path, cfg.Mongo.DialTimeout)
 	if err != nil {
-		log.Fatalf("[SVC-LISTEN] Register DB: %v", err)
+		log.Fatalf("Register DB: %v", err)
 	}
-	log.Info("[SVC-LISTEN] Connected to Mongo")
 	defer dbConn.Close()
 
 	// =========================================================================
@@ -118,45 +116,45 @@ func main() {
 
 	// ============================================================
 	// Get feeds list
-	feeds, err := feed.GetTargets(
+	feeds, err := feed.GetFeedsStreamList(
 		context.Background(),
 		dbConn,
 		feed.Limit(cfg.Streamer.Size),
 		feed.Lang(strings.ToUpper(cfg.Streamer.Lang)),
-		feed.StreamType("twitter"),
+		feed.StreamType(int(commonv2.StreamType_STREAM_TYPE_TWITTER)),
 	)
 	if err != nil {
-		log.Fatalf("[SVC-LISTEN] error getting feeds list: %v", err)
+		log.Fatalf("Error getting feeds list: %v", err)
 	}
 
-	log.Infof("[SVC-LISTEN] Loaded feeds: %d", len(feeds.Data))
-	if len(feeds.Data) == 0 {
-		log.Infof("[SVC-LISTEN] No feeds to listen, exiting.")
+	log.Infof("Loaded feeds: %d", len(feeds))
+	if len(feeds) == 0 {
+		log.Infof("No feeds to listen, exiting.")
 		os.Exit(0)
 	}
 
 	// ============================================================
 	// Get tweeter ids from feeds
-	fUsernames := getUsernames(feeds.Data)
+	fUsernames := getUsernames(feeds)
 
 	// ============================================================
 	// Create a new twitter client
 	api, err := twitter.NewTwitter(cfg.Twitter.TwitterConsumerKey, cfg.Twitter.TwitterConsumerSecret)
 	if err != nil {
-		log.Fatalf("[SVC-LISTEN] Error connecting to twitter: %s", err.Error())
+		log.Fatalf("Error connecting to twitter: %s", err.Error())
 	}
 
 	// ============================================================
 	// Remove all active filter stream rules
 	if _, err := removeRules(api); err != nil {
-		log.Fatalf("[SVC-LISTEN] Error while removing filter stream rules: %s", err.Error())
+		log.Fatalf("Error while removing filter stream rules: %s", err.Error())
 	}
 
 	// ============================================================
 	// Add new stream rules
 	rules := splitFrom512(fUsernames)
 	if _, err := addRules(api, rules); err != nil {
-		log.Fatalf("[SVC-LISTEN] Error while adding filter stream rules: %s", err.Error())
+		log.Fatalf("Error while adding filter stream rules: %s", err.Error())
 	}
 
 	// Create a channel to send catched urls from tweets
@@ -180,7 +178,7 @@ func main() {
 
 	// ============================================================
 	// Create a new Listener service, with our twitter stream and the scrape service grpc conn
-	log.Debugf("[SVC-LISTEN] Twitter rules to listen : %v", rules)
+	log.Debugf("Twitter rules to listen : %v", rules)
 
 	v := url.Values{}
 	v.Add("expansions", "author_id,attachments.media_keys")
@@ -201,9 +199,8 @@ func main() {
 	}()
 
 	// Start the service listening for requests.
-	log.Info("[SVC-LISTEN] Ready to start")
+	log.Info("Ready to start")
 	go func() {
-		log.Infof("[SVC-LISTEN] Starting prometheus web server listening %s", cfg.GetPrometheusURL())
 		errSingals <- promHandler.ListenAndServe()
 	}()
 
@@ -221,31 +218,31 @@ func main() {
 		select {
 		// Got Url from twitter
 		case u := <-tweetChan:
-			log.Infof("[SVC-LISTEN] New tweet from: %.16s %s", u.ScreenName, u.URL)
+			log.Debugf("New tweet from: %.16s %s", u.UserName, u.Url)
 
 			urlTweet, err := json.Marshal(&u)
 			if err != nil {
-				log.Errorf("[SVC-LISTEN] error marshal tweet data: %s", err.Error())
+				log.Errorf("Error marshal tweet data: %s", err.Error())
 				return
 			}
 			go worker.Produce(kaf.Message{Value: []byte(urlTweet)})
 
 		case err := <-kafkaChan:
-			log.Errorf("[SVC-LISTEN] error from kafka: %v", err)
+			log.Errorf("Error from kafka: %v", err)
 
 		case err := <-errSingals:
 			// Got Error from twitter stream
-			log.Errorf("[SVC-LISTEN] Error while streaming tweets: %s", err.Error())
+			log.Errorf("Error while streaming tweets: %s", err.Error())
 			os.Exit(1)
 
 		case s := <-osSignals:
-			log.Debugf("[SVC-LISTEN] Listen shutdown signal: %s", s)
+			log.Debugf("Listen shutdown signal: %s", s)
 
 			// Asking prometheus to shutdown and load shed.
 			if err := promHandler.Shutdown(context.Background()); err != nil {
-				log.Errorf("[SVC-COMPARE] Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
+				log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
 				if err := promHandler.Close(); err != nil {
-					log.Fatalf("[SVC-COMPARE] Could not stop http server: %v", err)
+					log.Fatalf("Could not stop http server: %v", err)
 				}
 			}
 		}
@@ -272,35 +269,26 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 		if err != nil {
 			continue
 		}
-
-		tweetID, err := strconv.ParseInt(t.Data.ID, 10, 64)
-		if err != nil {
-			continue
-		}
-		authorID, err := strconv.ParseInt(t.Data.AuthorID, 10, 64)
-		if err != nil {
-			continue
-		}
 		createdAt, _ := t.Data.CreatedAtTime()
 		messsage := link.CatchedURL{
-			ID:               uuid.New().String(),
-			URL:              l,
-			TweetID:          tweetID,
-			TwitterUserID:    authorID,
-			TwitterUserIDStr: t.Data.AuthorID,
-			ScreenName:       getUserNameFromTweet(t.Data.AuthorID, t.Includes.Users),
-			CreatedAt:        createdAt.Format(time.RFC3339),
+			DocId:         uuid.New().String(),
+			Type:          "twitter",
+			Url:           l,
+			TweetId:       t.Data.ID,
+			TwitterUserId: t.Data.AuthorID,
+			UserName:      getUserNameFromTweet(t.Data.AuthorID, t.Includes.Users),
+			CreatedAt:     createdAt.Format(time.RFC3339),
 		}
 		tweetChan <- messsage
 	}
 }
 
 // getUsernames list to listen.
-func getUsernames(feeds []*feed.Feed) []string {
+func getUsernames(feeds []*feedsv2.Feed) []string {
 	twitterUsernames := make([]string, 0)
 	for _, f := range feeds {
-		if f.ScreenName != "" {
-			twitterUsernames = append(twitterUsernames, f.ScreenName)
+		if f.UserName != "" {
+			twitterUsernames = append(twitterUsernames, f.UserName)
 		}
 	}
 	return twitterUsernames

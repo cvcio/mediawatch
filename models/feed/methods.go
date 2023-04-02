@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	commonv2 "github.com/cvcio/mediawatch/internal/mediawatch/common/v2"
-	feedsv2 "github.com/cvcio/mediawatch/internal/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/db"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
+	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -145,6 +145,44 @@ func GetFeedsStreamList(ctx context.Context, mg *db.MongoDB, optionsList ...func
 
 	if err := mg.Execute(ctx, feedsCollection, f); err != nil {
 		return nil, errors.Wrap(err, "db.feeds.find()")
+	}
+
+	return data, nil
+}
+
+// GetByUserName returns a feed with a specific user_name.
+func GetByUserName(ctx context.Context, mg *db.MongoDB, username string) (*feedsv2.Feed, error) {
+	filter := bson.M{"user_name": username}
+
+	var data *feedsv2.Feed
+	f := func(collection *mongo.Collection) error {
+		return collection.FindOne(ctx, filter).Decode(&data)
+	}
+	if err := mg.Execute(ctx, feedsCollection, f); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, db.ErrNotFound
+		}
+
+		return nil, errors.Wrap(err, fmt.Sprintf("db.feeds.findOne(%s)", db.Query(filter)))
+	}
+
+	return data, nil
+}
+
+// GetByHostname returns a feed with a specific hostname.
+func GetByHostname(ctx context.Context, mg *db.MongoDB, hostname string) (*feedsv2.Feed, error) {
+	filter := bson.M{"hostname": hostname}
+
+	var data *feedsv2.Feed
+	f := func(collection *mongo.Collection) error {
+		return collection.FindOne(ctx, filter).Decode(&data)
+	}
+	if err := mg.Execute(ctx, feedsCollection, f); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, db.ErrNotFound
+		}
+
+		return nil, errors.Wrap(err, fmt.Sprintf("db.feeds.findOne(%s)", db.Query(filter)))
 	}
 
 	return data, nil

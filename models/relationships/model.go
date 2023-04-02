@@ -11,7 +11,7 @@ type NodeArticle struct {
 	CrawledAt   string         `json:"crawled_at,omitempty"`
 	PublishedAt string         `json:"published_at,omitempty"`
 	Url         string         `json:"url,omitempty"`
-	ScreenName  string         `json:"screen_name,omitempty"`
+	Hostname    string         `json:"hostname,omitempty"`
 	Type        string         `json:"type,omitempty"`
 	RelCount    int64          `json:"relCount,omitempty"`
 	Similar     []*NodeArticle `json:"similar,omitempty"`
@@ -20,12 +20,12 @@ type NodeArticle struct {
 
 // NodeFeed struct.
 type NodeFeed struct {
-	Uid        string `json:"uid"`
-	FeedId     string `json:"feed_id,omitempty"`
-	Name       string `json:"name,omitempty"`
-	ScreenName string `json:"screen_name,omitempty"`
-	Url        string `json:"url,omitempty"`
-	Type       string `json:"type,omitempty"`
+	Uid      string `json:"uid"`
+	FeedId   string `json:"feed_id,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Hostname string `json:"hostname,omitempty"`
+	Url      string `json:"url,omitempty"`
+	Type     string `json:"type,omitempty"`
 }
 
 // NodeEntity struct.

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	articlesv2 "github.com/cvcio/mediawatch/internal/mediawatch/articles/v2"
 	"github.com/cvcio/mediawatch/pkg/es"
+	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
 )
 
 func GetById(ctx context.Context, es *es.Elastic, index string, id string) (*articlesv2.Article, error) {

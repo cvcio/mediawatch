@@ -7,8 +7,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/models/link"
+	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/google/uuid"
 	"github.com/mmcdole/gofeed"
@@ -23,7 +23,7 @@ type Ticker struct {
 	proxy    *http.Client
 	ticker   time.Ticker
 	done     chan bool
-	targets  []*feed.Feed
+	targets  []*feedsv2.Feed
 	init     bool
 	interval time.Duration
 }
@@ -35,7 +35,7 @@ type CacheLast struct {
 	LastArticleLink string    `json:"last_article_link"`
 }
 
-func NewTicker(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxy *http.Client, done chan bool, targets []*feed.Feed, init bool, interval time.Duration) *Ticker {
+func NewTicker(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxy *http.Client, done chan bool, targets []*feedsv2.Feed, init bool, interval time.Duration) *Ticker {
 	return &Ticker{
 		log:      log,
 		worker:   worker,
@@ -51,12 +51,12 @@ func NewTicker(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClie
 
 func (ticker *Ticker) Fetch() {
 	for _, v := range ticker.targets {
-		if _, err := url.Parse(v.RSS); err != nil {
-			ticker.rdb.Set("feed:status:"+v.ID.Hex(), "offline", time.Hour*3)
-			ticker.log.Errorf("[SVC-FEEDS] Unable to validate URL: %s", v.RSS)
+		if _, err := url.Parse(v.Stream.StreamTarget); err != nil {
+			ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
+			ticker.log.Errorf("Unable to validate URL: %s", v.Stream.StreamTarget)
 			continue
 		}
-		if status, _ := ticker.rdb.Get("feed:status:" + v.ID.Hex()); status == "offline" {
+		if status, _ := ticker.rdb.Get("feed:status:" + v.Id); status == "offline" {
 			continue
 		}
 		parser := gofeed.NewParser()
@@ -65,12 +65,12 @@ func (ticker *Ticker) Fetch() {
 		parser.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" // "MediaWatch Bot/3.0 (mediawatch.io)"
 
 		// parse feed
-		data, err := parser.ParseURL(v.RSS)
+		data, err := parser.ParseURL(v.Stream.StreamTarget)
 		if err != nil {
 			// TODO: Investigate how often this happens
 			// TODO: Add prometheus metrics with error codes per feed
-			ticker.rdb.Set("feed:status:"+v.ID.Hex(), "offline", time.Hour*3)
-			ticker.log.Errorf("[SVC-FEEDS] Error parsing RSS feed for: (%s) - %s", v.Hostname(), err.Error())
+			ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
+			ticker.log.Errorf("Error parsing RSS feed for: (%s) - %s", v.Hostname, err.Error())
 			continue
 		}
 
@@ -99,10 +99,10 @@ func (ticker *Ticker) Fetch() {
 			timePublished := l.PublishedParsed.Truncate(time.Millisecond)
 
 			// get the last saved time in redis key/value store
-			if last, _ := ticker.rdb.Get("feed:last:" + v.ID.Hex()); last != "" {
+			if last, _ := ticker.rdb.Get("feed:last:" + v.Id); last != "" {
 				var lastCache CacheLast
 				if err := json.Unmarshal([]byte(last), &lastCache); err != nil {
-					ticker.log.Errorf("[SVC-FEEDS] Unable to unmarshal cache: %v", last)
+					ticker.log.Errorf("Unable to unmarshal cache: %v", last)
 					continue
 				}
 
@@ -115,34 +115,36 @@ func (ticker *Ticker) Fetch() {
 				}
 			}
 
-			ticker.log.Debugf("[SVC-FEEDS] %s (%s) %s", timePublished.Format(time.RFC3339), v.Hostname(), l.Title)
+			ticker.log.Debugf("%s (%s) %s", timePublished.Format(time.RFC3339), v.Hostname, l.Title)
 
 			catchedURL := link.CatchedURL{
-				ID:         uuid.New().String(),
-				URL:        l.Link,
-				CreatedAt:  timePublished.Format(time.RFC3339),
-				Title:      l.Title,
-				ScreenName: v.ScreenName,
+				DocId:     uuid.New().String(),
+				Type:      "rss",
+				Url:       l.Link,
+				CreatedAt: timePublished.Format(time.RFC3339),
+				Title:     l.Title,
+				UserName:  v.UserName,
+				Hostname:  v.Hostname,
 			}
 
 			newCache, err := json.Marshal(&CacheLast{
-				Id:              v.ID.Hex(),
-				Hostname:        v.Hostname(),
+				Id:              v.Id,
+				Hostname:        v.Hostname,
 				LastArticleAt:   timePublished,
-				LastArticleLink: catchedURL.URL,
+				LastArticleLink: catchedURL.Url,
 			})
 			if err != nil {
-				ticker.log.Errorf("[SVC-FEEDS] Unable to marshal cache: %s", err.Error())
+				ticker.log.Errorf("Unable to marshal cache: %s", err.Error())
 				continue
 			}
 
 			// update last time published per target in redis key/value store
-			ticker.rdb.Set("feed:last:"+v.ID.Hex(), string(newCache), 0)
+			ticker.rdb.Set("feed:last:"+v.Id, string(newCache), 0)
 
 			// write message to kafka
 			message, err := json.Marshal(&catchedURL)
 			if err != nil {
-				ticker.log.Errorf("[SVC-FEEDS] Unable to marshal message: %s", err.Error())
+				ticker.log.Errorf("Unable to marshal message: %s", err.Error())
 				continue
 			}
 

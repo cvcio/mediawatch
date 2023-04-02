@@ -18,8 +18,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 
-	scrape_pb "github.com/cvcio/mediawatch/internal/mediawatch/scrape/v2"
 	mailer "github.com/cvcio/mediawatch/pkg/mailer/v1"
+	scrape_pb "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
 
 	"github.com/cvcio/mediawatch/cmd/server/handlers"
 	"github.com/cvcio/mediawatch/pkg/config"
