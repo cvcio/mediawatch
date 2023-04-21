@@ -10,7 +10,7 @@ docker tag ${NAME}:${CIRCLE_SHA1} ${REPO}/${PROJECT}-${NAME}:${CIRCLE_BRANCH}
 #docker login -u="$DOCKER_USER" -p="$DOCKER_PASS" ${REPO}
 docker push ${REPO}/${PROJECT}-${NAME}:${CIRCLE_SHA1}
 docker push ${REPO}/${PROJECT}-${NAME}:${CIRCLE_BRANCH}
-if [ "$CIRCLE_BRANCH" = "master" ]
+if [ "$CIRCLE_BRANCH" = "main" ]
   then
   docker tag ${NAME}:${CIRCLE_SHA1} ${REPO}/${PROJECT}-${NAME}:latest
   docker push ${REPO}/${PROJECT}-${NAME}:latest
