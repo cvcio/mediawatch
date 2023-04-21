@@ -30,12 +30,13 @@ fi
 ## cp kubeconf.yaml ${HOME}/.kube/config
 #echo $KUBE_CONFIG >> ${HOME}/.kube/config
 
-if [ "${CIRCLE_BRANCH}" = "master" ]
-  then
-  kubectl -n ${NAMESPACE} set image deployment/${NAME} ${NAME}=${REPO}/${PROJECT}-${NAME}:${CIRCLE_SHA1}
-fi
-
-if [ "${CIRCLE_BRANCH}" = "development" ]
-  then
-  kubectl -n development set image deployment/${NAME} ${NAME}=${REPO}/${PROJECT}-${NAME}:${CIRCLE_SHA1}
-fi
+### Deploy
+#if [ "${CIRCLE_BRANCH}" = "master" ]
+#  then
+#  kubectl -n ${NAMESPACE} set image deployment/${NAME} ${NAME}=${REPO}/${PROJECT}-${NAME}:${CIRCLE_SHA1}
+#fi
+#
+#if [ "${CIRCLE_BRANCH}" = "development" ]
+#  then
+#  kubectl -n development set image deployment/${NAME} ${NAME}=${REPO}/${PROJECT}-${NAME}:${CIRCLE_SHA1}
+#fi
