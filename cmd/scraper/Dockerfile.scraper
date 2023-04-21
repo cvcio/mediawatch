@@ -1,4 +1,4 @@
-FROM node:14.17.6-alpine AS base
+FROM node:16-alpine AS base
 
 # Install certificates and git
 RUN apk add --update --no-cache libc6-compat ca-certificates git
@@ -12,13 +12,11 @@ COPY cmd/scraper/package.json cmd/scraper/yarn.lock ./
 FROM base AS dependencies
 WORKDIR /app
 
-RUN npm install --production
+RUN npm install --omit=dev
 RUN cp -R node_modules /tmp/node_modules
 
-# Install dependencies and build whatever you have to build
-RUN npm install -g @mapbox/node-pre-gyp
+# Install dependencies and build
 RUN npm install
-
 COPY cmd/scraper/ /app
 RUN npm run build
 
