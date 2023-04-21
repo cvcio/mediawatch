@@ -178,7 +178,7 @@ func main() {
 
 	// ============================================================
 	// Create a new Listener service, with our twitter stream and the scrape service grpc conn
-	log.Debugf("Twitter rules to listen : %v", rules)
+	log.Debugf("Twitter rules to listen: %v", rules)
 
 	v := url.Values{}
 	v.Add("expansions", "author_id,attachments.media_keys")
@@ -251,14 +251,18 @@ func main() {
 
 // handler handles incoming tweets
 func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.CatchedURL) {
+	if t.Error != nil {
+		log.Errorf("Stream error: %s", t.Error.Message)
+		return
+	}
 	for _, v := range t.MatchingRules {
 		if v.Tag != "mediawatch-listener" {
 			return
 		}
 	}
-	if t.Data.InReplyToUserID != "" {
-		return
-	}
+	// if t.Data.InReplyToUserID != "" {
+	// 	return
+	// }
 	if len(t.Data.Entities.URLs) == 0 {
 		return
 	}
