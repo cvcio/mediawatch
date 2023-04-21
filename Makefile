@@ -119,8 +119,8 @@ prod:
 	go mod vendor
 	cp cmd/${APP}/Dockerfile.$(APP) .
 	docker build -f Dockerfile.${APP} --rm -t ${APP}:$(TAG) .
-	@chmod +x cmd/${APP}/deploy.sh
-	NAME=${APP} REPO=$(REGISTRY) PROJECT=$(PROJECT) NAMESPACE=$(NAMESPACE) CIRCLE_SHA1=$(TAG) CIRCLE_BRANCH=$(BRANCH) cmd/${APP}/deploy.sh
+	@chmod +x scripts/deploy.sh
+	NAME=${APP} REPO=$(REGISTRY) PROJECT=$(PROJECT) NAMESPACE=$(NAMESPACE) CIRCLE_SHA1=$(TAG) CIRCLE_BRANCH=$(BRANCH) scripts/deploy.sh
 	rm Dockerfile.${APP}
 
 prod-all:
@@ -129,8 +129,8 @@ prod-all:
 		cp cmd/$$name/Dockerfile.$$name .;\
 		echo "Building image $$name";\
 		docker build -f Dockerfile.$$name --rm -t $$name:$(TAG) .;\
-		chmod +x cmd/$$name/deploy.sh;\
-		NAME=$$name REPO=$(REGISTRY) PROJECT=$(PROJECT) CIRCLE_SHA1=$(TAG) CIRCLE_BRANCH=$(BRANCH) cmd/$$name/deploy.sh;\
+		chmod +x scripts/deploy.sh;\
+		NAME=$$name REPO=$(REGISTRY) PROJECT=$(PROJECT) CIRCLE_SHA1=$(TAG) CIRCLE_BRANCH=$(BRANCH) scripts/deploy.sh;\
 		rm Dockerfile.$$name;\
 	done
 
