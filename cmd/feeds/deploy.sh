@@ -32,7 +32,7 @@ fi
 
 if [ "${CIRCLE_BRANCH}" = "master" ]
   then
-  kubectl -n default set image deployment/${NAME} ${NAME}=${REPO}/${PROJECT}-${NAME}:${CIRCLE_SHA1}
+  kubectl -n ${NAMESPACE} set image deployment/${NAME} ${NAME}=${REPO}/${PROJECT}-${NAME}:${CIRCLE_SHA1}
 fi
 
 if [ "${CIRCLE_BRANCH}" = "development" ]
