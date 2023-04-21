@@ -1,4 +1,4 @@
-FROM golang:1.16.13-alpine3.15
+FROM golang:1.20.3-alpine3.16
 ARG version
 
 # Install certificates and git
@@ -23,11 +23,11 @@ COPY pkg/ /go/src/github.com/cvcio/mediawatch/pkg/
 COPY proto/ /go/src/github.com/cvcio/mediawatch/proto/
 COPY vendor/ /go/src/github.com/cvcio/mediawatch/vendor/
 
-WORKDIR /go/src/github.com/cvcio/mediawatch/cmd/worker/
-RUN GO111MODULE=on GOFLAGS=-mod=vendor CGO_ENABLED=0 GOOS=linux go build -v -ldflags "-X github.com/cvcio/mediawatch/cmd/worker/main.version=$version" -a -installsuffix cgo -o worker .
+WORKDIR /go/src/github.com/cvcio/mediawatch/cmd/compare/
+RUN GO111MODULE=on GOFLAGS=-mod=vendor CGO_ENABLED=0 GOOS=linux go build -v -ldflags "-X github.com/cvcio/mediawatch/cmd/compare/main.version=$version" -a -installsuffix cgo -o compare .
 
 FROM alpine:3.15
 RUN apk --no-cache add ca-certificates
-WORKDIR /worker/
-COPY --from=0 /go/src/github.com/cvcio/mediawatch/cmd/worker .
-ENTRYPOINT ["/worker/worker"]
+WORKDIR /compare/
+COPY --from=0 /go/src/github.com/cvcio/mediawatch/cmd/compare .
+ENTRYPOINT ["/compare/compare"]
