@@ -110,10 +110,7 @@ services-build:
 		rm Dockerfile.$$name;\
 	done
 
-services-run:
-	docker-compose -f docker-compose.with-services.yaml up
-
-services: services-build services-run
+services: services-build
 
 prod:
 	go mod vendor
