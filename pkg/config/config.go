@@ -47,6 +47,7 @@ type Config struct {
 		TwitterConsumerSecret    string `envconfig:"TWITTER_CONSUMER_SECRET" default:""`
 		TwitterAccessToken       string `envconfig:"TWITTER_ACCESS_TOKEN" default:""`
 		TwitterAccessTokenSecret string `envconfig:"TWITTER_ACCESS_TOKEN_SECRET" default:""`
+		TwitterRuleTag           string `envconfig:"TWITTER_RULE_TAG" default:"mediawatch-listener-v2"`
 	}
 	Scrape struct {
 		Host string `envconfig:"SVC_SCRAPER" default:"0.0.0.0:50050"`

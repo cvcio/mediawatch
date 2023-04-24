@@ -146,14 +146,14 @@ func main() {
 
 	// ============================================================
 	// Remove all active filter stream rules
-	if _, err := removeRules(api); err != nil {
+	if _, err := removeRules(api, cfg.Twitter.TwitterRuleTag); err != nil {
 		log.Fatalf("Error while removing filter stream rules: %s", err.Error())
 	}
 
 	// ============================================================
 	// Add new stream rules
 	rules := splitFrom512(fUsernames)
-	if _, err := addRules(api, rules); err != nil {
+	if _, err := addRules(api, rules, cfg.Twitter.TwitterRuleTag); err != nil {
 		log.Fatalf("Error while adding filter stream rules: %s", err.Error())
 	}
 
@@ -194,7 +194,7 @@ func main() {
 
 		for t := range stream.C {
 			f, _ := t.(twitter.StreamData)
-			handler(log, f, tweetChan)
+			handler(log, f, tweetChan, cfg.Twitter.TwitterRuleTag)
 		}
 	}()
 
@@ -250,13 +250,13 @@ func main() {
 }
 
 // handler handles incoming tweets
-func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.CatchedURL) {
+func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.CatchedURL, ruleTag string) {
 	if t.Error != nil {
 		log.Errorf("Stream error: %s", t.Error.Message)
 		return
 	}
 	for _, v := range t.MatchingRules {
-		if v.Tag != "mediawatch-listener" {
+		if v.Tag != ruleTag {
 			return
 		}
 	}
@@ -328,14 +328,14 @@ func getUserNameFromTweet(authorId string, users []*twitter.User) string {
 }
 
 // remove twitter api rules.
-func removeRules(api *twitter.Twitter) (bool, error) {
+func removeRules(api *twitter.Twitter, ruleTag string) (bool, error) {
 	rules, err := api.GetFilterStreamRules(nil)
 	if err != nil {
 		return false, err
 	}
 	var ids []string
 	for _, v := range rules.Data {
-		if v.Tag == "mediawatch-listener" {
+		if v.Tag == ruleTag {
 			ids = append(ids, v.ID)
 		}
 	}
@@ -356,12 +356,12 @@ func removeRules(api *twitter.Twitter) (bool, error) {
 }
 
 // add twitter api rules.
-func addRules(api *twitter.Twitter, usernames []string) (bool, error) {
+func addRules(api *twitter.Twitter, usernames []string, ruleTag string) (bool, error) {
 	rules := new(twitter.Rules)
 	for _, v := range usernames {
 		rules.Add = append(rules.Add, &twitter.RulesData{
 			Value: v,
-			Tag:   "mediawatch-listener",
+			Tag:   ruleTag,
 		})
 	}
 	added, err := api.PostFilterStreamRules(nil, rules)
