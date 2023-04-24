@@ -16,6 +16,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mmcdole/gofeed v1.1.3
 	github.com/neo4j/neo4j-go-driver/v4 v4.2.2
+	github.com/neo4j/neo4j-go-driver/v5 v5.7.0
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.1

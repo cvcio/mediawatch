@@ -9,7 +9,7 @@ import (
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/pkg/neo"
 	"github.com/google/uuid"
-	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 )
 
 // EnsureIndex fix the indexes in the Neo4J Database

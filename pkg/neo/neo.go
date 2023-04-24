@@ -1,6 +1,6 @@
 package neo
 
-import "github.com/neo4j/neo4j-go-driver/v4/neo4j"
+import "github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
 // Neo Neo4j Driver
 type Neo struct {
@@ -10,7 +10,7 @@ type Neo struct {
 // NewNeo Client from given config
 func NewNeo(bolt, user, password string) (*Neo, error) {
 	c := func(conf *neo4j.Config) {}
-	driver, err := neo4j.NewDriver(bolt, neo4j.NoAuth(), c)
+	driver, err := neo4j.NewDriver(bolt, neo4j.BasicAuth(user, password, ""), c)
 	if err != nil {
 		return nil, err
 	}

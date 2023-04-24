@@ -14,7 +14,7 @@ import (
 	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
 	"github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2/articlesv2connect"
 	"github.com/cvcio/mediawatch/pkg/neo"
-	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"go.uber.org/zap"
 )
 

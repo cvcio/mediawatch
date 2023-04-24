@@ -778,6 +778,24 @@ github.com/neo4j/neo4j-go-driver/v4/neo4j/internal/pool
 github.com/neo4j/neo4j-go-driver/v4/neo4j/internal/retry
 github.com/neo4j/neo4j-go-driver/v4/neo4j/internal/router
 github.com/neo4j/neo4j-go-driver/v4/neo4j/log
+# github.com/neo4j/neo4j-go-driver/v5 v5.7.0
+## explicit; go 1.18
+github.com/neo4j/neo4j-go-driver/v5/neo4j
+github.com/neo4j/neo4j-go-driver/v5/neo4j/config
+github.com/neo4j/neo4j-go-driver/v5/neo4j/db
+github.com/neo4j/neo4j-go-driver/v5/neo4j/dbtype
+github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/bolt
+github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/collections
+github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/connector
+github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/db
+github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/errorutil
+github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/packstream
+github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/pool
+github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/racing
+github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/retry
+github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/router
+github.com/neo4j/neo4j-go-driver/v5/neo4j/log
+github.com/neo4j/neo4j-go-driver/v5/neo4j/notifications
 # github.com/nxadm/tail v1.4.8
 ## explicit; go 1.13
 github.com/nxadm/tail
