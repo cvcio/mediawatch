@@ -255,15 +255,19 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 		log.Errorf("Stream error: %s", t.Error.Message)
 		return
 	}
+	if t.Data == nil {
+		log.Error("Stream error: empty data received")
+		return
+	}
 	for _, v := range t.MatchingRules {
 		if v.Tag != ruleTag {
 			return
 		}
 	}
-	// if t.Data.InReplyToUserID != "" {
-	// 	return
-	// }
-	if len(t.Data.Entities.URLs) == 0 {
+	if t.Data.InReplyToUserID != "" {
+		return
+	}
+	if t.Data.Entities != nil && len(t.Data.Entities.URLs) == 0 {
 		return
 	}
 	for _, u := range t.Data.Entities.URLs {
