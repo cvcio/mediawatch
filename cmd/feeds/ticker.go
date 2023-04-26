@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
 	"time"
 
 	"github.com/cvcio/mediawatch/models/link"
+	"github.com/cvcio/mediawatch/pkg/helper"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/google/uuid"
@@ -50,6 +52,7 @@ func NewTicker(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClie
 }
 
 func (ticker *Ticker) Fetch() {
+	delay := time.Duration((ticker.interval / time.Duration(math.Ceil(float64(len(ticker.targets))/100))) / 100)
 	for _, v := range ticker.targets {
 		if _, err := url.Parse(v.Stream.StreamTarget); err != nil {
 			ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
@@ -62,7 +65,7 @@ func (ticker *Ticker) Fetch() {
 		parser := gofeed.NewParser()
 		// TODO: Find a way to use a proxy for the reqursts, without getting back too many 403s. Using Tor works, but with too many errors.
 		// parser.Client = ticker.proxy
-		parser.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" // "MediaWatch Bot/3.0 (mediawatch.io)"
+		parser.UserAgent = helper.RandomUserAgent() // "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" // "MediaWatch Bot/3.0 (mediawatch.io)"
 
 		// parse feed
 		data, err := parser.ParseURL(v.Stream.StreamTarget)
@@ -86,7 +89,8 @@ func (ticker *Ticker) Fetch() {
 			}
 			return slice[i].PublishedParsed.Before(*slice[j].PublishedParsed)
 		})
-
+		// populate all urls in a list and send in a go routine
+		var urls []link.CatchedURL
 		// iter over the items and check if the article is already processed.
 		// we assume that the article is processed if the publish time of an item
 		// is before or equal to the time stored in redis key/value store.
@@ -141,23 +145,33 @@ func (ticker *Ticker) Fetch() {
 			// update last time published per target in redis key/value store
 			ticker.rdb.Set("feed:last:"+v.Id, string(newCache), 0)
 
-			// write message to kafka
-			message, err := json.Marshal(&catchedURL)
-			if err != nil {
-				ticker.log.Errorf("Unable to marshal message: %s", err.Error())
-				continue
-			}
-
 			if ticker.init {
 				continue
 			}
 
-			go ticker.worker.Produce(kafka.Message{
-				Value: []byte(message),
-			})
-
-			time.Sleep(150)
+			urls = append(urls, catchedURL)
 		}
+
+		if len(urls) > 0 {
+			go ticker.Produce(urls)
+			time.Sleep(delay)
+		}
+	}
+}
+
+func (ticker *Ticker) Produce(urls []link.CatchedURL) {
+	for _, v := range urls {
+		// write message to kafka
+		message, err := json.Marshal(&v)
+		if err != nil {
+			ticker.log.Errorf("Unable to marshal message: %s", err.Error())
+			continue
+		}
+		go ticker.worker.Produce(kafka.Message{
+			Value: []byte(message),
+		})
+
+		time.Sleep(1000)
 	}
 }
 
