@@ -171,7 +171,7 @@ func (ticker *Ticker) Produce(urls []link.CatchedURL) {
 			Value: []byte(message),
 		})
 
-		time.Sleep(1000)
+		time.Sleep(1 * time.Second)
 	}
 }
 
