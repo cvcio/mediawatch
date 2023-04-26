@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -52,7 +51,7 @@ func NewTicker(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClie
 }
 
 func (ticker *Ticker) Fetch() {
-	delay := time.Duration((ticker.interval / time.Duration(math.Ceil(float64(len(ticker.targets))/100))) / 100)
+	// delay := time.Duration((ticker.interval / time.Duration(math.Ceil(float64(len(ticker.targets))/100))) / 100)
 	for _, v := range ticker.targets {
 		if _, err := url.Parse(v.Stream.StreamTarget); err != nil {
 			ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
@@ -154,7 +153,7 @@ func (ticker *Ticker) Fetch() {
 
 		if len(urls) > 0 {
 			go ticker.Produce(urls)
-			time.Sleep(delay)
+			// time.Sleep(delay)
 		}
 	}
 }
