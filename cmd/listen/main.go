@@ -358,6 +358,9 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 			return
 		}
 	}
+	if t.Data == nil {
+		return
+	}
 	if t.Data.InReplyToUserID != "" {
 		return
 	}
