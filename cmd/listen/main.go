@@ -193,8 +193,10 @@ func main() {
 		}
 
 		for t := range stream.C {
-			f, _ := t.(twitter.StreamData)
-			handler(log, f, tweetChan, cfg.Twitter.TwitterRuleTag)
+			f, ok := t.(twitter.StreamData)
+			if ok {
+				handler(log, f, tweetChan, cfg.Twitter.TwitterRuleTag)
+			}
 		}
 	}()
 
@@ -256,7 +258,6 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 		return
 	}
 	if t.Data == nil {
-		log.Error("Stream error: empty data received")
 		return
 	}
 	for _, v := range t.MatchingRules {

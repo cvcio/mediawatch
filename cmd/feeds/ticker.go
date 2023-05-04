@@ -63,7 +63,7 @@ func (ticker *Ticker) Fetch() {
 		}
 		parser := gofeed.NewParser()
 		// TODO: Find a way to use a proxy for the reqursts, without getting back too many 403s. Using Tor works, but with too many errors.
-		// parser.Client = ticker.proxy
+		parser.Client = ticker.proxy
 		parser.UserAgent = helper.RandomUserAgent() // "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" // "MediaWatch Bot/3.0 (mediawatch.io)"
 
 		// parse feed

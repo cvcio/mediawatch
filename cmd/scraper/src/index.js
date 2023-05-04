@@ -11,6 +11,7 @@ let server;
 const main = async() => {
     logger.info('[SVC-SCRAPER] Starting gRPC server');
 
+	const proxy = process.env.PROXY_ENABLED && process.env.PROXY_PATH ? process.env.PROXY_PATH : null;
     const mongo = new MongoClient(process.env.MONGODB_URL);
     await mongo.connect();
 
@@ -28,7 +29,8 @@ const main = async() => {
         });
 
     const scrapeProto = grpc.loadPackageDefinition(packageDefinition);
-    const service = new services.ScrapeService(mongo);
+    const service = new services.ScrapeService(mongo, proxy);
+
     // Add Services (Endpoints)
     server.addService(scrapeProto.mediawatch.scrape.v2.ScrapeService.service, service);
     server.bindAsync(process.env.SERVER_ADDRESS, grpc.ServerCredentials.createInsecure(), (err) => {
@@ -39,7 +41,6 @@ const main = async() => {
         server.start();
         logger.info(`[SVC-SCRAPER] gRPC server started at: ${process.env.SERVER_ADDRESS}`);
     });
-
 };
 
 const shutdown = (err) => {

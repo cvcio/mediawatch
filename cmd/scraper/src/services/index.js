@@ -1,15 +1,16 @@
 const logger = require('../logger');
 const { parsers } = require('../parsers');
 const { toUpperCase, normalizeString, trimRight } = require('../utils/strings');
-const { extract } = require('ascraper'); // require('../../../../misc/npm/ascraper/lib'); //
+const { extract } = require('ascraper'); // require('/home/andefined/js/misc/npm/ascraper/lib'); //
 
 const moment = require('moment');
 moment.suppressDeprecationWarnings = true;
 
 class ScrapeService {
-    constructor(mongo) {
+    constructor(mongo, proxy) {
         this.passages = [];
         this.mongo = mongo;
+		this.proxy = proxy;
         this.GetPassages();
     }
 
@@ -19,7 +20,7 @@ class ScrapeService {
         const db = this.mongo.db(process.env.MONGODB_DB);
         const collection = db.collection('passages');
 
-        const passages = await collection.find({}).limit(500).toArray();
+        const passages = await collection.find({}).limit(5000).toArray();
 
         this.passages = passages.filter(m => m.type === 'trim');
         logger.debug(`[SVC-SCRAPER] (${this.passages.length}) passages loaded`);
@@ -117,6 +118,9 @@ class ScrapeService {
                     });
                 })
                 .catch(err => {
+					if (err.response && err.response.status == 403 && this.proxy) {
+						return this.RetryWithProxy(request, callback);
+					}
                     logger.error(`[SVC-SCRAPER] Error while scraping: ${err.message} - (${request.screen_name}) ${request.url}`);
                     return callback(err, null);
                 });
@@ -224,6 +228,46 @@ class ScrapeService {
         this.GetPassages();
         return callback(null, null);
     }
+
+	RetryWithProxy = (request, callback) => {
+		logger.info(`[SVC-SCRAPER] RetryWithProxy for (${request.screen_name}) ${request.url}`);
+		extract(decodeURIComponent(request.url).toString(), this.proxy)
+			.then(res => {
+				let article = res;
+				if (article.date && moment(request.crawled_at).isBefore(moment(article.date))) {
+					article.date = request.crawled_at;
+				}
+
+				if (article.text === '' || article.title === '') {
+					logger.error(`[SVC-SCRAPER] Unable to scrape URL (${request.screen_name}) ${request.url}`);
+					return callback(new Error(`Unable to scrape URL (${request.screen_name}) ${request.url}`), null);
+				}
+				article.text = trimRight(article.text, this.passages);
+				return callback(null, {
+					status: 'success',
+					code: 200,
+					message: '',
+					data: {
+						content: {
+							title: article.title,
+							body: normalizeString(article.text),
+							authors: (typeof article.author === 'string' && article.author.length > 2) ?
+								toUpperCase(article.author).split(',').map(m => m.trim()) : [],
+							published_at: article.date ?
+								moment(article.date).format('YYYY-MM-DDTHH:mm:ssZZ') : moment(request.crawled_at).format('YYYY-MM-DDTHH:mm:ssZZ'),
+							tags: (typeof article.keywords === 'string' && article.keywords.length > 2) ?
+								toUpperCase(article.keywords).split(',').map(m => m.trim()) : [],
+							description: normalizeString(article.description),
+							image: article.image || ''
+						}
+					}
+				});
+			})
+			.catch(err => {
+				logger.error(`[SVC-SCRAPER] Error while scraping: ${err.message} - (${request.screen_name}) ${request.url}`);
+				return callback(err, null);
+			});
+	}
 };
 
 module.exports = { ScrapeService };
