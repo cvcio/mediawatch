@@ -20,6 +20,7 @@ message FeedStream {
     mediawatch.common.v2.StreamType stream_type = 2 [(tagger.tags) = "bson:\"stream_type,omitempty\""];
     // common status (see common.proto)
     mediawatch.common.v2.Status stream_status = 3 [(tagger.tags) = "bson:\"stream_status,omitempty\""];
+    bool requires_proxy = 4 [(tagger.tags) = "bson:\"requires_proxy,omitempty\""];
 }
 
 // FeedDOM Model
