@@ -428,7 +428,7 @@ type Feed struct {
 	unknownFields protoimpl.UnknownFields
 
 	// UUID as a string
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty" bson:"_id,omitempty"`
 	// UUID string representation
 	Uuid string `protobuf:"bytes,2,opt,name=uuid,proto3" json:"uuid,omitempty"`
 	// Feed creation datetime in RFC3339 format

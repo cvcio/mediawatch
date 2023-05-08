@@ -1,5 +1,5 @@
 REGISTRY=cvcio
-PROJECT=mediawatch-v2
+PROJECT=mediawatch-svc
 TAG:=$(shell git rev-parse HEAD)
 BRANCH:=$(shell git rev-parse --abbrev-ref HEAD)
 POD=$(shell kubectl get pod -l app=mongo -o jsonpath='{.items[0].metadata.name}')
