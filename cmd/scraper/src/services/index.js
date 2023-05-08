@@ -2,6 +2,7 @@ const logger = require('../logger');
 const { parsers } = require('../parsers');
 const { toUpperCase, normalizeString, trimRight } = require('../utils/strings');
 const { extract } = require('ascraper'); // require('/home/andefined/js/misc/npm/ascraper/lib'); //
+const { errorCode } = require('../utils/errors');
 
 const moment = require('moment');
 moment.suppressDeprecationWarnings = true;
@@ -28,22 +29,25 @@ class ScrapeService {
 
     Scrape = (req, callback) => {
         let request = req.request;
-        logger.info(`[SVC-SCRAPER] Scrape - (${request.screen_name}) ${decodeURIComponent(request.url).toString()}`);
+		const feed = JSON.parse(request.feed);
 
-        if (parsers[request.screen_name.toLowerCase()] !== undefined) {
+        logger.info(`[SVC-SCRAPER] Scrape - (${feed.hostname}) ${decodeURIComponent(request.url).toString()}`);
+
+        if (request.screen_name && parsers[request.screen_name.toLowerCase()] !== undefined) {
 			let parser = parsers[request.screen_name.toLowerCase()];
 			let url = parser.url(request.url);
 
 			if (!url) {
-                logger.error(`[SVC-SCRAPER] URL Error (${request.screen_name}) ${request.url}`);
-                return callback(Error(`URL Error (${request.screen_name}) ${request.url}`), null);
+                logger.error(`[SVC-SCRAPER] Unable to scrape URL (url error) (${feed.hostname}) ${request.url}`);
+                return callback({code: 9, details: `Unable to scrape URL (url error) (${feed.hostname}) ${request.url}`}, null);
             }
 
 			parser.fetchAPI(url)
 				.then(res => {
 					if (!res) {
-						logger.error(`[SVC-SCRAPER] Unable to scrape URL (${request.screen_name}) ${request.url}`);
-						return callback(new Error(`Unable to scrape URL (${request.screen_name}) ${request.url}`), null);
+						logger.error(`[SVC-SCRAPER] Unable to scrape URL (response empty) (${feed.hostname}) ${request.url}`);
+						return callback({code: 9, details: `Unable to scrape URL (response empty) (${feed.hostname}) ${request.url}`}, null);
+
 					}
 					logger.debug(`[SVC-SCRAPER] Data ${JSON.stringify(res)}`);
 
@@ -54,8 +58,8 @@ class ScrapeService {
 					}
 
 					if (article.text === '' || article.title === '') {
-						logger.error(`[SVC-SCRAPER] Unable to scrape URL (${request.screen_name}) ${request.url}`);
-						return callback(new Error(`Unable to scrape URL (${request.screen_name}) ${request.url}`), null);
+						logger.error(`[SVC-SCRAPER] Unable to scrape URL (malformed data) (${feed.hostname}) ${request.url}`);
+						return callback({code: 9, details: `Unable to scrape URL (malformed data) (${feed.hostname}) ${request.url}`}, null);
 					}
 
 					return callback(null, {
@@ -79,8 +83,8 @@ class ScrapeService {
 					});
 				})
 				.catch(err => {
-					logger.error('Error while scraping:', err.message, `(${request.screen_name}) ${request.url}`);
-                    return callback(err, null);
+					logger.error(`[SVC-SCRAPER] Error while scraping: (${errorCode(err.response ? err.response.status : 500)}) ${err.message} - (${feed.hostname}) ${request.url}`);
+                    return callback({code: errorCode(err.response ? err.response.status : 500), details: err.message}, null);
 				});
         } else {
             extract(decodeURIComponent(request.url).toString())
@@ -93,8 +97,8 @@ class ScrapeService {
                     }
 
                     if (article.text === '' || article.title === '') {
-                        logger.error(`[SVC-SCRAPER] Unable to scrape URL (${request.screen_name}) ${request.url}`);
-                        return callback(new Error(`Unable to scrape URL (${request.screen_name}) ${request.url}`), null);
+                        logger.error(`[SVC-SCRAPER] Unable to scrape URL (malformed data) (${feed.hostname}) ${request.url}`);
+						return callback({code: 9, details: `Unable to scrape URL (malformed data) (${feed.hostname}) ${request.url}`}, null);
                     }
                     article.text = trimRight(article.text, this.passages);
                     return callback(null, {
@@ -118,11 +122,11 @@ class ScrapeService {
                     });
                 })
                 .catch(err => {
-					if (err.response && err.response.status == 403 && this.proxy) {
-						return this.RetryWithProxy(request, callback);
-					}
-                    logger.error(`[SVC-SCRAPER] Error while scraping: ${err.message} - (${request.screen_name}) ${request.url}`);
-                    return callback(err, null);
+					// if (err.response && err.response.status == 403 && this.proxy) {
+					// 	return this.RetryWithProxy(request, feed, callback);
+					// }
+                    logger.error(`[SVC-SCRAPER] Error while scraping: (${errorCode(err.response ? err.response.status : 500)}) ${err.message} - (${feed.hostname}) ${request.url}`);
+                    return callback({code: errorCode(err.response ? err.response.status : 500), details: err.message}, null);
                 });
         }
     }
@@ -182,7 +186,7 @@ class ScrapeService {
 				})
 				.catch(err => {
 					logger.error('Error while scraping:', err.message, `(${request.feed.screen_name}) ${request.url}`);
-                    return callback(err, null);
+                    return callback({code: errorCode(err.response ? err.response.status : 500), details: err.message}, null);
 				});
         } else {
             // Run Scraper
@@ -220,7 +224,7 @@ class ScrapeService {
                 })
                 .catch(err => {
                     logger.error(`[SVC-SCRAPER] Error while scraping: ${err.message} - (${request.feed.screen_name}) ${request.url}`);
-                    return callback(err, null);
+                    return callback({code: errorCode(err.response ? err.response.status : 500), details: err.message}, null);
                 });
         }
     }
@@ -228,9 +232,8 @@ class ScrapeService {
         this.GetPassages();
         return callback(null, null);
     }
-
-	RetryWithProxy = (request, callback) => {
-		logger.info(`[SVC-SCRAPER] RetryWithProxy for (${request.screen_name}) ${request.url}`);
+	RetryWithProxy = (request, feed, callback) => {
+		logger.info(`[SVC-SCRAPER] RetryWithProxy - (${feed.hostname}) ${decodeURIComponent(request.url).toString()}`);
 		extract(decodeURIComponent(request.url).toString(), this.proxy)
 			.then(res => {
 				let article = res;
@@ -239,8 +242,8 @@ class ScrapeService {
 				}
 
 				if (article.text === '' || article.title === '') {
-					logger.error(`[SVC-SCRAPER] Unable to scrape URL (${request.screen_name}) ${request.url}`);
-					return callback(new Error(`Unable to scrape URL (${request.screen_name}) ${request.url}`), null);
+					logger.error(`[SVC-SCRAPER] Unable to scrape URL (malformed data) (${feed.hostname}) ${request.url}`);
+					return callback({code: 9, details: `Unable to scrape URL (malformed data) (${feed.hostname}) ${request.url}`}, null);
 				}
 				article.text = trimRight(article.text, this.passages);
 				return callback(null, {
@@ -264,8 +267,8 @@ class ScrapeService {
 				});
 			})
 			.catch(err => {
-				logger.error(`[SVC-SCRAPER] Error while scraping: ${err.message} - (${request.screen_name}) ${request.url}`);
-				return callback(err, null);
+				logger.error(`[SVC-SCRAPER] Error while scraping: (${errorCode(err.response ? err.response.status : 500)}) ${err.message} - (${feed.hostname}) ${request.url}`);
+				return callback({code: errorCode(err.response ? err.response.status : 500), details: err.message}, null);
 			});
 	}
 };

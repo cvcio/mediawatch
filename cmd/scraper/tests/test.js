@@ -30,26 +30,24 @@ for (var i = 0; i < data.length; i++) {
     //     });
     // }
     let f = data[i];
-	if (f.test && f.test.url !== '' && f.stream && f.stream.requires_proxy) {
-        console.log(f);
-	}
-    if (f.test && f.test.url !== '' && f.user_name === 'efsyntakton') { // && f.screen_name === 'documentonews'
+    // if (f.test && f.test.url !== '' && f.stream && f.stream.requires_proxy) {
+    if (f.test && f.test.url !== '') {
         let req = {
             request: {
-                feed: f,
-                url: f.testURL,
+                feed: JSON.stringify(f),
+                url: f.test.url,
 				screen_name: f.user_name,
 				lang: 'el',
 				crawled_at: moment().format('YYYY-MM-DDTHH:mm:ss')
             }
         };
-        // service.Scrape(req, (err, data) => {
-        //     if (err) {
-		// 		console.dir(err);
-        //         console.error(f.screen_name, err.message);
-        //         return;
-        //     }
-        //     console.log(f.screen_name, data.data.content.title);
-        // });
+		// console.log(req);
+        service.Scrape(req, (err, data) => {
+            if (err) {
+                console.error(f.hostname, err.details, err.code);
+                return;
+            }
+            console.log(f.hostname, data.data.content.title);
+        });
     }
 }

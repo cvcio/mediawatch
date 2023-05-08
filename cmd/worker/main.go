@@ -60,8 +60,9 @@ type WorkerGroup struct {
 	esClient  *es.Elastic
 	esIndex   string
 	neoClient *neo.Neo
-	scrape    scrape_pb.ScrapeServiceClient
-	enrich    enrich_pb.EnrichServiceClient
+
+	scrapeHost  string
+	ernrichHost string
 }
 
 // Close closes the kafka client.
@@ -120,7 +121,11 @@ func (worker *WorkerGroup) Consume() {
 			worker.log.Errorf("ERRORED: %s - %s", msg.Hostname, err.Error())
 			// send the error to channel
 			worker.errChan <- errors.Wrap(err, "failed process article")
-			continue
+
+			// do not commit unprocessed articles
+			if strings.Contains(err.Error(), "GRPC Connection Error") {
+				continue
+			}
 		}
 		// }
 
@@ -154,8 +159,8 @@ func NewWorkerGroup(
 	esClient *es.Elastic,
 	esIndex string,
 	neoClient *neo.Neo,
-	scrape scrape_pb.ScrapeServiceClient,
-	enrich enrich_pb.EnrichServiceClient,
+	scrapeHost string,
+	ernrichHost string,
 ) *WorkerGroup {
 	return &WorkerGroup{
 		context.Background(),
@@ -166,8 +171,8 @@ func NewWorkerGroup(
 		esClient,
 		esIndex,
 		neoClient,
-		scrape,
-		enrich,
+		scrapeHost,
+		ernrichHost,
 	}
 }
 
@@ -215,29 +220,29 @@ func main() {
 	}
 	defer neoClient.Client.Close()
 
-	// =========================================================================
-	// Create the gRPC service clients
-	// Parse Server Options
-	var grpcOptions []grpc.DialOption
-	grpcOptions = append(grpcOptions, grpc.WithInsecure())
+	// // =========================================================================
+	// // Create the gRPC service clients
+	// // Parse Server Options
+	// var grpcOptions []grpc.DialOption
+	// grpcOptions = append(grpcOptions, grpc.WithInsecure())
 
-	// Create gRPC Scrape Connection
-	scrapeGRPC, err := grpc.Dial(cfg.Scrape.Host, grpcOptions...)
-	if err != nil {
-		log.Fatalf("GRPC Scrape did not connect: %v", err)
-	}
-	defer scrapeGRPC.Close()
-	// Create gRPC Scrape client
-	scrape := scrape_pb.NewScrapeServiceClient(scrapeGRPC)
+	// // Create gRPC Scrape Connection
+	// scrapeGRPC, err := grpc.Dial(cfg.Scrape.Host, grpcOptions...)
+	// if err != nil {
+	// 	log.Fatalf("GRPC Scrape did not connect: %v", err)
+	// }
+	// defer scrapeGRPC.Close()
+	// // Create gRPC Scrape client
+	// scrape := scrape_pb.NewScrapeServiceClient(scrapeGRPC)
 
-	// Create gRPC Enrich Connection
-	enrichGRPC, err := grpc.Dial(cfg.Enrich.Host, grpcOptions...)
-	if err != nil {
-		log.Fatalf("GRPC Enrich did not connect: %v", err)
-	}
-	defer enrichGRPC.Close()
-	// Create gRPC Enrich Connection
-	enrich := enrich_pb.NewEnrichServiceClient(enrichGRPC)
+	// // Create gRPC Enrich Connection
+	// enrichGRPC, err := grpc.Dial(cfg.Enrich.Host, grpcOptions...)
+	// if err != nil {
+	// 	log.Fatalf("GRPC Enrich did not connect: %v", err)
+	// }
+	// defer enrichGRPC.Close()
+	// // Create gRPC Enrich Connection
+	// enrich := enrich_pb.NewEnrichServiceClient(enrichGRPC)
 
 	// =========================================================================
 	// Create kafka consumer/producer worker
@@ -259,7 +264,7 @@ func main() {
 	// create a new worker
 	worker := NewWorkerGroup(
 		log, kafkaGoClient, kafkaChan,
-		dbConn, esClient, cfg.Elasticsearch.Index, neoClient, scrape, enrich,
+		dbConn, esClient, cfg.Elasticsearch.Index, neoClient, cfg.Scrape.Host, cfg.Enrich.Host,
 	)
 
 	// close connections on exit
@@ -386,9 +391,27 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// =========================================================================
 	timer := prometheus.NewTimer(grpcDuration.WithLabelValues("scraper"))
 
+	// =========================================================================
+	// Create the gRPC service clients
+	// Parse Server Options
+	var grpcOptions []grpc.DialOption
+	grpcOptions = append(grpcOptions, grpc.WithInsecure())
+
+	// Create gRPC Scrape Connection
+	scrapeGRPC, err := grpc.Dial(worker.scrapeHost, grpcOptions...)
+	if err != nil {
+		worker.log.Fatalf("GRPC Scrape did not connect: %v", err)
+	}
+	defer scrapeGRPC.Close()
+	// Create gRPC Scrape client
+	scrape := scrape_pb.NewScrapeServiceClient(scrapeGRPC)
+
+	// scraper client
+	feedString, _ := json.Marshal(f)
+
 	// create the scrape request
 	scrapeReq := scrape_pb.ScrapeRequest{
-		Feed:       f.String(),
+		Feed:       string(feedString),
 		Url:        in.Url,
 		Lang:       f.Localization.Lang,
 		ScreenName: strings.ToLower(f.UserName),
@@ -396,7 +419,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	}
 
 	// scrape the article
-	scrapeResp, err := worker.scrape.Scrape(context.Background(), &scrapeReq)
+	scrapeResp, err := scrape.Scrape(context.Background(), &scrapeReq)
 	if err != nil {
 		// if there is an error while scraping, return.
 		worker.log.Errorf("Scrape error: %s", err.Error())
@@ -429,6 +452,16 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// =========================================================================
 	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("enrich"))
 
+	// enrich client
+	// Create gRPC Enrich Connection
+	enrichGRPC, err := grpc.Dial(worker.ernrichHost, grpcOptions...)
+	if err != nil {
+		worker.log.Fatalf("GRPC Enrich did not connect: %v", err)
+	}
+	defer enrichGRPC.Close()
+
+	// Create gRPC Enrich Connection
+	enrich := enrich_pb.NewEnrichServiceClient(enrichGRPC)
 	// create the enrich request
 	enrichReq := enrich_pb.EnrichRequest{
 		Body: a.Content.Body,
@@ -436,7 +469,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	}
 
 	// send to enrich
-	enrichResp, err := worker.enrich.NLP(context.Background(), &enrichReq)
+	enrichResp, err := enrich.NLP(context.Background(), &enrichReq)
 	if err != nil {
 		// TODO: check what to do here
 		worker.log.Errorf("Enrich error: %s", err.Error())
