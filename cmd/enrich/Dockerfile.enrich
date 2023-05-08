@@ -1,7 +1,6 @@
 FROM python:3.8-buster AS venv
 
-ENV POETRY_VERSION=1.1.13
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+RUN pip install poetry
 ENV PATH /root/.poetry/bin:$PATH
 
 WORKDIR /svc
