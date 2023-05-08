@@ -10,6 +10,17 @@ import "tagger/tagger.proto";
 // mediawatch specific imports
 import "mediawatch/common/v2/common.proto";
 
+message FeedTest {
+    string title            = 1;
+    string body             = 2;
+    repeated string authors = 3;
+    repeated string tags    = 4;
+    string published_at     = 5;
+    string description      = 6;
+    string image            = 7;
+    string url              = 8;
+}
+
 // FeedStream Model
 message FeedStream {
     // stream key to select, can be the twitter_id of the feed in case 
@@ -99,6 +110,8 @@ message Feed {
     FeedMeta meta = 13;
     // dom fiedlds
     FeedDOM dom = 14;
+    // testing data
+    FeedTest test = 15;
 };
 
 message FeedStreamList {
