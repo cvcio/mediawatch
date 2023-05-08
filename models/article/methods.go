@@ -148,3 +148,33 @@ func scroll(ctx context.Context, es *es.Elastic, scrollId string) ([]*articlesv2
 	}
 	return data, nil
 }
+
+func Exists(ctx context.Context, es *es.Elastic, opts *Opts) bool {
+	args := opts.NewArticlesExistsQuery(es.Client.Count)
+	args = append(args, es.Client.Count.WithContext(ctx))
+
+	res, err := es.Client.Count(args...)
+	if err != nil {
+		return false
+	}
+
+	defer res.Body.Close()
+
+	// retrun on response error
+	if res.IsError() {
+		return false
+	}
+
+	// map data to interface
+	var r map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+		return false
+	}
+
+	parsed, err := ParseCount(r)
+	if err != nil {
+		return false
+	}
+
+	return int64(parsed) > 0
+}

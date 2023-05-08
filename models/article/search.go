@@ -27,6 +27,8 @@ type Opts struct {
 	CountCases  bool `json:"count_cases,omitempty"`
 	IncludeRels bool `json:"include_rels,omitempty"`
 
+	Url string `json:"url,omitempty"`
+
 	Skip   int  `json:"skip,omitempty"`
 	Limit  int  `json:"limit,omitempty"`
 	Scroll bool `json:"-"`
@@ -153,7 +155,13 @@ func (o *Opts) Query() map[string]interface{} {
 			},
 		})
 	}
-
+	if o.Url != "" {
+		must = append(must, map[string]interface{}{
+			"match": map[string]interface{}{
+				"url.keyword": o.Url,
+			},
+		})
+	}
 	if o.Range.From != "" && o.Range.To != "" {
 		filter = append(filter, map[string]interface{}{
 			"range": map[string]interface{}{
@@ -302,6 +310,12 @@ func Keywords(f string) func(*Opts) {
 	}
 }
 
+func Url(f string) func(*Opts) {
+	return func(s *Opts) {
+		s.Url = f
+	}
+}
+
 func Range(By, From, To string) func(*Opts) {
 	return func(s *Opts) {
 		s.Range.By = By
@@ -345,6 +359,15 @@ func (o *Opts) NewArticlesSearchQuery(es esapi.Search) []func(*esapi.SearchReque
 }
 
 func (o *Opts) NewArticlesCountQuery(es esapi.Count) []func(*esapi.CountRequest) {
+	buf, _ := json.Marshal(o.Query())
+
+	opts := make([]func(*esapi.CountRequest), 0)
+	opts = append(opts, esapi.Count.WithBody(es, strings.NewReader(string(buf))))
+	opts = append(opts, esapi.Count.WithIndex(es, o.Index))
+	return opts
+}
+
+func (o *Opts) NewArticlesExistsQuery(es esapi.Count) []func(*esapi.CountRequest) {
 	buf, _ := json.Marshal(o.Query())
 
 	opts := make([]func(*esapi.CountRequest), 0)

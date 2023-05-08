@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
+	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/models/feed"
 	"github.com/cvcio/mediawatch/models/link"
 	"github.com/cvcio/mediawatch/models/relationships"
@@ -70,6 +71,15 @@ func (worker *WorkerGroup) Close() {
 	worker.kafkaClient.Close()
 }
 
+func (worker *WorkerGroup) ArticleExists(url string) bool {
+	opts := article.NewOpts()
+	opts.Index = worker.esIndex + "_*"
+	opts.Url = url
+
+	exists := article.Exists(context.Background(), worker.esClient, opts)
+	return exists
+}
+
 // Consume consumes kafka topics inside an infinite loop. In our logic we need
 // to fetch a message from a topic (FetcMessage), parse the json (Unmarshal)
 // and process the content (articleProcess) if it doesn't already exists.
@@ -115,19 +125,20 @@ func (worker *WorkerGroup) Consume() {
 
 		// check if article exists before processing it
 		// on nil error the article exists
-		// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
-		// process the article
-		if err := worker.ProcessArticle(msg); err != nil {
-			worker.log.Errorf("ERRORED: %s - %s", msg.Hostname, err.Error())
-			// send the error to channel
-			worker.errChan <- errors.Wrap(err, "failed process article")
+		if exists := worker.ArticleExists(msg.Url); !exists {
+			// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
+			// process the article
+			if err := worker.ProcessArticle(msg); err != nil {
+				worker.log.Errorf("ERRORED: %s - %s", msg.Hostname, err.Error())
+				// send the error to channel
+				worker.errChan <- errors.Wrap(err, "failed process article")
 
-			// do not commit unprocessed articles
-			if strings.Contains(err.Error(), "GRPC Connection Error") {
-				continue
+				// do not commit unprocessed articles
+				if strings.Contains(err.Error(), "GRPC Connection Error") {
+					continue
+				}
 			}
 		}
-		// }
 
 		// mark message as read (commit)
 		worker.Commit(m)
