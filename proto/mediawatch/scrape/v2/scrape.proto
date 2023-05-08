@@ -18,14 +18,14 @@ message Empty {};
 
 // RequestArticle for SimpleScrape
 message SimpleScrapeRequest {
-    mediawatch.feeds.v2.Feed feed = 1;
+    string feed = 1;
     string url  = 2;
     string lang = 3;
 }
 
 // RequestStream for Scrape in Streaming mode (ex. svc-listen)
 message ScrapeRequest {
-    mediawatch.feeds.v2.Feed feed        = 1;
+    string feed        = 1;
     string url         = 2;
     string lang        = 3;
     string screen_name = 4;

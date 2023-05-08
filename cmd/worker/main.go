@@ -388,7 +388,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 
 	// create the scrape request
 	scrapeReq := scrape_pb.ScrapeRequest{
-		Feed:       f,
+		Feed:       f.String(),
 		Url:        in.Url,
 		Lang:       f.Localization.Lang,
 		ScreenName: strings.ToLower(f.UserName),

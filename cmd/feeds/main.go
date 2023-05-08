@@ -127,7 +127,8 @@ func main() {
 		proxyClient.Transport = &http.Transport{Proxy: http.ProxyURL(proxy)}
 		test, err := proxyClient.Get("http://ip-api.com")
 		if err != nil {
-			proxyClient.Transport = &http.Transport{}
+			proxyClient = nil
+			log.Warnf("Disabling proxy due to error: %s", err)
 		}
 		log.Debugf("Proxy Status: %s", test.Status)
 	} else {
