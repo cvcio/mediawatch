@@ -152,7 +152,7 @@ func main() {
 
 	// ============================================================
 	// Add new stream rules
-	rules := splitFrom512(fUsernames)
+	rules := splitFrom512(fUsernames, 512)
 	if _, err := addRules(api, rules, cfg.Twitter.TwitterRuleTag); err != nil {
 		log.Fatalf("Error while adding filter stream rules: %s", err.Error())
 	}
@@ -178,7 +178,8 @@ func main() {
 
 	// ============================================================
 	// Create a new Listener service, with our twitter stream and the scrape service grpc conn
-	log.Debugf("Twitter rules to listen: %v", rules)
+	log.Debugf("Twitter rules to listen: %d", len(rules))
+	log.Debugf("Listening: %+v", rules)
 
 	v := url.Values{}
 	v.Add("expansions", "author_id,attachments.media_keys")
@@ -260,11 +261,11 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 	if t.Data == nil {
 		return
 	}
-	for _, v := range t.MatchingRules {
-		if v.Tag != ruleTag {
-			return
-		}
-	}
+	// for _, v := range t.MatchingRules {
+	// 	if v.Tag != ruleTag {
+	// 		return
+	// 	}
+	// }
 	if t.Data.InReplyToUserID != "" {
 		return
 	}
@@ -296,7 +297,7 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 func getUsernames(feeds []*feedsv2.Feed) []string {
 	twitterUsernames := make([]string, 0)
 	for _, f := range feeds {
-		if f.UserName != "" {
+		if f.UserName != "" && f.Stream.StreamStatus == commonv2.Status_STATUS_ACTIVE {
 			twitterUsernames = append(twitterUsernames, f.UserName)
 		}
 	}
@@ -304,12 +305,12 @@ func getUsernames(feeds []*feedsv2.Feed) []string {
 }
 
 // split screen names into string with max length 512 chars.
-func splitFrom512(input []string) []string {
+func splitFrom512(input []string, size int) []string {
 	var output []string
 	current := ""
 	for _, v := range input {
 		s := "from:" + v
-		if len(current) <= 512-(4+len(s)) {
+		if len(current) <= size-(4+len(s)) {
 			current += s + " OR "
 		} else {
 			if current[len(current)-4:] == " OR " {
@@ -363,12 +364,15 @@ func removeRules(api *twitter.Twitter, ruleTag string) (bool, error) {
 // add twitter api rules.
 func addRules(api *twitter.Twitter, usernames []string, ruleTag string) (bool, error) {
 	rules := new(twitter.Rules)
+	rules.Add = make([]*twitter.RulesData, 0)
+
 	for _, v := range usernames {
 		rules.Add = append(rules.Add, &twitter.RulesData{
 			Value: v,
 			Tag:   ruleTag,
 		})
 	}
+
 	added, err := api.PostFilterStreamRules(nil, rules)
 	if err != nil {
 		return false, err

@@ -231,30 +231,6 @@ func main() {
 	}
 	defer neoClient.Client.Close()
 
-	// // =========================================================================
-	// // Create the gRPC service clients
-	// // Parse Server Options
-	// var grpcOptions []grpc.DialOption
-	// grpcOptions = append(grpcOptions, grpc.WithInsecure())
-
-	// // Create gRPC Scrape Connection
-	// scrapeGRPC, err := grpc.Dial(cfg.Scrape.Host, grpcOptions...)
-	// if err != nil {
-	// 	log.Fatalf("GRPC Scrape did not connect: %v", err)
-	// }
-	// defer scrapeGRPC.Close()
-	// // Create gRPC Scrape client
-	// scrape := scrape_pb.NewScrapeServiceClient(scrapeGRPC)
-
-	// // Create gRPC Enrich Connection
-	// enrichGRPC, err := grpc.Dial(cfg.Enrich.Host, grpcOptions...)
-	// if err != nil {
-	// 	log.Fatalf("GRPC Enrich did not connect: %v", err)
-	// }
-	// defer enrichGRPC.Close()
-	// // Create gRPC Enrich Connection
-	// enrich := enrich_pb.NewEnrichServiceClient(enrichGRPC)
-
 	// =========================================================================
 	// Create kafka consumer/producer worker
 
@@ -279,7 +255,7 @@ func main() {
 	)
 
 	// close connections on exit
-	// defer worker.Close()
+	defer worker.Close()
 
 	// run the worker
 	go func() {
