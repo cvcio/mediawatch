@@ -13,7 +13,6 @@ import (
 	"github.com/cvcio/mediawatch/models/deprecated/feed"
 	"github.com/cvcio/mediawatch/models/link"
 	"github.com/cvcio/mediawatch/pkg/config"
-	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/kafka"
 	"github.com/cvcio/mediawatch/pkg/logger"
 	"github.com/cvcio/twitter"
@@ -126,13 +125,13 @@ func main() {
 
 	// ============================================================
 	// Start Mongo
-	log.Info("[SVC-LISTEN] Initialize Mongo")
-	dbConn, err := db.NewMongoDB(cfg.Mongo.URL, cfg.Mongo.Path, cfg.Mongo.DialTimeout)
-	if err != nil {
-		log.Fatalf("[SVC-LISTEN] Register DB: %v", err)
-	}
-	log.Info("[SVC-LISTEN] Connected to Mongo")
-	defer dbConn.Close()
+	// log.Info("[SVC-LISTEN] Initialize Mongo")
+	// dbConn, err := db.NewMongoDB(cfg.Mongo.URL, cfg.Mongo.Path, cfg.Mongo.DialTimeout)
+	// if err != nil {
+	// 	log.Fatalf("[SVC-LISTEN] Register DB: %v", err)
+	// }
+	// log.Info("[SVC-LISTEN] Connected to Mongo")
+	// defer dbConn.Close()
 
 	// =========================================================================
 	// Create kafka consumer/producer worker
@@ -163,14 +162,14 @@ func main() {
 
 	// ============================================================
 	// Get feeds list
-	feeds, err := feed.List(context.Background(), dbConn, feed.Status("active"), feed.Limit(1000))
-	if err != nil {
-		log.Fatalf("[SVC-LISTEN] error getting feeds list: %v", err)
-	}
+	// feeds, err := feed.List(context.Background(), dbConn, feed.Status("active"), feed.Limit(1000))
+	// if err != nil {
+	// 	log.Fatalf("[SVC-LISTEN] error getting feeds list: %v", err)
+	// }
 
 	// ============================================================
 	// Get tweeter ids from feeds
-	fUsernames := getUsernames(feeds.Data)
+	// fUsernames := getUsernames(feeds.Data)
 
 	// ============================================================
 	// Create a new twitter client
@@ -184,27 +183,29 @@ func main() {
 
 	// ============================================================
 	// Remove all active filter stream rules
-	if _, err := removeRules(api, cfg.Twitter.TwitterRuleTag); err != nil {
-		log.Fatalf("[SVC-LISTEN] Error while removing filter stream rules: %s", err.Error())
-	}
+	// if _, err := removeRules(api, cfg.Twitter.TwitterRuleTag); err != nil {
+	// 	log.Fatalf("[SVC-LISTEN] Error while removing filter stream rules: %s", err.Error())
+	// }
 
 	// ============================================================
 	// Add new stream rules
-	rules := splitFrom512(fUsernames, 512)
-	if _, err := addRules(api, rules, cfg.Twitter.TwitterRuleTag); err != nil {
-		log.Fatalf("[SVC-LISTEN] Error while adding filter stream rules: %s", err.Error())
-	}
+	// rules := splitFrom512(fUsernames, 512)
+	// if _, err := addRules(api, rules, cfg.Twitter.TwitterRuleTag); err != nil {
+	// 	log.Fatalf("[SVC-LISTEN] Error while adding filter stream rules: %s", err.Error())
+	// }
 
 	// ============================================================
 	// Get rules
-	activeRules, err := api.GetFilterStreamRules(nil)
-	if err != nil {
-		log.Fatalf("[SVC-LISTEN] Error while getting filter stream rules: %s", err.Error())
-	}
+	// activeRules, err := api.GetFilterStreamRules(nil)
+	// if err != nil {
+	// 	log.Fatalf("[SVC-LISTEN] Error while getting filter stream rules: %s", err.Error())
+	// }
 
-	for _, rule := range activeRules.Data {
-		log.Infof("[SVC-LISTEN] Listening Rules: %+v", rule)
-	}
+	// for _, rule := range activeRules.Data {
+	// 	if rule.Tag == cfg.Twitter.TwitterRuleTag {
+	// 		log.Infof("[SVC-LISTEN] Listening Rules: %+v", rule)
+	// 	}
+	// }
 	// Create a channel to send catched urls from tweets
 	tweetChan := make(chan link.CatchedURL, 1)
 
@@ -226,7 +227,7 @@ func main() {
 
 	// ============================================================
 	// Create a new Listener service, with our twitter stream and the scrape service grpc conn
-	log.Debugf("[SVC-LISTEN] Twitter rules to listen : %v", rules)
+	// log.Debugf("[SVC-LISTEN] Twitter rules to listen : %v", rules)
 
 	v := url.Values{}
 	v.Add("expansions", "author_id,attachments.media_keys")
@@ -384,11 +385,11 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 	if t.Data == nil || t.Includes == nil {
 		return
 	}
-	for _, v := range t.MatchingRules {
-		if v.Tag != ruleTag {
-			return
-		}
-	}
+	// for _, v := range t.MatchingRules {
+	// 	if v.Tag != ruleTag {
+	// 		return
+	// 	}
+	// }
 	if t.Data.InReplyToUserID != "" {
 		return
 	}
