@@ -160,9 +160,9 @@ func main() {
 	}
 
 	for _, rule := range activeRules.Data {
-		if rule.Tag == cfg.Twitter.TwitterRuleTag {
-			log.Infof("Listening Rules: %+v", rule)
-		}
+		// if rule.Tag == cfg.Twitter.TwitterRuleTag {
+		log.Infof("Listening Rules: %+v", rule)
+		// }
 	}
 
 	// Create a channel to send catched urls from tweets
@@ -198,8 +198,6 @@ func main() {
 		}
 
 		for t := range stream.C {
-			log.Debugf("%+v", t)
-
 			f, ok := t.(twitter.StreamData)
 			if !ok {
 				break
@@ -271,11 +269,11 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 	if t.Data == nil || t.Includes == nil {
 		return
 	}
-	for _, v := range t.MatchingRules {
-		if v.Tag != ruleTag {
-			return
-		}
-	}
+	// for _, v := range t.MatchingRules {
+	// 	if v.Tag != ruleTag {
+	// 		return
+	// 	}
+	// }
 	if t.Data.InReplyToUserID != "" {
 		return
 	}

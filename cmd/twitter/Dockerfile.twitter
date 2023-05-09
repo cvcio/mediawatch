@@ -1,0 +1,32 @@
+FROM node:16-alpine AS base
+
+# Install certificates and git
+RUN apk add --update --no-cache libc6-compat ca-certificates git
+# Define working directory and copy source
+WORKDIR /app
+
+COPY cmd/twitter/package.json cmd/twitter/yarn.lock ./
+
+FROM base AS dependencies
+WORKDIR /app
+
+RUN npm install --omit=dev
+RUN cp -R node_modules /tmp/node_modules
+
+# Install dependencies and build
+RUN npm install
+COPY cmd/twitter/ /app
+RUN npm run build
+
+FROM dependencies as release
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+COPY --from=dependencies /tmp/node_modules ./node_modules
+COPY --from=dependencies /app/dist ./dist
+
+COPY cmd/twitter/.env.production .env
+
+# Start the app
+CMD ["npm", "run", "start:production"]

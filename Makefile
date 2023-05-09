@@ -5,7 +5,7 @@ BRANCH:=$(shell git rev-parse --abbrev-ref HEAD)
 POD=$(shell kubectl get pod -l app=mongo -o jsonpath='{.items[0].metadata.name}')
 CONTAINER=$(shell docker ps -f name=mongo -f label=app=mediawatch -q)
 BUF_VERSION:=1.8.0
-SERVICES=api compare enrich feeds listen scraper worker
+SERVICES=api compare enrich feeds listen scraper worker twitter
 NAMESPACE=default
 
 keys:
@@ -76,6 +76,9 @@ run-ministry:
 
 run-scraper:
 	cd cmd/scraper; yarn serve
+
+run-twitter:
+	cd cmd/twitter; yarn serve
 
 run-enrich:
 	cd cmd/enrich; $(MAKE) dev

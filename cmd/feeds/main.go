@@ -231,7 +231,7 @@ func main() {
 
 func tick(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxyClient *http.Client, done chan bool, targets [][]*feedsv2.Feed, init bool, interval time.Duration) {
 	// delay := interval / time.Duration(math.Ceil(float64(len(targets))/100))
-	delay := time.Second * time.Duration(len(targets)) * 2
+	delay := time.Second * time.Duration(len(targets))
 	for _, v := range targets {
 		ticker := NewTicker(log, worker, rdb, proxyClient, done, v, init, interval)
 		go ticker.Tick()
