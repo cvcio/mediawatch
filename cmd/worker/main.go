@@ -414,7 +414,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	}
 	timer.ObserveDuration()
 
-	worker.log.Debugf("SCRAPED: %s - %s", in.Hostname, in.Url)
+	worker.log.Debugf("SCRAPED: %s - %s", f.Hostname, in.Url)
 
 	// set scraped data to content
 	a.Content.Body = scrapeResp.Data.Content.Body
@@ -463,7 +463,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		return errors.Wrap(err, "enrich error")
 	}
 
-	worker.log.Debugf("ENRICH:  %s - %s", in.Hostname, in.Url)
+	worker.log.Debugf("ENRICH:  %s - %s", f.Hostname, in.Url)
 
 	// set enriched data to nlp
 	a.Nlp.Summary = enrichResp.Data.Nlp.Summary
@@ -499,7 +499,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		return errors.New(index.String())
 	}
 	index.Body.Close()
-	worker.log.Debugf("INDEXED: %s - %s", in.Hostname, in.Url)
+	worker.log.Debugf("INDEXED: %s - %s", f.Hostname, in.Url)
 
 	// =========================================================================
 	// Create a new nodeAuthor if not exist for each Atuhor extracted
@@ -583,7 +583,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// using the compare microservice.
 	go worker.Produce(kaf.Message{Value: []byte(b)})
 
-	worker.log.Infof("SAVED: %s - %s", in.Hostname, resNeo)
+	worker.log.Infof("SAVED: %s - %s", f.Hostname, resNeo)
 
 	return nil
 }
