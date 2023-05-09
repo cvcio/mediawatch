@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -23,8 +22,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	kaf "github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
@@ -110,9 +107,9 @@ func main() {
 	// close connections on exit
 	defer worker.Close()
 
-	// ========================================
-	// Create a registry and a web server for prometheus metrics
-	registry := prometheus.NewRegistry()
+	// // ========================================
+	// // Create a registry and a web server for prometheus metrics
+	// registry := prometheus.NewRegistry()
 
 	// ============================================================
 	// Get feeds list
@@ -122,6 +119,7 @@ func main() {
 		feed.Limit(cfg.Streamer.Size),
 		feed.Lang(strings.ToUpper(cfg.Streamer.Lang)),
 		feed.StreamType(int(commonv2.StreamType_STREAM_TYPE_TWITTER)),
+		feed.StreamStatus(int(commonv2.Status_STATUS_ACTIVE)),
 	)
 	if err != nil {
 		log.Fatalf("Error getting feeds list: %v", err)
@@ -157,6 +155,17 @@ func main() {
 		log.Fatalf("Error while adding filter stream rules: %s", err.Error())
 	}
 
+	// ============================================================
+	// Get rules
+	activeRules, err := api.GetFilterStreamRules(nil)
+	if err != nil {
+		log.Fatalf("Error while getting filter stream rules: %s", err.Error())
+	}
+
+	for _, rule := range activeRules.Data {
+		log.Infof("Listening Rules: %+v", rule)
+	}
+
 	// Create a channel to send catched urls from tweets
 	tweetChan := make(chan link.CatchedURL, 1)
 
@@ -166,20 +175,16 @@ func main() {
 	errSingals := make(chan error, 1)
 
 	// api will be our http.Server
-	promHandler := http.Server{
-		Addr:           cfg.GetPrometheusURL(),
-		Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
-		ReadTimeout:    cfg.Prometheus.ReadTimeout,
-		WriteTimeout:   cfg.Prometheus.WriteTimeout,
-		MaxHeaderBytes: 1 << 20,
-	}
-
-	// ========================================
+	// promHandler := http.Server{
+	// 	Addr:           cfg.GetPrometheusURL(),
+	// 	Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
+	// 	ReadTimeout:    cfg.Prometheus.ReadTimeout,
+	// 	WriteTimeout:   cfg.Prometheus.WriteTimeout,
+	// 	MaxHeaderBytes: 1 << 20,
+	// }
 
 	// ============================================================
 	// Create a new Listener service, with our twitter stream and the scrape service grpc conn
-	log.Debugf("Twitter rules to listen: %d", len(rules))
-	log.Debugf("Listening: %+v", rules)
 
 	v := url.Values{}
 	v.Add("expansions", "author_id,attachments.media_keys")
@@ -195,6 +200,9 @@ func main() {
 
 		for t := range stream.C {
 			f, ok := t.(twitter.StreamData)
+			if !ok {
+				break
+			}
 			if ok {
 				handler(log, f, tweetChan, cfg.Twitter.TwitterRuleTag)
 			}
@@ -202,10 +210,10 @@ func main() {
 	}()
 
 	// Start the service listening for requests.
-	log.Info("Ready to start")
-	go func() {
-		errSingals <- promHandler.ListenAndServe()
-	}()
+	// log.Info("Ready to start")
+	// go func() {
+	// 	errSingals <- promHandler.ListenAndServe()
+	// }()
 
 	// ========================================
 	// Shutdown
@@ -221,7 +229,7 @@ func main() {
 		select {
 		// Got Url from twitter
 		case u := <-tweetChan:
-			log.Debugf("New tweet from: %.16s %s", u.UserName, u.Url)
+			log.Infof("New Tweet: %.16s %s", u.UserName, u.Url)
 
 			urlTweet, err := json.Marshal(&u)
 			if err != nil {
@@ -239,33 +247,34 @@ func main() {
 			os.Exit(1)
 
 		case s := <-osSignals:
-			log.Debugf("Listen shutdown signal: %s", s)
+			log.Fatalf("Listen shutdown signal: %s", s)
 
-			// Asking prometheus to shutdown and load shed.
-			if err := promHandler.Shutdown(context.Background()); err != nil {
-				log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
-				if err := promHandler.Close(); err != nil {
-					log.Fatalf("Could not stop http server: %v", err)
-				}
-			}
+			// // Asking prometheus to shutdown and load shed.
+			// if err := promHandler.Shutdown(context.Background()); err != nil {
+			// 	log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
+			// 	if err := promHandler.Close(); err != nil {
+			// 		log.Fatalf("Could not stop http server: %v", err)
+			// 	}
+			// }
 		}
 	}
 }
 
 // handler handles incoming tweets
 func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.CatchedURL, ruleTag string) {
+	log.Debugf("Heartbeat Data: %+v", t.Data)
 	if t.Error != nil {
 		log.Errorf("Stream error: %s", t.Error.Message)
 		return
 	}
-	if t.Data == nil {
+	if t.Data == nil || t.Includes == nil {
 		return
 	}
-	// for _, v := range t.MatchingRules {
-	// 	if v.Tag != ruleTag {
-	// 		return
-	// 	}
-	// }
+	for _, v := range t.MatchingRules {
+		if v.Tag != ruleTag {
+			return
+		}
+	}
 	if t.Data.InReplyToUserID != "" {
 		return
 	}
@@ -280,16 +289,19 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 			continue
 		}
 		createdAt, _ := t.Data.CreatedAtTime()
-		messsage := link.CatchedURL{
-			DocId:         uuid.New().String(),
-			Type:          "twitter",
-			Url:           l,
-			TweetId:       t.Data.ID,
-			TwitterUserId: t.Data.AuthorID,
-			UserName:      getUserNameFromTweet(t.Data.AuthorID, t.Includes.Users),
-			CreatedAt:     createdAt.Format(time.RFC3339),
+		userName := getUserNameFromTweet(t.Data.AuthorID, t.Includes.Users)
+		if userName != "" {
+			messsage := link.CatchedURL{
+				DocId:         uuid.New().String(),
+				Type:          "twitter",
+				Url:           l,
+				TweetId:       t.Data.ID,
+				TwitterUserId: t.Data.AuthorID,
+				UserName:      userName,
+				CreatedAt:     createdAt.Format(time.RFC3339),
+			}
+			tweetChan <- messsage
 		}
-		tweetChan <- messsage
 	}
 }
 
