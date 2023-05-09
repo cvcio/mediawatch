@@ -320,17 +320,28 @@ func getUsernames(feeds []*feedsv2.Feed) []string {
 func splitFrom512(input []string, size int) []string {
 	var output []string
 	current := ""
-	for _, v := range input {
-		s := "from:" + v
+	for i, v := range input {
+		s := "from:" + v + " OR "
 		if len(current) <= size-(4+len(s)) {
-			current += s + " OR "
+			current += s
+			// fmt.Printf("Size: %d - Current: %s\n", len(output), current)
 		} else {
 			if current[len(current)-4:] == " OR " {
 				current = current[0 : len(current)-4]
 			}
+			// fmt.Println(current)
 			output = append(output, current)
 			current = ""
 		}
+		if i == len(input)-1 && current != "" {
+			if current[len(current)-4:] == " OR " {
+				current = current[0 : len(current)-4]
+			}
+			// fmt.Println(current)
+			output = append(output, current)
+			current = ""
+		}
+
 	}
 	return output
 }
