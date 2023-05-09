@@ -6,14 +6,11 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
-	"github.com/cvcio/mediawatch/models/feed"
 	"github.com/cvcio/mediawatch/models/link"
 	"github.com/cvcio/mediawatch/pkg/config"
-	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/kafka"
 	"github.com/cvcio/mediawatch/pkg/logger"
 	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
@@ -78,11 +75,11 @@ func main() {
 
 	// ============================================================
 	// Start Mongo
-	dbConn, err := db.NewMongoDB(cfg.Mongo.URL, cfg.Mongo.Path, cfg.Mongo.DialTimeout)
-	if err != nil {
-		log.Fatalf("Register DB: %v", err)
-	}
-	defer dbConn.Close()
+	// dbConn, err := db.NewMongoDB(cfg.Mongo.URL, cfg.Mongo.Path, cfg.Mongo.DialTimeout)
+	// if err != nil {
+	// 	log.Fatalf("Register DB: %v", err)
+	// }
+	// defer dbConn.Close()
 
 	// =========================================================================
 	// Create kafka consumer/producer worker
@@ -112,28 +109,28 @@ func main() {
 	// registry := prometheus.NewRegistry()
 
 	// ============================================================
-	// Get feeds list
-	feeds, err := feed.GetFeedsStreamList(
-		context.Background(),
-		dbConn,
-		feed.Limit(cfg.Streamer.Size),
-		feed.Lang(strings.ToUpper(cfg.Streamer.Lang)),
-		feed.StreamType(int(commonv2.StreamType_STREAM_TYPE_TWITTER)),
-		feed.StreamStatus(int(commonv2.Status_STATUS_ACTIVE)),
-	)
-	if err != nil {
-		log.Fatalf("Error getting feeds list: %v", err)
-	}
+	// // Get feeds list
+	// feeds, err := feed.GetFeedsStreamList(
+	// 	context.Background(),
+	// 	dbConn,
+	// 	feed.Limit(cfg.Streamer.Size),
+	// 	feed.Lang(strings.ToUpper(cfg.Streamer.Lang)),
+	// 	feed.StreamType(int(commonv2.StreamType_STREAM_TYPE_TWITTER)),
+	// 	feed.StreamStatus(int(commonv2.Status_STATUS_ACTIVE)),
+	// )
+	// if err != nil {
+	// 	log.Fatalf("Error getting feeds list: %v", err)
+	// }
 
-	log.Infof("Loaded feeds: %d", len(feeds))
-	if len(feeds) == 0 {
-		log.Infof("No feeds to listen, exiting.")
-		os.Exit(0)
-	}
+	// log.Infof("Loaded feeds: %d", len(feeds))
+	// if len(feeds) == 0 {
+	// 	log.Infof("No feeds to listen, exiting.")
+	// 	os.Exit(0)
+	// }
 
 	// ============================================================
 	// Get tweeter ids from feeds
-	fUsernames := getUsernames(feeds)
+	// fUsernames := getUsernames(feeds)
 
 	// ============================================================
 	// Create a new twitter client
@@ -144,16 +141,16 @@ func main() {
 
 	// ============================================================
 	// Remove all active filter stream rules
-	if _, err := removeRules(api, cfg.Twitter.TwitterRuleTag); err != nil {
-		log.Fatalf("Error while removing filter stream rules: %s", err.Error())
-	}
+	// if _, err := removeRules(api, cfg.Twitter.TwitterRuleTag); err != nil {
+	// 	log.Fatalf("Error while removing filter stream rules: %s", err.Error())
+	// }
 
 	// ============================================================
 	// Add new stream rules
-	rules := splitFrom512(fUsernames, 512)
-	if _, err := addRules(api, rules, cfg.Twitter.TwitterRuleTag); err != nil {
-		log.Fatalf("Error while adding filter stream rules: %s", err.Error())
-	}
+	// rules := splitFrom512(fUsernames, 512)
+	// if _, err := addRules(api, rules, cfg.Twitter.TwitterRuleTag); err != nil {
+	// 	log.Fatalf("Error while adding filter stream rules: %s", err.Error())
+	// }
 
 	// ============================================================
 	// Get rules
@@ -163,7 +160,9 @@ func main() {
 	}
 
 	for _, rule := range activeRules.Data {
-		log.Infof("Listening Rules: %+v", rule)
+		if rule.Tag == cfg.Twitter.TwitterRuleTag {
+			log.Infof("Listening Rules: %+v", rule)
+		}
 	}
 
 	// Create a channel to send catched urls from tweets
@@ -199,6 +198,8 @@ func main() {
 		}
 
 		for t := range stream.C {
+			log.Debugf("%+v", t)
+
 			f, ok := t.(twitter.StreamData)
 			if !ok {
 				break
