@@ -133,8 +133,13 @@ type Config struct {
 		Key     string `envconfig:"STRIPE_KEY" default:""`
 	}
 	Proxy struct {
-		Enabled bool   `envconfig:"PROXY_ENABLED" default:"false"`
-		Path    string `envconfig:"PROXY_PATH" default:"http://localhost:9060"` // HTTP
+		Enabled  bool   `envconfig:"PROXY_ENABLED" default:"false"`
+		Host     string `envconfig:"PROXY_HOST" default:"dc.smartproxy.com"`
+		Port     string `envconfig:"PROXY_PORT" default:"10000"`
+		UserName string `envconfig:"PROXY_USERNAME" default:""`
+		Password string `envconfig:"PROXY_PASSWORD" default:""`
+
+		// Path    string `envconfig:"PROXY_PATH" default:"http://localhost:9060"` // HTTP
 		// Path string `envconfig:"PROXY_PATH" default:"socks5://localhost:9050"` // SOCKS
 	}
 	Streamer struct {
@@ -172,6 +177,10 @@ func (c *Config) GetServiceURL() string {
 
 func (c *Config) GetPrometheusURL() string {
 	return fmt.Sprintf("%s:%s", c.Prometheus.Host, c.Prometheus.Port)
+}
+
+func (c *Config) GetProxyURL() string {
+	return fmt.Sprintf("%s:%s", c.Proxy.Host, c.Proxy.Port)
 }
 
 func (c *Config) ExternalAuths() (map[string]*oauth2.Config, error) {
