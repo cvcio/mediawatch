@@ -134,8 +134,8 @@ type Config struct {
 	}
 	Proxy struct {
 		Enabled  bool   `envconfig:"PROXY_ENABLED" default:"false"`
-		Host     string `envconfig:"PROXY_HOST" default:"dc.smartproxy.com"`
-		Port     string `envconfig:"PROXY_PORT" default:"10000"`
+		Host     string `envconfig:"PROXY_HOST" default:""`
+		Port     string `envconfig:"PROXY_PORT" default:""`
 		UserName string `envconfig:"PROXY_USERNAME" default:""`
 		Password string `envconfig:"PROXY_PASSWORD" default:""`
 
