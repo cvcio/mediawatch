@@ -19,6 +19,7 @@ const isValidUrl = (s) => {
 	if (s.includes('twitter.com')) return false;
 	if (s.includes('live24.gr')) return false;
 	if (s.includes('indymedia.org')) return false;
+	if (s.includes('youtube.com')) return false;
 	if (s.includes('.jpg') || s.includes('.png')) return false;
 
 	const parts = url.parse(s);
