@@ -14,8 +14,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kelseyhightower/envconfig"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/cvcio/go-plagiarism"
 	"github.com/cvcio/mediawatch/models/article"
@@ -29,13 +27,13 @@ import (
 	kaf "github.com/segmentio/kafka-go"
 )
 
-var (
-	compareProcessDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
-		Name:       "consumer_process_duration_seconds",
-		Help:       "Duration of consumer processing requests.",
-		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-	}, []string{"service"})
-)
+// var (
+// 	compareProcessDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
+// 		Name:       "consumer_process_duration_seconds",
+// 		Help:       "Duration of consumer processing requests.",
+// 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+// 	}, []string{"service"})
+// )
 
 const SIZE = 64
 
@@ -69,7 +67,7 @@ func (worker *CompareGroup) Close() {
 // this particular message again.
 func (worker *CompareGroup) Consume() {
 	for {
-		timer := prometheus.NewTimer(compareProcessDuration.WithLabelValues("compare"))
+		// timer := prometheus.NewTimer(compareProcessDuration.WithLabelValues("compare"))
 		// fetch the message from kafka topic
 		m, err := worker.kafkaClient.Consumer.FetchMessage(worker.ctx)
 		if err != nil {
@@ -98,7 +96,7 @@ func (worker *CompareGroup) Consume() {
 
 		// mark message as read (commit)
 		worker.Commit(m)
-		timer.ObserveDuration()
+		// timer.ObserveDuration()
 	}
 }
 
@@ -348,14 +346,7 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 					detector.Score = detector.Score * (-1)
 				}
 
-				c.log.Debugw(
-					"DetectWithStopWords",
-					"timeTaken", time.Since(start).Milliseconds(),
-					"score", detector.Score,
-					"similar", detector.Similar,
-					"total", detector.Total,
-					"stopwords", strings.Join(a.Nlp.Keywords, ", "),
-				)
+				c.log.Debugf("[SVC-COMPARE] DetectWithStopWords: %s %.4f %d/%d (%d)", source.DocId, detector.Score, detector.Similar, detector.Total, time.Since(start).Milliseconds())
 
 				// save relation to neo4j database
 				go relationships.CreateSimilar(context.Background(), c.neoClient, a.DocId, b.DocId, detector.Score)
