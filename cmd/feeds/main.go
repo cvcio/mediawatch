@@ -123,7 +123,15 @@ func main() {
 	// ============================================================
 	proxyClient := &http.Client{Timeout: 60 * time.Second}
 	if cfg.Proxy.Enabled {
-		proxy, _ := url.Parse(cfg.Proxy.Path)
+		proxy := &url.URL{
+			Scheme: "http",
+			Host:   cfg.GetProxyURL(),
+		}
+
+		if cfg.Proxy.UserName != "" && cfg.Proxy.Password != "" {
+			proxy.User = url.UserPassword(cfg.Proxy.UserName, cfg.Proxy.Password)
+		}
+
 		proxyClient.Transport = &http.Transport{Proxy: http.ProxyURL(proxy)}
 		test, err := proxyClient.Get("http://ip-api.com")
 		if err != nil {
