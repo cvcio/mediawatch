@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -17,7 +16,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/cvcio/go-plagiarism"
 	"github.com/cvcio/mediawatch/models/article"
@@ -176,8 +174,8 @@ func main() {
 
 	// ========================================
 	// Create a registry and a web server for prometheus metrics
-	registry := prometheus.NewRegistry()
-	registry.MustRegister(compareProcessDuration)
+	// registry := prometheus.NewRegistry()
+	// registry.MustRegister(compareProcessDuration)
 
 	// =========================================================================
 	// Create kafka consumer/producer worker
@@ -217,22 +215,22 @@ func main() {
 	// Blocking main listening for requests
 	// Make a channel to listen for errors coming from the listener. Use a
 	// buffered channel so the goroutine can exit if we don't collect this error.
-	errSingals := make(chan error, 1)
+	// errSingals := make(chan error, 1)
 
 	// api will be our http.Server
-	promHandler := http.Server{
-		Addr:           cfg.GetPrometheusURL(),
-		Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
-		ReadTimeout:    cfg.Prometheus.ReadTimeout,
-		WriteTimeout:   cfg.Prometheus.WriteTimeout,
-		MaxHeaderBytes: 1 << 20,
-	}
+	// promHandler := http.Server{
+	// 	Addr:           cfg.GetPrometheusURL(),
+	// 	Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
+	// 	ReadTimeout:    cfg.Prometheus.ReadTimeout,
+	// 	WriteTimeout:   cfg.Prometheus.WriteTimeout,
+	// 	MaxHeaderBytes: 1 << 20,
+	// }
 	// ========================================
 	// Start the http service
-	go func() {
-		log.Infof("[SVC-COMPARE] Starting prometheus web server listening %s", cfg.GetPrometheusURL())
-		errSingals <- promHandler.ListenAndServe()
-	}()
+	// go func() {
+	// 	log.Infof("[SVC-COMPARE] Starting prometheus web server listening %s", cfg.GetPrometheusURL())
+	// 	errSingals <- promHandler.ListenAndServe()
+	// }()
 
 	// Listen for os signals
 	osSignals := make(chan os.Signal, 1)
@@ -245,20 +243,20 @@ func main() {
 		case err := <-kafkaChan:
 			log.Errorf("[SVC-COMPARE] error from kafka: %s", err.Error())
 
-		case err := <-errSingals:
-			log.Errorf("[SVC-COMPARE] gRPC Server Error: %s", err.Error())
-			os.Exit(1)
+		// case err := <-errSingals:
+		// 	log.Errorf("[SVC-COMPARE] gRPC Server Error: %s", err.Error())
+		// 	os.Exit(1)
 
 		case s := <-osSignals:
-			log.Debugf("[SVC-COMPARE] gRPC Server shutdown signal: %s", s)
+			log.Fatalf("[SVC-COMPARE] gRPC Server shutdown signal: %s", s)
 
-			// Asking prometheus to shutdown and load shed.
-			if err := promHandler.Shutdown(context.Background()); err != nil {
-				log.Errorf("[SVC-COMPARE] Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
-				if err := promHandler.Close(); err != nil {
-					log.Fatalf("[SVC-COMPARE] Could not stop http server: %v", err)
-				}
-			}
+			// // Asking prometheus to shutdown and load shed.
+			// if err := promHandler.Shutdown(context.Background()); err != nil {
+			// 	log.Errorf("[SVC-COMPARE] Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
+			// 	if err := promHandler.Close(); err != nil {
+			// 		log.Fatalf("[SVC-COMPARE] Could not stop http server: %v", err)
+			// 	}
+			// }
 		}
 	}
 }
