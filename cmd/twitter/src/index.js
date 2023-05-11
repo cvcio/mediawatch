@@ -45,6 +45,7 @@ const getMessage = (data, url, username) => {
 			twitter_user_id: data.author_id,
 			twitter_user_id_str: data.author_id.toString(),
 			screen_name: username,
+			user_name: username,
 			created_at: new Date(data.created_at),
 			created_at_str: data.created_at
 
