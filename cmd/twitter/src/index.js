@@ -41,7 +41,7 @@ const getMessage = (data, url, username) => {
 		return {
 			docId: uuidv4(),
 			url,
-			tweet_id: data.id,
+			tweet_id: parseInt(data.id, 16),
 			twitter_user_id: parseInt(data.author_id, 16),
 			twitter_user_id_str: data.author_id.toString(),
 			screen_name: username,
