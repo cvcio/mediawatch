@@ -98,7 +98,7 @@ const main = async () => {
 
 	stream.on(ETwitterStreamEvent.Data,
 		data => {
-			console.debug(data);
+			// console.debug(data);
 			// stop
 			if (!data.data) return;
 			if (!data.data.entities) return;
