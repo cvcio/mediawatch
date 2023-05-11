@@ -15,11 +15,4 @@ const errorCode = (status) => {
 	return 2;
 };
 
-const errorDetails = (err) => {};
-const grpcError = (response) => {};
-
-export {
-	errorCode,
-	errorDetails,
-	grpcError
-};
+export { errorCode };

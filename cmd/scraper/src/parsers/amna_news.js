@@ -3,13 +3,31 @@
 // ex. https://www.amna.gr/home/article/525014/Stin-Patra-ektaktos-o-M-Chrusochoidis-me-ton-gg-Politikis-Prostasias-BPapageorgiou
 // https://www.amna.gr/home/article/624073/Komision-Schedio-gia-doruforiko-sustima-sundesimotitas-pou-tha-epitrepei-se-oli-tin-Europi--prosbasi-upsilis-tachutitas-sto-diadiktuo
 
-const { getParameterByName } = require('../utils/strings');
 const { URL } = require('url');
 const axios = require('axios');
+const { getParameterByName } = require('../utils/strings');
 
 const url = (u) => {
-    const id = getParameterByName('id', u) || u.split('/').splice(-2, 2)[0];
-    return id ? `https://www.amna.gr/feeds/getarticle.php?id=${id}&infolevel=ADVANCED` : null;
+	const id = getParameterByName('id', u) || u.split('/').splice(-2, 2)[0];
+	return id ? `https://www.amna.gr/feeds/getarticle.php?id=${id}&infolevel=ADVANCED` : null;
+};
+
+const parseJSON = (body) => {
+	const article = body;
+
+	let image = article.photo1.split('/');
+	image[image.length - 1] = `w${image[image.length - 1]}`;
+	image = image.join('/');
+
+	return {
+		title: article.title,
+		body: article.text,
+		authors: article.author,
+		publishedAt: article.c_daytime,
+		tags: article.tags,
+		description: article.capelo,
+		image: image.replace('..', 'https://www.amna.gr')
+	};
 };
 
 const fetchAPI = async (link) => {
@@ -22,7 +40,7 @@ const fetchAPI = async (link) => {
 		const html = await axios({
 			method: 'get',
 			url: url.href,
-			responseType:'json',
+			responseType: 'json',
 			insecureHTTPParser: true
 		});
 		if (html.status >= 400) {
@@ -33,24 +51,6 @@ const fetchAPI = async (link) => {
 	} catch (err) {
 		throw new Error(`Error Fetching URL: ${err.message}`);
 	}
-};
-
-const parseJSON = (body) => {
-	let article = body;
-
-	let image = article.photo1.split('/');
-	image[image.length - 1] = 'w' + image[image.length - 1];
-	image = image.join('/');
-
-	return {
-		title: article.title,
-		body: article.text,
-		authors: article.author,
-		publishedAt: article.c_daytime,
-		tags: article.tags,
-		description: article.capelo,
-		image: image.replace('..', 'https://www.amna.gr')
-	};
 };
 
 module.exports = { url, fetchAPI };

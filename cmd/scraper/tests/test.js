@@ -31,7 +31,7 @@ for (var i = 0; i < data.length; i++) {
     // }
     let f = data[i];
     // if (f.test && f.test.url !== '' && f.stream && f.stream.requires_proxy) {
-    if (f.test && f.test.url !== '') {
+    if (f.test && f.test.url !== '' && f.user_name === 'EFSYNTAKTON') {
         let req = {
             request: {
                 feed: JSON.stringify(f),
@@ -42,12 +42,13 @@ for (var i = 0; i < data.length; i++) {
             }
         };
 		// console.log(req);
-        service.Scrape(req, (err, data) => {
-            if (err) {
-                console.error(f.hostname, err.details, err.code);
-                return;
-            }
-            console.log(f.hostname, data.data.content.title);
-        });
+        // service.Scrape(req, (err, data) => {
+		// 	console.log(data)
+		// });
+
+		console.log(req)
+        service.RetryWithProxy(req.request, f, (err, data) => {
+			console.log(data)
+		});
     }
 }
