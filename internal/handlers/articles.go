@@ -14,6 +14,7 @@ import (
 	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
 	"github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2/articlesv2connect"
 	"github.com/cvcio/mediawatch/pkg/neo"
+	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"go.uber.org/zap"
 )
@@ -25,13 +26,14 @@ type ArticlesHandler struct {
 	elastic       *es.Elastic
 	neo           *neo.Neo
 	authenticator *auth.JWTAuthenticator
+	rdb           *redis.RedisClient
 	// Embed the unimplemented server
 	articlesv2connect.UnimplementedArticlesServiceHandler
 }
 
 // NewArticlesHandler returns a new ArticlesHandler service.
-func NewArticlesHandler(cfg *config.Config, log *zap.SugaredLogger, mg *db.MongoDB, elastic *es.Elastic, neo *neo.Neo, authenticator *auth.JWTAuthenticator) *ArticlesHandler {
-	return &ArticlesHandler{log: log, mg: mg, elastic: elastic, neo: neo, authenticator: authenticator}
+func NewArticlesHandler(cfg *config.Config, log *zap.SugaredLogger, mg *db.MongoDB, elastic *es.Elastic, neo *neo.Neo, authenticator *auth.JWTAuthenticator, rdb *redis.RedisClient) *ArticlesHandler {
+	return &ArticlesHandler{log: log, mg: mg, elastic: elastic, neo: neo, authenticator: authenticator, rdb: rdb}
 }
 
 // GetArticle return a single article.

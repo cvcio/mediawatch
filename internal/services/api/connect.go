@@ -16,6 +16,7 @@ import (
 	"github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2/articlesv2connect"
 	"github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2/feedsv2connect"
 	"github.com/cvcio/mediawatch/pkg/neo"
+	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/rs/cors"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
@@ -47,8 +48,9 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	}
 	log.Debugf("[SERVER] Elasticsearch connected on: %s", cfg.GetElasticsearchURL())
 
-	// =========================================================================
+	// ============================================================
 	// Neo4J
+	// ============================================================
 	neoClient, err := neo.NewNeo(cfg.Neo.BOLT, cfg.Neo.User, cfg.Neo.Pass)
 	if err != nil {
 		log.Errorf("[SERVER] Neo4J connection failed with error: %", err.Error())
@@ -56,6 +58,16 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	}
 	log.Debugf("[SERVER] Neo4J connected on: %s", cfg.Neo.BOLT)
 	defer neoClient.Client.Close()
+
+	// ============================================================
+	// Redis
+	// ============================================================
+	rdb, err := redis.NewRedisClient(context.Background(), cfg.GetRedisURL(), "")
+	if err != nil {
+		log.Fatalf("[SERVER] Error connecting to Redis: %s", err.Error())
+	}
+	log.Debugf("[SERVER] Redis connected on: %s", cfg.GetRedisURL())
+	defer rdb.Close()
 
 	// Create authenticator
 	authenticator, err := auth.NewJWTAuthenticator(cfg.Auth.PrivateKeyFile, cfg.Auth.KeyID, cfg.Auth.Algorithm, cfg.Auth.Authorizer)
@@ -116,7 +128,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ...
 	mux := http.NewServeMux()
 	// feeds
-	feedsHandler, err := handlers.NewFeedsHandler(cfg, log, mongo, elastic, authenticator)
+	feedsHandler, err := handlers.NewFeedsHandler(cfg, log, mongo, elastic, authenticator, rdb)
 	if err != nil {
 		log.Errorf("[SERVER] Error while creating feeds collection: %s", err.Error())
 		return err
@@ -125,7 +137,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	mux.Handle(muxFeedsPath, muxFeedsHandler)
 
 	// articles
-	articlesHandler := handlers.NewArticlesHandler(cfg, log, mongo, elastic, neoClient, authenticator)
+	articlesHandler := handlers.NewArticlesHandler(cfg, log, mongo, elastic, neoClient, authenticator, rdb)
 	muxArticlesPath, muxArticlesHandler := articlesv2connect.NewArticlesServiceHandler(articlesHandler, connect.WithCompressMinBytes(1024*100))
 	mux.Handle(muxArticlesPath, muxArticlesHandler)
 

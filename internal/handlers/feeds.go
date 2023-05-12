@@ -12,6 +12,7 @@ import (
 	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2/feedsv2connect"
+	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -22,16 +23,17 @@ type FeedsHandler struct {
 	mg            *db.MongoDB
 	elastic       *es.Elastic
 	authenticator *auth.JWTAuthenticator
+	rdb           *redis.RedisClient
 	// Embed the unimplemented server
 	feedsv2connect.UnimplementedFeedServiceHandler
 }
 
 // NewFeedsHandler returns a new FeedsHandler service.
-func NewFeedsHandler(cfg *config.Config, log *zap.SugaredLogger, mg *db.MongoDB, elastic *es.Elastic, authenticator *auth.JWTAuthenticator) (*FeedsHandler, error) {
+func NewFeedsHandler(cfg *config.Config, log *zap.SugaredLogger, mg *db.MongoDB, elastic *es.Elastic, authenticator *auth.JWTAuthenticator, rdb *redis.RedisClient) (*FeedsHandler, error) {
 	if err := feed.EnsureIndex(context.Background(), mg); err != nil {
 		return nil, err
 	}
-	return &FeedsHandler{log: log, mg: mg, elastic: elastic, authenticator: authenticator}, nil
+	return &FeedsHandler{log: log, mg: mg, elastic: elastic, authenticator: authenticator, rdb: rdb}, nil
 }
 
 // CreateFeed creates a new feed.
@@ -66,6 +68,16 @@ func (h *FeedsHandler) GetFeed(ctx context.Context, req *connect.Request[feedsv2
 		return nil, errorMessage
 	}
 
+	data.Stream.State = commonv2.State_STATE_UNSPECIFIED
+	state, err := h.rdb.Get("feed:status:" + data.Id)
+	if err != nil {
+		data.Stream.State = commonv2.State_STATE_OK
+	}
+
+	if state == "offline" {
+		data.Stream.State = commonv2.State_STATE_NOT_OK
+	}
+
 	return connect.NewResponse(data), nil
 }
 
@@ -88,6 +100,18 @@ func (h *FeedsHandler) GetFeeds(ctx context.Context, req *connect.Request[feedsv
 		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to retrieve feed"))
 		h.log.Errorf("Internal: %s", err.Error())
 		return nil, errorMessage
+	}
+
+	for _, f := range data.Data {
+		f.Stream.State = commonv2.State_STATE_UNSPECIFIED
+		state, err := h.rdb.Get("feed:status:" + f.Id)
+		if err != nil {
+			f.Stream.State = commonv2.State_STATE_OK
+		}
+
+		if state == "offline" {
+			f.Stream.State = commonv2.State_STATE_NOT_OK
+		}
 	}
 
 	return connect.NewResponse(data), nil
