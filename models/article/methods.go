@@ -145,8 +145,28 @@ func scroll(ctx context.Context, es *es.Elastic, scrollId string) ([]*articlesv2
 		}
 
 		data = append(data, parsed.Data...)
+
+		if len(data) > 5760 {
+			break
+		}
+	}
+
+	if err := clearScroll(ctx, es, scrollId); err != nil {
+		// do nothing
 	}
 	return data, nil
+}
+
+func clearScroll(ctx context.Context, es *es.Elastic, scrollId string) error {
+	if scrollId == "" {
+		return nil
+	}
+
+	_, err := es.Client.ClearScroll(
+		es.Client.ClearScroll.WithScrollID(scrollId),
+	)
+
+	return err
 }
 
 func Exists(ctx context.Context, es *es.Elastic, opts *Opts) bool {

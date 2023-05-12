@@ -34,8 +34,8 @@ type Opts struct {
 	Scroll bool `json:"-"`
 
 	Sort struct {
-		By  string `json:"by,omitempty"`
-		Asc bool   `json:"asc,omitempty"`
+		By    string `json:"by,omitempty"`
+		Order string `json:"order,omitempty"`
 	} `json:"sort,omitempty"`
 
 	Range struct {
@@ -53,7 +53,7 @@ func NewOpts() *Opts {
 	opts.Range.To = "now"
 	opts.Range.By = "content.published_at"
 	opts.Sort.By = "content.published_at"
-	opts.Sort.Asc = false
+	opts.Sort.Order = "desc"
 	opts.Index = "mediawatch_articles_*"
 	opts.Scroll = false
 	return opts
@@ -68,6 +68,13 @@ func NewOptsForm(j []byte) *Opts {
 func (o *Opts) Query() map[string]interface{} {
 	filter := []map[string]interface{}{}
 	must := []map[string]interface{}{}
+	sort := []map[string]interface{}{}
+
+	if o.Sort.By != "" {
+		sort = append(sort, map[string]interface{}{
+			o.Sort.By: o.Sort.Order,
+		})
+	}
 
 	if o.Q != "" {
 		must = append(must, map[string]interface{}{
@@ -192,6 +199,7 @@ func (o *Opts) Query() map[string]interface{} {
 		}
 	}
 	return map[string]interface{}{
+		// "sort": sort,
 		"query": map[string]interface{}{
 			"bool": map[string]interface{}{
 				"filter": filter,
@@ -207,10 +215,10 @@ func Index(i string) func(*Opts) {
 	}
 }
 
-func Sort(By string, Asc bool) func(*Opts) {
+func Sort(By string, Order string) func(*Opts) {
 	return func(s *Opts) {
 		s.Sort.By = By
-		s.Sort.Asc = Asc
+		s.Sort.Order = Order
 	}
 }
 
@@ -220,9 +228,9 @@ func sortBy(i string) func(*Opts) {
 	}
 }
 
-func sortAsc(i bool) func(*Opts) {
+func sortOrder(i string) func(*Opts) {
 	return func(s *Opts) {
-		s.Sort.Asc = i
+		s.Sort.Order = i
 	}
 }
 
@@ -352,6 +360,7 @@ func (o *Opts) NewArticlesSearchQuery(es esapi.Search) []func(*esapi.SearchReque
 	opts = append(opts, esapi.Search.WithSize(es, o.Limit))
 	opts = append(opts, esapi.Search.WithTimeout(es, time.Second*10))
 	opts = append(opts, esapi.Search.WithTrackTotalHits(es, true))
+	opts = append(opts, esapi.Search.WithSort(es, o.Sort.By+":"+o.Sort.Order, "_score"))
 	if o.Scroll {
 		opts = append(opts, esapi.Search.WithScroll(es, time.Second*10))
 	}
