@@ -89,7 +89,7 @@ func (worker *CompareGroup) Consume() {
 			continue
 		}
 
-		worker.log.Debugf("[SVC-COMPARE] FindAndCompare: %s (%s)", msg.DocId, msg.CrawledAt)
+		worker.log.Infof("[SVC-COMPARE] FAC: %s - %s", msg.DocId, msg.CrawledAt)
 
 		// test the article for similar
 		go worker.compare.FindAndCompare(msg.DocId, msg.Lang)
@@ -288,6 +288,8 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 	opts := article.NewOpts()
 	opts.Index = c.index + "_" + strings.ToLower(lang)
 	opts.Lang = lang
+	opts.Limit = 240
+
 	opts.Range.From = from.Format(time.RFC3339)
 	opts.Range.To = time.Now().Format(time.RFC3339)
 	opts.Keywords = strings.Join(source.Nlp.Keywords, " ")
@@ -303,15 +305,23 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 		c.log.Debugf("[SVC-COMPARE] No similar articles found for DocId: %s", source.DocId)
 		return nil
 	}
-	if total > 64 {
+
+	if total > 240 {
 		opts.Scroll = true
-		opts.Limit = 64
+		opts.Limit = 240
 	}
+
+	opts.Sort.By = "content.published_at"
+	opts.Sort.Order = "desc"
+
 	articles, err := article.Search(context.Background(), c.es, opts)
 	if err != nil {
 		return err
 	}
 
+	c.log.Infof("[SVC-COMPARE] PSD: %s - %d/%d", id, len(articles.Data), total)
+
+	similar := 0
 	for _, dest := range articles.Data {
 		// do not compare same documents
 		if source.DocId == dest.DocId {
@@ -322,7 +332,6 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 			continue
 		}
 
-		start := time.Now()
 		// create the plagiarism detection interface
 		detector, _ := plagiarism.NewDetector(plagiarism.SetLang(strings.ToLower(source.Lang)), plagiarism.SetN(8))
 		// detect with extracted stopwords
@@ -346,13 +355,14 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 					detector.Score = detector.Score * (-1)
 				}
 
-				c.log.Debugf("[SVC-COMPARE] DetectWithStopWords: %s %.4f %d/%d (%d)", source.DocId, detector.Score, detector.Similar, detector.Total, time.Since(start).Milliseconds())
+				similar++
 
 				// save relation to neo4j database
 				go relationships.CreateSimilar(context.Background(), c.neoClient, a.DocId, b.DocId, detector.Score)
 			}
 		}
 	}
+	c.log.Infof("[SVC-COMPARE] DWS: %s - %d/%d", id, similar, len(articles.Data))
 
 	return nil
 }
