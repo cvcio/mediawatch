@@ -21,7 +21,7 @@ buf-install:
     	-o "$(shell go env GOPATH)/bin/buf" && \
   	chmod +x "$(shell go env GOPATH)/bin/buf"
 
-buf-generate: vendor buf-generate-go buf-generate-tags buf-generate-py buf-clean
+buf-generate: vendor buf-generate-go buf-generate-tags buf-generate-py buf-clean buf-push
 
 buf-generate-go:
 	buf generate --template buf.gen.yaml .
@@ -43,6 +43,9 @@ buf-clean:
 
 buf-update:
 	buf mod update
+
+buf-push:
+	cd proto; buf push
 
 buf-lint:
 	buf lint
