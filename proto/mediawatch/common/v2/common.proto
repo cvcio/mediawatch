@@ -13,6 +13,13 @@ enum Status {
     STATUS_OFFLINE = 6;
 };
 
+// State Enumeration
+enum State {
+    STATE_UNSPECIFIED = 0;
+    STATE_OK = 1;
+    STATE_NOT_OK = 2;
+};
+
 // StreamType Enumeration
 enum StreamType {
     STREAM_TYPE_UNSPECIFIED = 0;

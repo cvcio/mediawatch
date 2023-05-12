@@ -82,6 +82,56 @@ func (Status) EnumDescriptor() ([]byte, []int) {
 	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{0}
 }
 
+// State Enumeration
+type State int32
+
+const (
+	State_STATE_UNSPECIFIED State = 0
+	State_STATE_OK          State = 1
+	State_STATE_NOT_OK      State = 2
+)
+
+// Enum value maps for State.
+var (
+	State_name = map[int32]string{
+		0: "STATE_UNSPECIFIED",
+		1: "STATE_OK",
+		2: "STATE_NOT_OK",
+	}
+	State_value = map[string]int32{
+		"STATE_UNSPECIFIED": 0,
+		"STATE_OK":          1,
+		"STATE_NOT_OK":      2,
+	}
+)
+
+func (x State) Enum() *State {
+	p := new(State)
+	*p = x
+	return p
+}
+
+func (x State) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (State) Descriptor() protoreflect.EnumDescriptor {
+	return file_mediawatch_common_v2_common_proto_enumTypes[1].Descriptor()
+}
+
+func (State) Type() protoreflect.EnumType {
+	return &file_mediawatch_common_v2_common_proto_enumTypes[1]
+}
+
+func (x State) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use State.Descriptor instead.
+func (State) EnumDescriptor() ([]byte, []int) {
+	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{1}
+}
+
 // StreamType Enumeration
 type StreamType int32
 
@@ -119,11 +169,11 @@ func (x StreamType) String() string {
 }
 
 func (StreamType) Descriptor() protoreflect.EnumDescriptor {
-	return file_mediawatch_common_v2_common_proto_enumTypes[1].Descriptor()
+	return file_mediawatch_common_v2_common_proto_enumTypes[2].Descriptor()
 }
 
 func (StreamType) Type() protoreflect.EnumType {
-	return &file_mediawatch_common_v2_common_proto_enumTypes[1]
+	return &file_mediawatch_common_v2_common_proto_enumTypes[2]
 }
 
 func (x StreamType) Number() protoreflect.EnumNumber {
@@ -132,7 +182,7 @@ func (x StreamType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use StreamType.Descriptor instead.
 func (StreamType) EnumDescriptor() ([]byte, []int) {
-	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{1}
+	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{2}
 }
 
 // Locality Enumeration
@@ -178,11 +228,11 @@ func (x Locality) String() string {
 }
 
 func (Locality) Descriptor() protoreflect.EnumDescriptor {
-	return file_mediawatch_common_v2_common_proto_enumTypes[2].Descriptor()
+	return file_mediawatch_common_v2_common_proto_enumTypes[3].Descriptor()
 }
 
 func (Locality) Type() protoreflect.EnumType {
-	return &file_mediawatch_common_v2_common_proto_enumTypes[2]
+	return &file_mediawatch_common_v2_common_proto_enumTypes[3]
 }
 
 func (x Locality) Number() protoreflect.EnumNumber {
@@ -191,7 +241,7 @@ func (x Locality) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Locality.Descriptor instead.
 func (Locality) EnumDescriptor() ([]byte, []int) {
-	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{2}
+	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{3}
 }
 
 // BusinessType Enumeration
@@ -237,11 +287,11 @@ func (x BusinessType) String() string {
 }
 
 func (BusinessType) Descriptor() protoreflect.EnumDescriptor {
-	return file_mediawatch_common_v2_common_proto_enumTypes[3].Descriptor()
+	return file_mediawatch_common_v2_common_proto_enumTypes[4].Descriptor()
 }
 
 func (BusinessType) Type() protoreflect.EnumType {
-	return &file_mediawatch_common_v2_common_proto_enumTypes[3]
+	return &file_mediawatch_common_v2_common_proto_enumTypes[4]
 }
 
 func (x BusinessType) Number() protoreflect.EnumNumber {
@@ -250,7 +300,7 @@ func (x BusinessType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use BusinessType.Descriptor instead.
 func (BusinessType) EnumDescriptor() ([]byte, []int) {
-	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{3}
+	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{4}
 }
 
 // ContentType Enumeration
@@ -344,11 +394,11 @@ func (x ContentType) String() string {
 }
 
 func (ContentType) Descriptor() protoreflect.EnumDescriptor {
-	return file_mediawatch_common_v2_common_proto_enumTypes[4].Descriptor()
+	return file_mediawatch_common_v2_common_proto_enumTypes[5].Descriptor()
 }
 
 func (ContentType) Type() protoreflect.EnumType {
-	return &file_mediawatch_common_v2_common_proto_enumTypes[4]
+	return &file_mediawatch_common_v2_common_proto_enumTypes[5]
 }
 
 func (x ContentType) Number() protoreflect.EnumNumber {
@@ -357,7 +407,7 @@ func (x ContentType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ContentType.Descriptor instead.
 func (ContentType) EnumDescriptor() ([]byte, []int) {
-	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{4}
+	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{5}
 }
 
 // PoliticalOrientation Enumeration
@@ -409,11 +459,11 @@ func (x PoliticalOrientation) String() string {
 }
 
 func (PoliticalOrientation) Descriptor() protoreflect.EnumDescriptor {
-	return file_mediawatch_common_v2_common_proto_enumTypes[5].Descriptor()
+	return file_mediawatch_common_v2_common_proto_enumTypes[6].Descriptor()
 }
 
 func (PoliticalOrientation) Type() protoreflect.EnumType {
-	return &file_mediawatch_common_v2_common_proto_enumTypes[5]
+	return &file_mediawatch_common_v2_common_proto_enumTypes[6]
 }
 
 func (x PoliticalOrientation) Number() protoreflect.EnumNumber {
@@ -422,7 +472,7 @@ func (x PoliticalOrientation) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use PoliticalOrientation.Descriptor instead.
 func (PoliticalOrientation) EnumDescriptor() ([]byte, []int) {
-	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{5}
+	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{6}
 }
 
 // Tier Enumeration
@@ -471,11 +521,11 @@ func (x Tier) String() string {
 }
 
 func (Tier) Descriptor() protoreflect.EnumDescriptor {
-	return file_mediawatch_common_v2_common_proto_enumTypes[6].Descriptor()
+	return file_mediawatch_common_v2_common_proto_enumTypes[7].Descriptor()
 }
 
 func (Tier) Type() protoreflect.EnumType {
-	return &file_mediawatch_common_v2_common_proto_enumTypes[6]
+	return &file_mediawatch_common_v2_common_proto_enumTypes[7]
 }
 
 func (x Tier) Number() protoreflect.EnumNumber {
@@ -484,7 +534,7 @@ func (x Tier) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Tier.Descriptor instead.
 func (Tier) EnumDescriptor() ([]byte, []int) {
-	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{6}
+	return file_mediawatch_common_v2_common_proto_rawDescGZIP(), []int{7}
 }
 
 // Pagination
@@ -748,7 +798,11 @@ var file_mediawatch_common_v2_common_proto_rawDesc = []byte{
 	0x53, 0x5f, 0x43, 0x4c, 0x4f, 0x53, 0x45, 0x44, 0x10, 0x04, 0x12, 0x12, 0x0a, 0x0e, 0x53, 0x54,
 	0x41, 0x54, 0x55, 0x53, 0x5f, 0x44, 0x45, 0x4c, 0x45, 0x54, 0x45, 0x44, 0x10, 0x05, 0x12, 0x12,
 	0x0a, 0x0e, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x5f, 0x4f, 0x46, 0x46, 0x4c, 0x49, 0x4e, 0x45,
-	0x10, 0x06, 0x2a, 0x6e, 0x0a, 0x0a, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x54, 0x79, 0x70, 0x65,
+	0x10, 0x06, 0x2a, 0x3e, 0x0a, 0x05, 0x53, 0x74, 0x61, 0x74, 0x65, 0x12, 0x15, 0x0a, 0x11, 0x53,
+	0x54, 0x41, 0x54, 0x45, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44,
+	0x10, 0x00, 0x12, 0x0c, 0x0a, 0x08, 0x53, 0x54, 0x41, 0x54, 0x45, 0x5f, 0x4f, 0x4b, 0x10, 0x01,
+	0x12, 0x10, 0x0a, 0x0c, 0x53, 0x54, 0x41, 0x54, 0x45, 0x5f, 0x4e, 0x4f, 0x54, 0x5f, 0x4f, 0x4b,
+	0x10, 0x02, 0x2a, 0x6e, 0x0a, 0x0a, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x54, 0x79, 0x70, 0x65,
 	0x12, 0x1b, 0x0a, 0x17, 0x53, 0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f,
 	0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x15, 0x0a,
 	0x11, 0x53, 0x54, 0x52, 0x45, 0x41, 0x4d, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x4f, 0x54, 0x48,
@@ -873,20 +927,21 @@ func file_mediawatch_common_v2_common_proto_rawDescGZIP() []byte {
 	return file_mediawatch_common_v2_common_proto_rawDescData
 }
 
-var file_mediawatch_common_v2_common_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
+var file_mediawatch_common_v2_common_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
 var file_mediawatch_common_v2_common_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_mediawatch_common_v2_common_proto_goTypes = []interface{}{
 	(Status)(0),                 // 0: mediawatch.common.v2.Status
-	(StreamType)(0),             // 1: mediawatch.common.v2.StreamType
-	(Locality)(0),               // 2: mediawatch.common.v2.Locality
-	(BusinessType)(0),           // 3: mediawatch.common.v2.BusinessType
-	(ContentType)(0),            // 4: mediawatch.common.v2.ContentType
-	(PoliticalOrientation)(0),   // 5: mediawatch.common.v2.PoliticalOrientation
-	(Tier)(0),                   // 6: mediawatch.common.v2.Tier
-	(*Pagination)(nil),          // 7: mediawatch.common.v2.Pagination
-	(*ResponseWithMessage)(nil), // 8: mediawatch.common.v2.ResponseWithMessage
-	(*SortBy)(nil),              // 9: mediawatch.common.v2.SortBy
-	(*RangeBy)(nil),             // 10: mediawatch.common.v2.RangeBy
+	(State)(0),                  // 1: mediawatch.common.v2.State
+	(StreamType)(0),             // 2: mediawatch.common.v2.StreamType
+	(Locality)(0),               // 3: mediawatch.common.v2.Locality
+	(BusinessType)(0),           // 4: mediawatch.common.v2.BusinessType
+	(ContentType)(0),            // 5: mediawatch.common.v2.ContentType
+	(PoliticalOrientation)(0),   // 6: mediawatch.common.v2.PoliticalOrientation
+	(Tier)(0),                   // 7: mediawatch.common.v2.Tier
+	(*Pagination)(nil),          // 8: mediawatch.common.v2.Pagination
+	(*ResponseWithMessage)(nil), // 9: mediawatch.common.v2.ResponseWithMessage
+	(*SortBy)(nil),              // 10: mediawatch.common.v2.SortBy
+	(*RangeBy)(nil),             // 11: mediawatch.common.v2.RangeBy
 }
 var file_mediawatch_common_v2_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -956,7 +1011,7 @@ func file_mediawatch_common_v2_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_mediawatch_common_v2_common_proto_rawDesc,
-			NumEnums:      7,
+			NumEnums:      8,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
