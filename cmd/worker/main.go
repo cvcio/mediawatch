@@ -122,7 +122,11 @@ func (worker *WorkerGroup) Consume() {
 			continue
 		}
 
-		worker.log.Debugf("CONSUME: %s - %s - %s", msg.Hostname, msg.CreatedAt, msg.DocId)
+		name := msg.Hostname
+		if msg.Type == "twitter" {
+			name = msg.UserName
+		}
+		worker.log.Debugf("CONSUME: %s - %s - %s", name, msg.CreatedAt, msg.DocId)
 
 		// check if article exists before processing it
 		// on nil error the article exists
@@ -355,6 +359,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		f = tf
 	}
 
+	// skip if offline
 	if f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
 		return nil
 	}
