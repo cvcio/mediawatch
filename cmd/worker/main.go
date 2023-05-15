@@ -12,6 +12,7 @@ import (
 	"time"
 
 	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	enrich_pb "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	scrape_pb "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
@@ -352,6 +353,10 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 			return errors.Wrap(err, "feed not found")
 		}
 		f = tf
+	}
+
+	if f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
+		return nil
 	}
 
 	// create a new node into the neo4j database, if not exists
