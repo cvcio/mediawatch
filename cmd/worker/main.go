@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -18,9 +17,6 @@ import (
 	scrape_pb "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
@@ -37,19 +33,19 @@ import (
 	kaf "github.com/segmentio/kafka-go"
 )
 
-var (
-	grpcDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
-		Name:       "grpc_response_time_seconds",
-		Help:       "Duration of GRPC requests.",
-		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-	}, []string{"service"})
+// var (
+// 	grpcDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
+// 		Name:       "grpc_response_time_seconds",
+// 		Help:       "Duration of GRPC requests.",
+// 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+// 	}, []string{"service"})
 
-	workerProcessDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
-		Name:       "consumer_process_duration_seconds",
-		Help:       "Duration of consumer processing requests.",
-		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-	}, []string{"service"})
-)
+// 	workerProcessDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
+// 		Name:       "consumer_process_duration_seconds",
+// 		Help:       "Duration of consumer processing requests.",
+// 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+// 	}, []string{"service"})
+// )
 
 // WorkerGroup struct.
 type WorkerGroup struct {
@@ -89,7 +85,7 @@ func (worker *WorkerGroup) ArticleExists(url string) bool {
 // for some reason).
 func (worker *WorkerGroup) Consume() {
 	for {
-		timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("worker"))
+		// timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("worker"))
 		//
 		// fetch the message from kafka topic
 		m, err := worker.kafkaClient.Consumer.FetchMessage(worker.ctx)
@@ -130,24 +126,24 @@ func (worker *WorkerGroup) Consume() {
 
 		// check if article exists before processing it
 		// on nil error the article exists
-		if exists := worker.ArticleExists(msg.Url); !exists {
-			// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
-			// process the article
-			if err := worker.ProcessArticle(msg); err != nil {
-				worker.log.Errorf("ERRORED: %s - %s", msg.Hostname, err.Error())
-				// send the error to channel
-				worker.errChan <- errors.Wrap(err, "failed process article")
+		// if exists := worker.ArticleExists(msg.Url); !exists {
+		// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
+		// process the article
+		if err := worker.ProcessArticle(msg); err != nil {
+			worker.log.Errorf("ERRORED: %s - %s", msg.Hostname, err.Error())
+			// send the error to channel
+			worker.errChan <- errors.Wrap(err, "failed process article")
 
-				// do not commit unprocessed articles
-				if strings.Contains(err.Error(), "GRPC Connection Error") {
-					continue
-				}
+			// do not commit unprocessed articles
+			if strings.Contains(err.Error(), "GRPC Connection Error") {
+				continue
 			}
 		}
+		// }
 
 		// mark message as read (commit)
 		worker.Commit(m)
-		timer.ObserveDuration()
+		// timer.ObserveDuration()
 	}
 }
 
@@ -274,28 +270,28 @@ func main() {
 	// Blocking main listening for requests
 	// Make a channel to listen for errors coming from the listener. Use a
 	// buffered channel so the goroutine can exit if we don't collect this error.
-	errSingals := make(chan error, 1)
+	// errSingals := make(chan error, 1)
 
 	// ========================================
 	// Create a registry and a web server for prometheus metrics
-	registry := prometheus.NewRegistry()
-	registry.MustRegister(grpcDuration)
-	registry.MustRegister(workerProcessDuration)
+	// registry := prometheus.NewRegistry()
+	// registry.MustRegister(grpcDuration)
+	// registry.MustRegister(workerProcessDuration)
 
 	// create a prometheus http.Server
-	promHandler := http.Server{
-		Addr:           cfg.GetPrometheusURL(),
-		Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
-		ReadTimeout:    cfg.Prometheus.ReadTimeout,
-		WriteTimeout:   cfg.Prometheus.WriteTimeout,
-		MaxHeaderBytes: 1 << 20,
-	}
+	// promHandler := http.Server{
+	// 	Addr:           cfg.GetPrometheusURL(),
+	// 	Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
+	// 	ReadTimeout:    cfg.Prometheus.ReadTimeout,
+	// 	WriteTimeout:   cfg.Prometheus.WriteTimeout,
+	// 	MaxHeaderBytes: 1 << 20,
+	// }
 
 	// ========================================
 	// Start the http service for prometheus
-	go func() {
-		errSingals <- promHandler.ListenAndServe()
-	}()
+	// go func() {
+	// 	errSingals <- promHandler.ListenAndServe()
+	// }()
 
 	// ========================================
 	// Shutdown
@@ -313,20 +309,20 @@ func main() {
 			log.Errorf("Error from kafka: %s", err.Error())
 			continue
 
-		case err := <-errSingals:
-			log.Errorf("Error: %s", err.Error())
-			os.Exit(1)
+		// case err := <-errSingals:
+		// 	log.Errorf("Error: %s", err.Error())
+		// 	os.Exit(1)
 
 		case s := <-osSignals:
-			log.Debugf("Worker shutdown signal: %s", s)
+			log.Fatalf("Worker shutdown signal: %s", s)
 
 			// Asking prometheus to shutdown and load shed.
-			if err := promHandler.Shutdown(context.Background()); err != nil {
-				log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
-				if err := promHandler.Close(); err != nil {
-					log.Fatalf("Could not stop http server: %v", err)
-				}
-			}
+			// if err := promHandler.Shutdown(context.Background()); err != nil {
+			// 	log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
+			// 	if err := promHandler.Close(); err != nil {
+			// 		log.Fatalf("Could not stop http server: %v", err)
+			// 	}
+			// }
 		}
 	}
 }
@@ -361,6 +357,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 
 	// skip if offline
 	if f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
+		worker.log.Debugf("SKIPPED: %s - %s", f.Hostname, in.Url)
 		return nil
 	}
 
@@ -386,7 +383,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	a.CrawledAt = in.CreatedAt
 
 	// =========================================================================
-	timer := prometheus.NewTimer(grpcDuration.WithLabelValues("scraper"))
+	// timer := prometheus.NewTimer(grpcDuration.WithLabelValues("scraper"))
 
 	// =========================================================================
 	// Create the gRPC service clients
@@ -422,7 +419,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		worker.log.Errorf("Scrape error: %s", err.Error())
 		return errors.Wrap(err, "scrape error")
 	}
-	timer.ObserveDuration()
+	// timer.ObserveDuration()
 
 	worker.log.Debugf("SCRAPED: %s - %s", f.Hostname, in.Url)
 
@@ -447,7 +444,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	}
 
 	// =========================================================================
-	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("enrich"))
+	// timer = prometheus.NewTimer(grpcDuration.WithLabelValues("enrich"))
 
 	// enrich client
 	// Create gRPC Enrich Connection
@@ -484,7 +481,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	a.Nlp.Claims = enrichResp.Data.Nlp.Claims
 	a.Nlp.Entities = enrichResp.Data.Nlp.Entities
 
-	timer.ObserveDuration()
+	// timer.ObserveDuration()
 
 	// =========================================================================
 	// Save the Document to Elasticsearch
