@@ -162,6 +162,7 @@ func main() {
 		log.Fatalf("error getting feeds list: %v", err)
 	}
 
+	feeds = filter(feeds)
 	log.Debugf("Loaded feeds: %d", len(feeds))
 	if len(feeds) == 0 {
 		log.Infof("No feeds to listen, exiting.")
@@ -257,4 +258,17 @@ func chunks(feeds []*feedsv2.Feed, size int) [][]*feedsv2.Feed {
 		chunks = append(chunks, feeds[i:d])
 	}
 	return chunks
+}
+
+func filter(feeds []*feedsv2.Feed) []*feedsv2.Feed {
+	var f []*feedsv2.Feed
+	for _, v := range feeds {
+		if v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_AUTO &&
+			v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_MUSIC &&
+			v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_ENTERTAINMENT &&
+			v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_SPORTS {
+			f = append(f, v)
+		}
+	}
+	return f
 }
