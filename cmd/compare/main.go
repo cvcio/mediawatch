@@ -282,8 +282,8 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 	}
 
 	now, _ := time.Parse(time.RFC3339, source.CrawledAt)
-	// last 7 days
-	from := now.AddDate(0, 0, -7)
+	// last 3 days
+	from := now.AddDate(0, 0, -3)
 
 	opts := article.NewOpts()
 	opts.Index = c.index + "_" + strings.ToLower(lang)
