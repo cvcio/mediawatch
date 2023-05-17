@@ -90,7 +90,7 @@ type Config struct {
 		ConsumerGroupCompare string `envconfig:"KAFKA_CONSUMER_GROUP_COMPARE" default:"mw-compare"`
 		Version              string `envconfig:"KAFKA_VERSION" default:"2.5.0"`
 		WorkerOffsetOldest   bool   `envconfig:"KAFKA_WORKER_OFFSET_OLDEST" default:"false"`
-		AckBefore            string `envconfig:"KAFKA_ACK_BEFORE" default:"2023-05-17"`
+		AckBefore            string `envconfig:"KAFKA_ACK_BEFORE" default:""`
 	}
 	SMTP struct {
 		Server   string `envconfig:"SMTP_SERVER" default:"smtp"`
