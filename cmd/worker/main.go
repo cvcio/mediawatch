@@ -141,20 +141,20 @@ func (worker *WorkerGroup) Consume() {
 
 		// check if article exists before processing it
 		// on nil error the article exists
-		// if exists := worker.ArticleExists(msg.Url); !exists {
-		// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
-		// process the article
-		if err := worker.ProcessArticle(msg); err != nil {
-			worker.log.Errorf("ERRORED: %s - %s", msg.Hostname, err.Error())
-			// send the error to channel
-			worker.errChan <- errors.Wrap(err, "failed process article")
+		if exists := worker.ArticleExists(msg.Url); !exists {
+			// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
+			// process the article
+			if err := worker.ProcessArticle(msg); err != nil {
+				worker.log.Errorf("ERRORED: %s - %s", msg.Hostname, err.Error())
+				// send the error to channel
+				worker.errChan <- errors.Wrap(err, "failed process article")
 
-			// do not commit unprocessed articles
-			if strings.Contains(err.Error(), "GRPC Connection Error") {
-				continue
+				// do not commit unprocessed articles
+				if strings.Contains(err.Error(), "GRPC Connection Error") {
+					continue
+				}
 			}
 		}
-		// }
 
 		// mark message as read (commit)
 		worker.Commit(m)
