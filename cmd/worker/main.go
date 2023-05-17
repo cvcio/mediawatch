@@ -113,13 +113,13 @@ func (worker *WorkerGroup) Consume() {
 		// Commit messages if the AckBefore environment variable is present and valid
 		if worker.ackBefore != "" {
 			if s, err := time.Parse(time.DateOnly, worker.ackBefore); err == nil {
-				// if e, err := time.Parse(time.RFC3339, msg.CreatedAt); err == nil {
-				if m.Time.Before(s) {
-					worker.Commit(m)
-					worker.log.Debugf("SKIPPED: %s - %s", msg.CreatedAt, msg.Url)
-					continue
+				if e, err := time.Parse(time.RFC3339, msg.CreatedAt); err == nil {
+					if e.Before(s) {
+						worker.Commit(m)
+						worker.log.Debugf("SKIPPED: %s - %s", msg.CreatedAt, msg.Url)
+						continue
+					}
 				}
-				// }
 			}
 		}
 
