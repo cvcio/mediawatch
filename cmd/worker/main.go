@@ -61,6 +61,8 @@ type WorkerGroup struct {
 
 	scrapeHost  string
 	ernrichHost string
+
+	ackBefore string
 }
 
 // Close closes the kafka client.
@@ -106,6 +108,19 @@ func (worker *WorkerGroup) Consume() {
 			worker.errChan <- errors.Wrap(err, "failed to unmarshall messages from kafka")
 			// go to next
 			continue
+		}
+
+		// Commit messages if the AckBefore environment variable is present and valid
+		if worker.ackBefore != "" {
+			if s, err := time.Parse(time.DateOnly, worker.ackBefore); err == nil {
+				// if e, err := time.Parse(time.RFC3339, msg.CreatedAt); err == nil {
+				if m.Time.Before(s) {
+					worker.Commit(m)
+					worker.log.Debugf("SKIPPED: %s - %s", msg.CreatedAt, msg.Url)
+					continue
+				}
+				// }
+			}
 		}
 
 		// re-validate link and make sure it is a valid url
@@ -173,6 +188,7 @@ func NewWorkerGroup(
 	neoClient *neo.Neo,
 	scrapeHost string,
 	ernrichHost string,
+	ackBefore string,
 ) *WorkerGroup {
 	return &WorkerGroup{
 		context.Background(),
@@ -185,6 +201,7 @@ func NewWorkerGroup(
 		neoClient,
 		scrapeHost,
 		ernrichHost,
+		ackBefore,
 	}
 }
 
@@ -252,7 +269,7 @@ func main() {
 	// create a new worker
 	worker := NewWorkerGroup(
 		log, kafkaGoClient, kafkaChan,
-		dbConn, esClient, cfg.Elasticsearch.Index, neoClient, cfg.Scrape.Host, cfg.Enrich.Host,
+		dbConn, esClient, cfg.Elasticsearch.Index, neoClient, cfg.Scrape.Host, cfg.Enrich.Host, cfg.Kafka.AckBefore,
 	)
 
 	// close connections on exit
