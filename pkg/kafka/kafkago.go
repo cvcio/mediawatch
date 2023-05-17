@@ -41,10 +41,10 @@ func NewKafkaClient(
 }
 
 // NewConsumer creates a new kafka consumer.
-func NewConsumer(brokers []string, toppic string, group string, oldest bool) *kaf.Reader {
+func NewConsumer(brokers []string, topic string, group string, oldest bool) *kaf.Reader {
 	return kaf.NewReader(kaf.ReaderConfig{
 		Brokers:  brokers,
-		Topic:    toppic,
+		Topic:    topic,
 		GroupID:  group,
 		MinBytes: 5,
 		MaxBytes: 10e6,
@@ -53,10 +53,10 @@ func NewConsumer(brokers []string, toppic string, group string, oldest bool) *ka
 }
 
 // NewProducer creates a new kafka producer.
-func NewProducer(brokers []string, toppic string) *kaf.Writer {
+func NewProducer(brokers []string, topic string) *kaf.Writer {
 	return &kaf.Writer{
 		Addr:                   kaf.TCP(brokers...),
-		Topic:                  toppic,
+		Topic:                  topic,
 		AllowAutoTopicCreation: true,
 		BatchSize:              10,
 		BatchTimeout:           2 * time.Second,
