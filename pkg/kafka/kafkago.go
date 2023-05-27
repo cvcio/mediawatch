@@ -58,9 +58,9 @@ func NewProducer(brokers []string, topic string) *kaf.Writer {
 		Addr:                   kaf.TCP(brokers...),
 		Topic:                  topic,
 		AllowAutoTopicCreation: true,
-		BatchSize:              10,
-		BatchTimeout:           2 * time.Second,
-		RequiredAcks:           -1,
+		// BatchSize:              10,
+		// BatchTimeout:           2 * time.Second,
+		// RequiredAcks:           -1,
 	}
 }
 
