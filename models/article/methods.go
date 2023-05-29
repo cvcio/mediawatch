@@ -146,7 +146,7 @@ func scroll(ctx context.Context, es *es.Elastic, scrollId string) ([]*articlesv2
 
 		data = append(data, parsed.Data...)
 
-		if len(data) > 5760 {
+		if len(data) > 3600 {
 			break
 		}
 	}
