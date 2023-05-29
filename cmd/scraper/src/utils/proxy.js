@@ -16,8 +16,6 @@ const getProxy = () => {
 		};
 	}
 
-	console.log(proxy);
-
 	return proxy;
 };
 
