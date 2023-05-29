@@ -4,14 +4,14 @@ const logger = require('../logger');
 const { parsers } = require('../parsers');
 const { toUpperCase, normalizeString, trimRight } = require('../utils/strings');
 const { errorCode } = require('../utils/errors');
+const { getProxy } = require('../utils/proxy');
 
 moment.suppressDeprecationWarnings = true;
 
 class ScrapeService {
-	constructor (mongo, proxy) {
+	constructor (mongo) {
 		this.passages = [];
 		this.mongo = mongo;
-		this.proxy = proxy;
 		this.GetPassages();
 	}
 
@@ -92,7 +92,7 @@ class ScrapeService {
 				});
 		} else {
 			extract(decodeURIComponent(request.url).toString(),
-				feed.stream.requires_proxy ? this.proxy : null)
+				feed.stream.requires_proxy ? getProxy() : null)
 				.then(res => {
 					logger.debug(`[SVC-SCRAPER] Data ${JSON.stringify(res)}`);
 
@@ -127,7 +127,7 @@ class ScrapeService {
 					});
 				})
 				.catch(err => {
-					if (err.response && err.response.status === 403 && this.proxy) {
+					if (err.response && err.response.status === 403 && getProxy()) {
 						return this.RetryWithProxy(request, feed, callback);
 					}
 					logger.error(`[SVC-SCRAPER] Error while scraping: (${errorCode(err.response ? err.response.status : 500)}) ${err.message} - (${feed.hostname}) ${request.url}`);
@@ -247,7 +247,7 @@ class ScrapeService {
 
 	RetryWithProxy (request, feed, callback) {
 		logger.info(`[SVC-SCRAPER] RetryWithProxy - (${feed.hostname}) ${decodeURIComponent(request.url).toString()}`);
-		extract(decodeURIComponent(request.url).toString(), this.proxy)
+		extract(decodeURIComponent(request.url).toString(), getProxy())
 			.then(res => {
 				const article = res;
 				if (article.date && moment(request.crawled_at).isBefore(moment(article.date))) {

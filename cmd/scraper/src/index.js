@@ -5,7 +5,6 @@ const protoLoader = require('@grpc/proto-loader');
 const { MongoClient } = require('mongodb');
 const services = require('./services');
 const logger = require('./logger');
-const { getProxy } = require('./utils/proxy');
 
 let server;
 
@@ -43,7 +42,7 @@ const main = async () => {
 		});
 
 	const scrapeProto = grpc.loadPackageDefinition(packageDefinition);
-	const service = new services.ScrapeService(mongo, getProxy());
+	const service = new services.ScrapeService(mongo);
 
 	// Add Services (Endpoints)
 	server.addService(scrapeProto.mediawatch.scrape.v2.ScrapeService.service, service);

@@ -1,18 +1,22 @@
 const getProxy = () => {
 	if (!process.env.PROXY_ENABLED) return null;
 
+	const proxyList = process.env.PROXY_LIST.split(',');
+	const [host, port] = proxyList[Math.floor(Math.random() * proxyList.length)].split(':');
 	const proxy = {
 		protocol: 'http',
-		host: process.env.PROXY_HOST,
-		port: parseInt(process.env.PROXY_PORT, 10)
+		host,
+		port: parseInt(port, 10)
 	};
 
-	if (process.env.PROXY_USERNAME !== '' && process.env.PROXY_USERNAME !== '') {
+	if (process.env.PROXY_USERNAME !== '' && process.env.PROXY_PASSWORD !== '') {
 		proxy.auth = {
 			username: process.env.PROXY_USERNAME,
 			password: process.env.PROXY_PASSWORD
 		};
 	}
+
+	console.log(proxy);
 
 	return proxy;
 };
