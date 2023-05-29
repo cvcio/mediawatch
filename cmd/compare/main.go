@@ -39,20 +39,21 @@ const SIZE = 64
 
 // Compare Service
 type Compare struct {
-	es        *es.Elastic
-	index     string
-	log       *zap.SugaredLogger
-	cfg       *config.Config
-	neoClient *neo.Neo
+	es             *es.Elastic
+	index          string
+	log            *zap.SugaredLogger
+	cfg            *config.Config
+	neoClient      *neo.Neo
+	serviceErrChan chan error
 }
 
 // CompareGroup struct.
 type CompareGroup struct {
-	ctx         context.Context
-	log         *zap.SugaredLogger
-	kafkaClient *kafka.KafkaClient
-	errChan     chan error
-	compare     *Compare
+	ctx          context.Context
+	log          *zap.SugaredLogger
+	kafkaClient  *kafka.KafkaClient
+	kafkaErrChan chan error
+	compare      *Compare
 }
 
 // Close closes the kafka client.
@@ -68,12 +69,12 @@ func (worker *CompareGroup) Close() {
 func (worker *CompareGroup) Consume() {
 	for {
 		// timer := prometheus.NewTimer(compareProcessDuration.WithLabelValues("compare"))
-		// fetch the message from kafka topic
+		// read the message from kafka topic
 		m, err := worker.kafkaClient.Consumer.FetchMessage(worker.ctx)
 		if err != nil {
 			// at this point we don't have a message, as such we don't commit
 			// send the error to channel
-			worker.errChan <- errors.Wrap(err, "failed to fetch messages from kafka")
+			worker.kafkaErrChan <- errors.Wrap(err, "failed to fetch messages from kafka")
 			// go to next
 			continue
 		}
@@ -84,7 +85,7 @@ func (worker *CompareGroup) Consume() {
 			// mark message as read (commit)
 			worker.Commit(m)
 			// send the error to channel
-			worker.errChan <- errors.Wrap(err, "failed to unmarshall messages from kafka")
+			worker.kafkaErrChan <- errors.Wrap(err, "failed to unmarshall messages from kafka")
 			// go to next
 			continue
 		}
@@ -93,6 +94,10 @@ func (worker *CompareGroup) Consume() {
 
 		// test the article for similar
 		go worker.compare.FindAndCompare(msg.DocId, msg.Lang)
+		// if err := worker.compare.FindAndCompare(msg.DocId, msg.Lang); err != nil {
+		// 	worker.log.Errorf("[SCV-COMPARE] FAC: %s", err.Error())
+		// 	continue
+		// }
 
 		// mark message as read (commit)
 		worker.Commit(m)
@@ -103,7 +108,7 @@ func (worker *CompareGroup) Consume() {
 // Commit commits a message to the kafka topic.
 func (worker *CompareGroup) Commit(m kaf.Message) {
 	if err := worker.kafkaClient.Consumer.CommitMessages(worker.ctx, m); err != nil {
-		worker.errChan <- errors.Wrap(err, "failed to commit messages to kafka")
+		worker.kafkaErrChan <- errors.Wrap(err, "failed to commit messages to kafka")
 	}
 }
 
@@ -111,14 +116,14 @@ func (worker *CompareGroup) Commit(m kaf.Message) {
 func NewCompareGroup(
 	log *zap.SugaredLogger,
 	kafkaClient *kafka.KafkaClient,
-	errChan chan error,
+	kafkaErrChan chan error,
 	compare *Compare,
 ) *CompareGroup {
 	return &CompareGroup{
 		context.Background(),
 		log,
 		kafkaClient,
-		errChan,
+		kafkaErrChan,
 		compare,
 	}
 }
@@ -162,6 +167,12 @@ func main() {
 	log.Info("[SVC-COMPARE] Connected to Neo4J")
 	defer neoClient.Client.Close()
 
+	// ========================================
+	// Blocking main listening for requests
+	// Make a channel to listen for errors coming from the listener. Use a
+	// buffered channel so the goroutine can exit if we don't collect this error.
+	errSingals := make(chan error, 1)
+
 	// Create compare struct
 	compareCLient := new(Compare)
 	compareCLient.es = esClient
@@ -169,6 +180,7 @@ func main() {
 	compareCLient.log = log
 	compareCLient.cfg = cfg
 	compareCLient.neoClient = neoClient
+	compareCLient.serviceErrChan = errSingals
 
 	// ========================================
 	// Create a registry and a web server for prometheus metrics
@@ -209,12 +221,6 @@ func main() {
 		worker.Consume()
 	}()
 
-	// ========================================
-	// Blocking main listening for requests
-	// Make a channel to listen for errors coming from the listener. Use a
-	// buffered channel so the goroutine can exit if we don't collect this error.
-	// errSingals := make(chan error, 1)
-
 	// api will be our http.Server
 	// promHandler := http.Server{
 	// 	Addr:           cfg.GetPrometheusURL(),
@@ -241,9 +247,10 @@ func main() {
 		case err := <-kafkaChan:
 			log.Errorf("[SVC-COMPARE] error from kafka: %s", err.Error())
 
-		// case err := <-errSingals:
-		// 	log.Errorf("[SVC-COMPARE] gRPC Server Error: %s", err.Error())
-		// 	os.Exit(1)
+		case err := <-errSingals:
+			// most probably the service is dead, restart and initialize the service
+			log.Errorf("[SVC-COMPARE] Service Error: %s", err.Error())
+			os.Exit(1)
 
 		case s := <-osSignals:
 			log.Fatalf("[SVC-COMPARE] gRPC Server shutdown signal: %s", s)
@@ -268,9 +275,9 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 	// source, err := article.Get(context.Background(), c.es, id)
 	source, err := article.GetById(context.Background(), c.es, c.index+"_"+strings.ToLower(lang), id)
 	if err != nil {
-		// in very rare occasions the document is missing
-		c.log.Debugf("[SVC-COMPARE] failed to get document: %s", err.Error())
-		return errors.Wrap(err, "failed to get document")
+		// in very rare occasions the document is missing, but we should not restart the service here
+		c.log.Errorf("[SVC-COMPARE] failed to get document: %s", err.Error())
+		return err
 	}
 
 	// in some occasions the article is too small or there was a problem while
@@ -296,8 +303,9 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 
 	total, err := article.Count(context.Background(), c.es, opts)
 	if err != nil {
-		c.log.Errorf("[SVC-COMPARE] Error counting total potential similar %s", err.Error())
-		return errors.Wrap(err, "failed to get potential similar")
+		c.log.Errorf("[SVC-COMPARE] Error counting total potential similar: %s", err.Error())
+		c.serviceErrChan <- err
+		return err
 	}
 
 	if total == 0 {
@@ -316,6 +324,7 @@ func (c Compare) FindAndCompare(id string, lang string) error {
 
 	articles, err := article.Search(context.Background(), c.es, opts)
 	if err != nil {
+		c.log.Errorf("[SVC-COMPARE] Error retrieving articles: %s", err.Error())
 		return err
 	}
 
