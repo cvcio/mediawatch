@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -119,31 +118,6 @@ func main() {
 	defer worker.Close()
 
 	// ============================================================
-	// Proxy HTTP Client
-	// ============================================================
-	proxyClient := &http.Client{Timeout: 60 * time.Second}
-	if cfg.Proxy.Enabled {
-		proxy := &url.URL{
-			Scheme: "http",
-			Host:   cfg.GetProxyURL(),
-		}
-
-		if cfg.Proxy.UserName != "" && cfg.Proxy.Password != "" {
-			proxy.User = url.UserPassword(cfg.Proxy.UserName, cfg.Proxy.Password)
-		}
-
-		proxyClient.Transport = &http.Transport{Proxy: http.ProxyURL(proxy)}
-		test, err := proxyClient.Get("http://ip-api.com")
-		if err != nil {
-			proxyClient = nil
-			log.Warnf("Disabling proxy due to error: %s", err)
-		}
-		log.Debugf("Proxy Status: %s", test.Status)
-	} else {
-		log.Debugf("Proxy Status: %s", "Disabled")
-	}
-
-	// ============================================================
 	// Prometheus
 	// ============================================================
 	// Create a registry and a web server for prometheus metrics
@@ -179,7 +153,7 @@ func main() {
 	targets := chunks(feeds, cfg.Streamer.Chunks)
 
 	// run the tickers
-	go tick(log, worker, rdb, proxyClient, done, targets, cfg.Streamer.Init, cfg.Streamer.Interval)
+	go tick(cfg, log, worker, rdb, done, targets, cfg.Streamer.Init, cfg.Streamer.Interval)
 
 	// ============================================================
 	// Set Channels
@@ -238,11 +212,11 @@ func main() {
 	}
 }
 
-func tick(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxyClient *http.Client, done chan bool, targets [][]*feedsv2.Feed, init bool, interval time.Duration) {
+func tick(cfg *config.Config, log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, done chan bool, targets [][]*feedsv2.Feed, init bool, interval time.Duration) {
 	// delay := interval / time.Duration(math.Ceil(float64(len(targets))/100))
 	// delay := time.Second * time.Duration(len(targets))
 	for _, v := range targets {
-		ticker := NewTicker(log, worker, rdb, proxyClient, done, v, init, interval)
+		ticker := NewTicker(cfg, log, worker, rdb, done, v, init, interval)
 		go ticker.Tick()
 		time.Sleep(time.Second * time.Duration(len(v)*2))
 	}

@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"sort"
 	"time"
 
 	"github.com/cvcio/mediawatch/models/link"
+	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/helper"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/redis"
@@ -18,10 +20,10 @@ import (
 )
 
 type Ticker struct {
+	cfg      *config.Config
 	log      *zap.SugaredLogger
 	worker   *ListenGroup
 	rdb      *redis.RedisClient
-	proxy    *http.Client
 	ticker   time.Ticker
 	done     chan bool
 	targets  []*feedsv2.Feed
@@ -36,18 +38,45 @@ type CacheLast struct {
 	LastArticleLink string    `json:"last_article_link"`
 }
 
-func NewTicker(log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, proxy *http.Client, done chan bool, targets []*feedsv2.Feed, init bool, interval time.Duration) *Ticker {
+func NewTicker(cfg *config.Config, log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, done chan bool, targets []*feedsv2.Feed, init bool, interval time.Duration) *Ticker {
 	return &Ticker{
+		cfg:      cfg,
 		log:      log,
 		worker:   worker,
 		rdb:      rdb,
-		proxy:    proxy,
 		ticker:   *time.NewTicker(interval),
 		done:     done,
 		targets:  targets,
 		init:     init,
 		interval: interval,
 	}
+}
+
+func (ticker *Ticker) GetProxy(u ...string) *http.Client {
+	// ============================================================
+	// Proxy HTTP Client
+	// ============================================================
+	proxyClient := &http.Client{Timeout: 30 * time.Second}
+	if ticker.cfg.Proxy.Enabled {
+		proxyList := ticker.cfg.GetProxyList()
+		proxy := &url.URL{Scheme: "http", Host: proxyList[rand.Intn(len(proxyList))]}
+		if ticker.cfg.Proxy.UserName != "" && ticker.cfg.Proxy.Password != "" {
+			proxy.User = url.UserPassword(ticker.cfg.Proxy.UserName, ticker.cfg.Proxy.Password)
+		}
+
+		proxyClient.Transport = &http.Transport{Proxy: http.ProxyURL(proxy)}
+		// test, err := proxyClient.Get("http://ip-api.com")
+		// if err != nil {
+		// 	proxyClient = nil
+		// 	ticker.log.Warnf("Disabling proxy due to error: %s", err)
+		// }
+		// ticker.log.Debugf("Proxy Status: %s", test.Status)
+		ticker.log.Debugf("Execute with proxy: %s : %s", proxy.Host, u)
+	} else {
+		ticker.log.Debugf("Proxy Status: %s", "Disabled")
+	}
+
+	return proxyClient
 }
 
 func (ticker *Ticker) Fetch() {
@@ -62,11 +91,12 @@ func (ticker *Ticker) Fetch() {
 			continue
 		}
 		parser := gofeed.NewParser()
-		// TODO: Find a way to use a proxy for the reqursts, without getting back too many 403s. Using Tor works, but with too many errors.
-		if v.Stream.RequiresProxy && ticker.proxy != nil {
-			parser.Client = ticker.proxy
+		if v.Stream.RequiresProxy {
+			parser.Client = ticker.GetProxy(v.Stream.StreamTarget)
 		}
-		parser.UserAgent = helper.RandomUserAgent() // "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" // "MediaWatch Bot/3.0 (mediawatch.io)"
+
+		// "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" // "MediaWatch Bot/3.0 (mediawatch.io)"
+		parser.UserAgent = helper.RandomUserAgent()
 
 		// parse feed
 		data, err := parser.ParseURL(v.Stream.StreamTarget)
