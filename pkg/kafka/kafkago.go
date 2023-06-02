@@ -4,7 +4,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/segmentio/kafka-go"
 	kaf "github.com/segmentio/kafka-go"
 )
 
@@ -47,9 +46,9 @@ func NewConsumer(brokers []string, topic string, group string, oldest bool) *kaf
 		Brokers:  brokers,
 		Topic:    topic,
 		GroupID:  group,
-		MinBytes: 5,
-		MaxBytes: 10e6,
-		MaxWait:  2 * time.Second,
+		MinBytes: 1,
+		MaxBytes: 1e5,
+		MaxWait:  3 * time.Second,
 	})
 }
 
@@ -60,9 +59,9 @@ func NewProducer(brokers []string, topic string) *kaf.Writer {
 		Topic:                  topic,
 		AllowAutoTopicCreation: true,
 		BatchSize:              1,
-		BatchTimeout:           10 * time.Millisecond,
-		Balancer:               &kafka.LeastBytes{},
-		// RequiredAcks:           -1,
+		BatchTimeout:           2 * time.Second,
+		Balancer:               &kaf.LeastBytes{},
+		RequiredAcks:           1,
 	}
 }
 

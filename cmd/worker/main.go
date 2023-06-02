@@ -79,6 +79,11 @@ func (worker *WorkerGroup) ArticleExists(url string) bool {
 	return exists
 }
 
+func (worker *WorkerGroup) TimeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	worker.log.Debugf("%s: %s", name, elapsed)
+}
+
 // Consume consumes kafka topics inside an infinite loop. In our logic we need
 // to fetch a message from a topic (FetcMessage), parse the json (Unmarshal)
 // and process the content (articleProcess) if it doesn't already exists.
@@ -87,6 +92,7 @@ func (worker *WorkerGroup) ArticleExists(url string) bool {
 // for some reason).
 func (worker *WorkerGroup) Consume() {
 	for {
+		now := time.Now()
 		// timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("worker"))
 		//
 		// fetch the message from kafka topic
@@ -159,6 +165,8 @@ func (worker *WorkerGroup) Consume() {
 		// mark message as read (commit)
 		worker.Commit(m)
 		// timer.ObserveDuration()
+
+		worker.TimeTrack(now, "CONSUME-TIME")
 	}
 }
 
@@ -401,12 +409,13 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 
 	// =========================================================================
 	// timer := prometheus.NewTimer(grpcDuration.WithLabelValues("scraper"))
+	scrapeTime := time.Now()
 
 	// =========================================================================
 	// Create the gRPC service clients
 	// Parse Server Options
 	var grpcOptions []grpc.DialOption
-	grpcOptions = append(grpcOptions, grpc.WithInsecure())
+	grpcOptions = append(grpcOptions, grpc.WithInsecure(), grpc.WithTimeout(30*time.Second))
 
 	// Create gRPC Scrape Connection
 	scrapeGRPC, err := grpc.Dial(worker.scrapeHost, grpcOptions...)
@@ -437,7 +446,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		return errors.Wrap(err, "scrape error")
 	}
 	// timer.ObserveDuration()
-
+	worker.TimeTrack(scrapeTime, "SCRAPE-TIME")
 	worker.log.Debugf("SCRAPED: %s - %s", f.Hostname, in.Url)
 
 	// set scraped data to content
@@ -462,7 +471,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 
 	// =========================================================================
 	// timer = prometheus.NewTimer(grpcDuration.WithLabelValues("enrich"))
-
+	enrichTime := time.Now()
 	// enrich client
 	// Create gRPC Enrich Connection
 	enrichGRPC, err := grpc.Dial(worker.ernrichHost, grpcOptions...)
@@ -487,6 +496,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		return errors.Wrap(err, "enrich error")
 	}
 
+	worker.TimeTrack(enrichTime, "ENRICH-TIME")
 	worker.log.Debugf("ENRICH:  %s - %s", f.Hostname, in.Url)
 
 	// set enriched data to nlp
@@ -501,6 +511,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// timer.ObserveDuration()
 
 	// =========================================================================
+	indexTime := time.Now()
 	// Save the Document to Elasticsearch
 	data, err := json.Marshal(a)
 	if err != nil {
@@ -523,9 +534,11 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		return errors.New(index.String())
 	}
 	index.Body.Close()
+	worker.TimeTrack(indexTime, "INDEX-TIME")
 	worker.log.Debugf("INDEXED: %s - %s", f.Hostname, in.Url)
 
 	// =========================================================================
+	saveTime := time.Now()
 	// Create a new nodeAuthor if not exist for each Atuhor extracted
 	// by svc-scraper service and return the uid
 	var entities []*relationships.NodeEntity
@@ -585,16 +598,19 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, fUID, "PUBLISHED_AT")
 	}
 	for _, entity := range entities {
-		if entity.Type == "author" {
-			go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, nArticle.DocId, "AUTHOR_OF")
-			if fUID != "" {
-				// writes for
-				go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, fUID, "WRITES_FOR")
-			}
-		} else if entity.Type == "topic" {
+		// if entity.Type == "author" {
+		// 	go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, nArticle.DocId, "AUTHOR_OF")
+		// 	if fUID != "" {
+		// 		// writes for
+		// 		go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, fUID, "WRITES_FOR")
+		// 	}
+		// } else
+		if entity.Type == "topic" {
 			go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
 		}
 	}
+
+	worker.TimeTrack(saveTime, "SAVE-TIME")
 
 	// marshal node article
 	b, err := json.Marshal(nArticle)
@@ -606,7 +622,6 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// write node article as a new message in the compare topic, so we can process it
 	// using the compare microservice.
 	go worker.Produce(kaf.Message{Value: []byte(b)})
-
 	worker.log.Infof("SAVED: %s - %s", f.Hostname, resNeo)
 
 	return nil

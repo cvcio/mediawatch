@@ -60,7 +60,7 @@ var nodeFeedTpl = `
 	RETURN n.uid
 `
 var nodeArticleTpl = `
-	MERGE (n:Article {
+	CREATE (n:Article {
 		uid: $uid, 
 		doc_id: $doc_id,
 		lang: $lang,
@@ -70,7 +70,6 @@ var nodeArticleTpl = `
 		published_at: datetime($published_at),
 		hostname: $hostname
 	})
-	ON CREATE SET n.uid = $uid
 	RETURN n.uid
 `
 var publishedAtTpl = `

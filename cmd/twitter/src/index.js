@@ -73,6 +73,7 @@ const produce = async (msg) => {
 					value: JSON.stringify(msg)
 				},
 			],
+			acks: 0
 		});
 
 		logger.info(`New Tweet: ${msg.user_name} ${msg.url}`);

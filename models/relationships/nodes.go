@@ -93,7 +93,7 @@ func MergeNodeEntity(ctx context.Context, neoClient *neo.Neo, label string, enti
 // createNodeArticle transaction function.
 func createNodeArticle(article *NodeArticle) neo4j.TransactionWork {
 	return func(tx neo4j.Transaction) (interface{}, error) {
-		result, err := tx.Run(nodeArticleTpl, map[string]interface{}{
+		_, err := tx.Run(nodeArticleTpl, map[string]interface{}{
 			"uid":          article.DocId,
 			"doc_id":       article.DocId,
 			"lang":         article.Lang,
@@ -108,11 +108,12 @@ func createNodeArticle(article *NodeArticle) neo4j.TransactionWork {
 			return nil, err
 		}
 
-		if result.Next() {
-			return result.Record().Values[0], nil
-		}
+		// if result.Next() {
+		// 	return result.Record().Values[0], nil
+		// }
 
-		return nil, fmt.Errorf("article %s record didn't create: %s", article.DocId, result.Err().Error())
+		// return nil, fmt.Errorf("article %s record didn't create: %s", article.DocId, result.Err().Error())
+		return article.DocId, nil
 	}
 }
 
