@@ -415,7 +415,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// Create the gRPC service clients
 	// Parse Server Options
 	var grpcOptions []grpc.DialOption
-	grpcOptions = append(grpcOptions, grpc.WithInsecure(), grpc.WithTimeout(30*time.Second))
+	grpcOptions = append(grpcOptions, grpc.WithInsecure(), grpc.WithTimeout(60*time.Second))
 
 	// Create gRPC Scrape Connection
 	scrapeGRPC, err := grpc.Dial(worker.scrapeHost, grpcOptions...)

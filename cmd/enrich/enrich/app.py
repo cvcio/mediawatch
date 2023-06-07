@@ -115,12 +115,12 @@ class Model:
             use_fast=True,
             truncate=True,
             max_length=512,
-            use_auth_token=os.environ["HUGGINGFACES_API_TOKEN"],
+            use_auth_token=True
         )
         # text-calssification model
         classifier = AutoModelForSequenceClassification.from_pretrained(
             self.model.classifier,
-            use_auth_token=os.environ["HUGGINGFACES_API_TOKEN"],
+            use_auth_token=True
         )
 
         return (
