@@ -14,7 +14,6 @@ import (
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/kafka"
 	"github.com/cvcio/mediawatch/pkg/logger"
-	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/kelseyhightower/envconfig"
@@ -130,7 +129,7 @@ func main() {
 		dbConn,
 		feed.Limit(cfg.Streamer.Size),
 		feed.Lang(strings.ToUpper(cfg.Streamer.Lang)),
-		feed.StreamType(int(commonv2.StreamType_STREAM_TYPE_RSS)),
+		// feed.StreamType(int(commonv2.StreamType_STREAM_TYPE_RSS)),
 	)
 	if err != nil {
 		log.Fatalf("error getting feeds list: %v", err)
@@ -237,12 +236,17 @@ func chunks(feeds []*feedsv2.Feed, size int) [][]*feedsv2.Feed {
 func filter(feeds []*feedsv2.Feed) []*feedsv2.Feed {
 	var f []*feedsv2.Feed
 	for _, v := range feeds {
-		if v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_AUTO &&
-			v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_MUSIC &&
-			v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_ENTERTAINMENT &&
-			v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_SPORTS {
+		if v.Stream.StreamType == 1 || v.Stream.StreamType == 3 {
 			f = append(f, v)
 		}
+		// if v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_AUTO &&
+		// 	v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_MUSIC &&
+		// 	v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_ENTERTAINMENT &&
+		// 	v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_SPORTS {
+		// 	f = append(f, v)
+		// }
+		// if v.Hostname == "efsyn.gr" {
+		// }
 	}
 	return f
 }

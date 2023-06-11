@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"math/rand"
 	"net/http"
@@ -11,8 +12,10 @@ import (
 	"github.com/cvcio/mediawatch/models/link"
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/helper"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/redis"
+	"github.com/cvcio/mediawatch/pkg/targets"
 	"github.com/google/uuid"
 	"github.com/mmcdole/gofeed"
 	"github.com/segmentio/kafka-go"
@@ -90,30 +93,57 @@ func (ticker *Ticker) Fetch() {
 		if status, _ := ticker.rdb.Get("feed:status:" + v.Id); status == "offline" {
 			continue
 		}
-		parser := gofeed.NewParser()
-		if v.Stream.RequiresProxy {
-			parser.Client = ticker.GetProxy(v.Stream.StreamTarget)
-		}
-
 		// "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" // "MediaWatch Bot/3.0 (mediawatch.io)"
-		parser.UserAgent = helper.RandomUserAgent()
+		userAgent := helper.RandomUserAgent()
+		var slice []*gofeed.Item
 
-		// parse feed
-		data, err := parser.ParseURL(v.Stream.StreamTarget)
-		if err != nil {
-			// TODO: Investigate how often this happens
-			// TODO: Add prometheus metrics with error codes per feed
-			ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
-			ticker.log.Errorf("Error parsing RSS feed for: (%s) - %s", v.Hostname, err.Error())
-			continue
+		if v.Stream.StreamType == commonv2.StreamType_STREAM_TYPE_TWITTER {
+			parser := gofeed.NewParser()
+			if v.Stream.RequiresProxy {
+				parser.Client = ticker.GetProxy(v.Stream.StreamTarget)
+			}
+			parser.UserAgent = userAgent
+
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			// parse feed
+			data, err := parser.ParseURLWithContext(v.Stream.StreamTarget, ctx)
+			if err != nil {
+				// TODO: Investigate how often this happens
+				// TODO: Add prometheus metrics with error codes per feed
+				ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
+				ticker.log.Errorf("Error parsing RSS feed for: (%s) - %s", v.Hostname, err.Error())
+				continue
+			}
+
+			if &data.Items == nil || len(data.Items) == 0 {
+				continue
+			}
+
+			// create a new slice with the feed items and sort by time published
+			slice = data.Items
+		} else if v.Stream.StreamType == commonv2.StreamType_STREAM_TYPE_OTHER {
+			if _, ok := targets.Targets[v.Hostname]; !ok {
+				continue
+			}
+
+			c := targets.Targets[v.Hostname]
+			data, err := targets.Get(c.(targets.Target))
+			if err != nil {
+				// TODO: Investigate how often this happens
+				// TODO: Add prometheus metrics with error codes per feed
+				ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
+				ticker.log.Errorf("Error parsing RSS feed for: (%s) - %s", v.Hostname, err.Error())
+				continue
+			}
+			if len(data) == 0 {
+				continue
+			}
+
+			slice = data
 		}
 
-		if &data.Items == nil || len(data.Items) == 0 {
-			continue
-		}
-
-		// create a new slice with the feed items and sort by time published
-		slice := data.Items
 		sort.Slice(slice, func(i, j int) bool {
 			if slice[i].PublishedParsed == nil || slice[j].PublishedParsed == nil {
 				return false
