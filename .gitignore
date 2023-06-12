@@ -45,3 +45,4 @@ plugins/
 dump.tar.gz
 node_modules
 dist
+*.env
