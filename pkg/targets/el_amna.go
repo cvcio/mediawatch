@@ -2,14 +2,17 @@ package targets
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mmcdole/gofeed"
 )
 
 // Ex. https://www.amna.gr/sport/article/737728/I-kardia-tou-Mpasket-tha-chtupa-sto-Irakleio-Kritisrn
-type AmnaGRItem struct {
+type El_Amna_Item struct {
 	Id        string `json:"id,omitempty"`
 	Title     string `json:"title,omitempty"`
 	Category  string `json:"parent_title,omitempty"`
@@ -19,9 +22,9 @@ type AmnaGRItem struct {
 	Kind      string `json:"kind,omitempty"`
 }
 
-type AmnaGR struct{}
+type El_Amna struct{}
 
-func (h AmnaGR) Get() ([]*gofeed.Item, error) {
+func (h El_Amna) ParseList(client *http.Client) ([]*gofeed.Item, error) {
 	r, err := http.Get("https://www.amna.gr/feeds/getfolder.php?id=46&infolevel=INTERMEDIATE&offset=0&numrows=30&kind=article&byrole=false&subfolders=true&order=[[%22c_timestamp%22,%22desc%22]]&exclude=")
 	if err != nil {
 		return nil, err
@@ -29,7 +32,11 @@ func (h AmnaGR) Get() ([]*gofeed.Item, error) {
 
 	defer r.Body.Close()
 
-	var res []*AmnaGRItem
+	if r.StatusCode != 200 {
+		return nil, errors.New(fmt.Sprintf("Failed with code: %d", r.StatusCode))
+	}
+
+	var res []*El_Amna_Item
 	if err := json.NewDecoder(r.Body).Decode(&res); err != nil {
 		return nil, err
 	}
@@ -38,9 +45,9 @@ func (h AmnaGR) Get() ([]*gofeed.Item, error) {
 	loc, _ := time.LoadLocation("Europe/Athens")
 
 	for _, item := range res {
-		t, _ := time.ParseInLocation(time.DateTime, item.Published, loc)
+		t, _ := time.ParseInLocation(time.DateTime, strings.TrimSpace(item.Published), loc)
 		list = append(list, &gofeed.Item{
-			Title:           item.Title,
+			Title:           strings.TrimSpace(item.Title),
 			Published:       t.Format(time.RFC3339),
 			PublishedParsed: &t,
 			Link:            "https://www.amna.gr/feeds/getarticle.php?id=" + item.Id,
