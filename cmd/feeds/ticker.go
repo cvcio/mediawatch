@@ -3,10 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"math/rand"
-	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/cvcio/mediawatch/models/link"
@@ -14,6 +13,7 @@ import (
 	"github.com/cvcio/mediawatch/pkg/helper"
 	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
+	"github.com/cvcio/mediawatch/pkg/proxy"
 	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/cvcio/mediawatch/pkg/targets"
 	"github.com/google/uuid"
@@ -55,33 +55,6 @@ func NewTicker(cfg *config.Config, log *zap.SugaredLogger, worker *ListenGroup, 
 	}
 }
 
-func (ticker *Ticker) GetProxy(u ...string) *http.Client {
-	// ============================================================
-	// Proxy HTTP Client
-	// ============================================================
-	proxyClient := &http.Client{Timeout: 30 * time.Second}
-	if ticker.cfg.Proxy.Enabled {
-		proxyList := ticker.cfg.GetProxyList()
-		proxy := &url.URL{Scheme: "http", Host: proxyList[rand.Intn(len(proxyList))]}
-		if ticker.cfg.Proxy.UserName != "" && ticker.cfg.Proxy.Password != "" {
-			proxy.User = url.UserPassword(ticker.cfg.Proxy.UserName, ticker.cfg.Proxy.Password)
-		}
-
-		proxyClient.Transport = &http.Transport{Proxy: http.ProxyURL(proxy)}
-		// test, err := proxyClient.Get("http://ip-api.com")
-		// if err != nil {
-		// 	proxyClient = nil
-		// 	ticker.log.Warnf("Disabling proxy due to error: %s", err)
-		// }
-		// ticker.log.Debugf("Proxy Status: %s", test.Status)
-		ticker.log.Debugf("Execute with proxy: %s : %s", proxy.Host, u)
-	} else {
-		ticker.log.Debugf("Proxy Status: %s", "Disabled")
-	}
-
-	return proxyClient
-}
-
 func (ticker *Ticker) Fetch() {
 	// delay := time.Duration((ticker.interval / time.Duration(math.Ceil(float64(len(ticker.targets))/100))) / 100)
 	for _, v := range ticker.targets {
@@ -97,10 +70,10 @@ func (ticker *Ticker) Fetch() {
 		userAgent := helper.RandomUserAgent()
 		var slice []*gofeed.Item
 
-		if v.Stream.StreamType == commonv2.StreamType_STREAM_TYPE_TWITTER {
+		if v.Stream.StreamType == commonv2.StreamType_STREAM_TYPE_RSS {
 			parser := gofeed.NewParser()
 			if v.Stream.RequiresProxy {
-				parser.Client = ticker.GetProxy(v.Stream.StreamTarget)
+				parser.Client = proxy.CreateProxy(ticker.cfg.GetProxyList(), ticker.cfg.Proxy.UserName, ticker.cfg.Proxy.Password)
 			}
 			parser.UserAgent = userAgent
 
@@ -124,12 +97,15 @@ func (ticker *Ticker) Fetch() {
 			// create a new slice with the feed items and sort by time published
 			slice = data.Items
 		} else if v.Stream.StreamType == commonv2.StreamType_STREAM_TYPE_OTHER {
-			if _, ok := targets.Targets[v.Hostname]; !ok {
+			if _, ok := targets.Targets[strings.TrimPrefix(v.Hostname, "www.")]; !ok {
 				continue
 			}
 
-			c := targets.Targets[v.Hostname]
-			data, err := targets.Get(c.(targets.Target))
+			c := targets.Targets[strings.TrimPrefix(v.Hostname, "www.")]
+			data, err := targets.ParseList(
+				proxy.CreateProxy(ticker.cfg.GetProxyList(), ticker.cfg.Proxy.UserName, ticker.cfg.Proxy.Password),
+				c.(targets.Target),
+			)
 			if err != nil {
 				// TODO: Investigate how often this happens
 				// TODO: Add prometheus metrics with error codes per feed

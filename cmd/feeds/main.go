@@ -14,6 +14,7 @@ import (
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/kafka"
 	"github.com/cvcio/mediawatch/pkg/logger"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/kelseyhightower/envconfig"
@@ -217,7 +218,7 @@ func tick(cfg *config.Config, log *zap.SugaredLogger, worker *ListenGroup, rdb *
 	for _, v := range targets {
 		ticker := NewTicker(cfg, log, worker, rdb, done, v, init, interval)
 		go ticker.Tick()
-		time.Sleep(time.Second * time.Duration(len(v)*2))
+		time.Sleep(time.Second * time.Duration(150))
 	}
 }
 
@@ -236,16 +237,16 @@ func chunks(feeds []*feedsv2.Feed, size int) [][]*feedsv2.Feed {
 func filter(feeds []*feedsv2.Feed) []*feedsv2.Feed {
 	var f []*feedsv2.Feed
 	for _, v := range feeds {
-		if v.Stream.StreamType == 1 || v.Stream.StreamType == 3 {
-			f = append(f, v)
+		if v.Stream.StreamStatus == commonv2.Status_STATUS_ACTIVE {
+			if v.Stream.StreamType == commonv2.StreamType_STREAM_TYPE_OTHER || v.Stream.StreamType == commonv2.StreamType_STREAM_TYPE_RSS {
+				f = append(f, v)
+			}
 		}
 		// if v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_AUTO &&
 		// 	v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_MUSIC &&
 		// 	v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_ENTERTAINMENT &&
 		// 	v.Meta.ContentType != commonv2.ContentType_CONTENT_TYPE_SPORTS {
 		// 	f = append(f, v)
-		// }
-		// if v.Hostname == "efsyn.gr" {
 		// }
 	}
 	return f
