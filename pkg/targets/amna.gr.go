@@ -35,15 +35,15 @@ func (h AmnaGR) Get() ([]*gofeed.Item, error) {
 	}
 
 	var list []*gofeed.Item
+	loc, _ := time.LoadLocation("Europe/Athens")
 
 	for _, item := range res {
-		t, _ := time.Parse(time.DateTime, item.Published)
+		t, _ := time.ParseInLocation(time.DateTime, item.Published, loc)
 		list = append(list, &gofeed.Item{
 			Title:           item.Title,
 			Published:       t.Format(time.RFC3339),
 			PublishedParsed: &t,
 			Link:            "https://www.amna.gr/feeds/getarticle.php?id=" + item.Id,
-			// Link:            "https://www.amna.gr/" + item.Note + "/" + item.Kind + "/" + item.Id + "/" + item.Path,
 		})
 	}
 
