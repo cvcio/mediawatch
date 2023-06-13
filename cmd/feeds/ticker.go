@@ -74,6 +74,8 @@ func (ticker *Ticker) Fetch() {
 			parser := gofeed.NewParser()
 			if v.Stream.RequiresProxy {
 				parser.Client = proxy.CreateProxy(ticker.cfg.GetProxyList(), ticker.cfg.Proxy.UserName, ticker.cfg.Proxy.Password)
+			} else {
+				parser.Client = proxy.CreateClient()
 			}
 			parser.UserAgent = userAgent
 

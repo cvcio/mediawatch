@@ -2,7 +2,7 @@ FROM golang:1.20.3-alpine3.16
 ARG version
 
 # Install certificates and git
-RUN apk add --update --no-cache ca-certificates git
+RUN apk add --update --no-cache ca-certificates git tzdata
 
 # Create and use a directory where our project will be build
 RUN mkdir -p /go/src/github.com/cvcio/mediawatch/
@@ -27,7 +27,7 @@ WORKDIR /go/src/github.com/cvcio/mediawatch/cmd/feeds/
 RUN GO111MODULE=on GOFLAGS=-mod=vendor CGO_ENABLED=0 GOOS=linux go build -v -ldflags "-X github.com/cvcio/mediawatch/cmd/feeds/main.version=$version" -a -installsuffix cgo -o feeds .
 
 FROM alpine:3.16
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /feeds/
 COPY --from=0 /go/src/github.com/cvcio/mediawatch/cmd/feeds .
 ENTRYPOINT ["/feeds/feeds"]
