@@ -12,10 +12,10 @@ import (
 	"github.com/mmcdole/gofeed"
 )
 
-type El_Tvxs struct{}
+type El_MoneyReview struct{}
 
-func (h El_Tvxs) ParseList(client *http.Client) ([]*gofeed.Item, error) {
-	url := "https://tvxs.gr/news/all"
+func (h El_MoneyReview) ParseList(client *http.Client) ([]*gofeed.Item, error) {
+	url := "https://www.moneyreview.gr/newsfeed/"
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -45,37 +45,26 @@ func (h El_Tvxs) ParseList(client *http.Client) ([]*gofeed.Item, error) {
 	var list []*gofeed.Item
 	loc, _ := time.LoadLocation("Europe/Athens")
 
-	collection := doc.Find("article.col2of3:not(:first-child)")
+	collection := doc.Find("article.post")
 	if collection.Size() == 0 {
 		return list, nil
 	}
 
 	collection.Each(func(i int, s *goquery.Selection) {
-		href, hok := s.Find("div.col1of3.trim-left-a a").Attr("href")
+		href, hok := s.Find("h2 a").Attr("href")
 		if !hok {
 			return
 		}
-		d1, dok := s.Find("time").Attr("datetime")
-		if !dok {
-			return
-		}
-		t1, err := time.ParseInLocation("2006-01-02 15:04", strings.TrimSpace(d1), loc)
+		datetime := s.Find("span.meta-date").Text()
+		t, err := time.ParseInLocation("02.01.2006 / 15:04", strings.TrimSpace(datetime), loc)
 		if err != nil {
 			return
 		}
-
-		d2 := s.Find("time").Text()
-		t2, err := time.ParseInLocation("15:04", strings.TrimSpace(d2), loc)
-		if err != nil {
-			return
-		}
-
-		t := time.Date(t1.Year(), t1.Month(), t1.Day(), t2.Hour(), t2.Minute(), 0, 0, loc)
 		item := &gofeed.Item{
-			Title:           strings.TrimSpace(s.Find("div.col1of3 h3").Text()),
+			Title:           strings.TrimSpace(s.Find("h2 a").Text()),
 			Published:       t.Format(time.RFC3339),
 			PublishedParsed: &t,
-			Link:            "https:" + href,
+			Link:            href,
 		}
 		list = append(list, item)
 	})

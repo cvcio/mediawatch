@@ -15,11 +15,13 @@ func ParseList(client *http.Client, t Target) ([]*gofeed.Item, error) {
 }
 
 var Targets = map[string]interface{}{
-	"amna.gr":    El_Amna{},
-	"news247.gr": El_News247{},
-	"pronews.gr": El_ProNews{},
-	"liberal.gr": El_Liberal{},
-	"lifo.gr":    El_Lifo{},
-	"efsyn.gr":   El_Efsyn{},
-	// "stoxos.gr":  El_Stoxos{},
+	"amna.gr":        El_Amna{},
+	"efsyn.gr":       El_Efsyn{},
+	"liberal.gr":     El_Liberal{},
+	"lifo.gr":        El_Lifo{},
+	"news247.gr":     El_News247{},
+	"pronews.gr":     El_ProNews{},
+	"moneyreview.gr": El_MoneyReview{},
+	"stoxos.gr":      El_Stoxos{},
+	"tvxs.gr":        El_Tvxs{},
 }

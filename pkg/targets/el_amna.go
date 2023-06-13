@@ -45,7 +45,7 @@ func (h El_Amna) ParseList(client *http.Client) ([]*gofeed.Item, error) {
 	loc, _ := time.LoadLocation("Europe/Athens")
 
 	for _, item := range res {
-		t, _ := time.ParseInLocation(time.DateTime, strings.TrimSpace(item.Published), loc)
+		t, _ := time.ParseInLocation(time.DateTime, item.Published, loc)
 		list = append(list, &gofeed.Item{
 			Title:           strings.TrimSpace(item.Title),
 			Published:       t.Format(time.RFC3339),
