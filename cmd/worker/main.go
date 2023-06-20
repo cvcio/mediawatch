@@ -49,6 +49,11 @@ var (
 		Help:       "Duration of consumer processing requests.",
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 	}, []string{"service"})
+
+	workerProcessErrors = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "consumer_process_errors_total",
+		Help: "Total number of consumer processing errors.",
+	}, []string{"service"})
 )
 
 // WorkerGroup struct.
@@ -368,6 +373,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	if in.Type == "twitter" {
 		tf, err := feed.GetByUserName(context.Background(), worker.dbConn, in.UserName)
 		if err != nil {
+			workerProcessErrors.WithLabelValues("feed not found").Inc()
 			worker.log.Errorf("Feed not found: %s", err.Error())
 			return errors.Wrap(err, "feed not found")
 		}
@@ -375,6 +381,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	} else if in.Type == "rss" {
 		tf, err := feed.GetByHostname(context.Background(), worker.dbConn, in.Hostname)
 		if err != nil {
+			workerProcessErrors.WithLabelValues("feed not found").Inc()
 			worker.log.Errorf("Feed not found: %s", err.Error())
 			return errors.Wrap(err, "feed not found")
 		}
@@ -383,6 +390,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 
 	// skip if offline
 	if f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
+		workerProcessErrors.WithLabelValues("feed offline").Inc()
 		worker.log.Debugf("SKIPPED: %s - %s", f.Hostname, in.Url)
 		return nil
 	}
@@ -390,6 +398,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// create a new node into the neo4j database, if not exists
 	fUID, err := relationships.MergeNodeFeed(worker.ctx, worker.neoClient, f)
 	if err != nil {
+		workerProcessErrors.WithLabelValues("merge feed error").Inc()
 		// if there is an error during feed node creation return an error
 		// as will not be able to associate the article with a feed.
 		worker.log.Errorf("Merge feed failed: %s", err.Error())
@@ -420,6 +429,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// Create gRPC Scrape Connection
 	scrapeGRPC, err := grpc.Dial(worker.scrapeHost, grpcOptions...)
 	if err != nil {
+		workerProcessErrors.WithLabelValues("scraper offline").Inc()
 		worker.log.Fatalf("GRPC Scrape did not connect: %v", err)
 	}
 	defer scrapeGRPC.Close()
@@ -441,6 +451,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// scrape the article
 	scrapeResp, err := scrape.Scrape(context.Background(), &scrapeReq)
 	if err != nil {
+		workerProcessErrors.WithLabelValues("scrape error").Inc()
 		// if there is an error while scraping, return.
 		worker.log.Errorf("Scrape error: %s", err.Error())
 		return errors.Wrap(err, "scrape error")
@@ -475,6 +486,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// Create gRPC Enrich Connection
 	enrichGRPC, err := grpc.Dial(worker.ernrichHost, grpcOptions...)
 	if err != nil {
+		workerProcessErrors.WithLabelValues("enrich offline").Inc()
 		worker.log.Fatalf("GRPC Enrich did not connect: %v", err)
 	}
 	defer enrichGRPC.Close()
@@ -490,6 +502,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// send to enrich
 	enrichResp, err := enrich.NLP(context.Background(), &enrichReq)
 	if err != nil {
+		workerProcessErrors.WithLabelValues("enrich error").Inc()
 		// TODO: check what to do here
 		worker.log.Errorf("Enrich error: %s", err.Error())
 		return errors.Wrap(err, "enrich error")
@@ -512,6 +525,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// Save the Document to Elasticsearch
 	data, err := json.Marshal(a)
 	if err != nil {
+		workerProcessErrors.WithLabelValues("json marshal error").Inc()
 		worker.log.Errorf("JSON marshal error: %s", err.Error())
 		return errors.Wrap(err, "json marshal error")
 	}
@@ -522,12 +536,14 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		worker.esClient.Client.Index.WithDocumentID(a.DocId),
 	)
 	if err != nil {
+		workerProcessErrors.WithLabelValues("index error").Inc()
 		worker.log.Errorf("Article indexing error: %s", err.Error())
 		return errors.Wrap(err, "index error")
 	}
 
 	// retrun on response error
 	if index.IsError() {
+		workerProcessErrors.WithLabelValues("index error").Inc()
 		return errors.New(index.String())
 	}
 	index.Body.Close()
@@ -543,6 +559,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	for _, author := range a.Content.Authors {
 		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, author, "author")
 		if err != nil {
+			workerProcessErrors.WithLabelValues("merge authors error").Inc()
 			worker.log.Errorf("Merge author error: %s", err.Error())
 			continue
 		}
@@ -556,6 +573,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	for _, topic := range a.Nlp.Topics {
 		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, topic.Text, "topic")
 		if err != nil {
+			workerProcessErrors.WithLabelValues("merge topics error").Inc()
 			worker.log.Errorf("Merge topic error: %s", err.Error())
 			continue
 		}
@@ -581,6 +599,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 
 	resNeo, err := relationships.CreateNodeArticle(worker.ctx, worker.neoClient, nArticle)
 	if err != nil {
+		workerProcessErrors.WithLabelValues("create node article error").Inc()
 		worker.log.Errorf("Merge article error: %s", err.Error())
 		if !strings.Contains(err.Error(), "already exists with label `Article`") {
 			// since the article exists we don't need to save it again
@@ -593,6 +612,8 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// Save relationships
 	// feed published at
 	if fUID != "" {
+		// disable lint for the error since we don't care about the response
+		// nolint:errcheck
 		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, fUID, "PUBLISHED_AT")
 	}
 	for _, entity := range entities {
@@ -604,6 +625,8 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		// 	}
 		// } else
 		if entity.Type == "topic" {
+			// disable lint for the error since we don't care about the response
+			// nolint:errcheck
 			go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
 		}
 	}
@@ -613,6 +636,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// marshal node article
 	b, err := json.Marshal(nArticle)
 	if err != nil {
+		workerProcessErrors.WithLabelValues("marshal article error").Inc()
 		worker.log.Errorf("Marshal article to message error: %s", err.Error())
 		return err
 	}
