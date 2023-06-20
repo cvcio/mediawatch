@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -17,6 +18,9 @@ import (
 	scrape_pb "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
@@ -33,19 +37,19 @@ import (
 	kaf "github.com/segmentio/kafka-go"
 )
 
-// var (
-// 	grpcDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
-// 		Name:       "grpc_response_time_seconds",
-// 		Help:       "Duration of GRPC requests.",
-// 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-// 	}, []string{"service"})
+var (
+	grpcDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
+		Name:       "grpc_response_time_seconds",
+		Help:       "Duration of GRPC requests.",
+		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+	}, []string{"service"})
 
-// 	workerProcessDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
-// 		Name:       "consumer_process_duration_seconds",
-// 		Help:       "Duration of consumer processing requests.",
-// 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-// 	}, []string{"service"})
-// )
+	workerProcessDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
+		Name:       "consumer_process_duration_seconds",
+		Help:       "Duration of consumer processing requests.",
+		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+	}, []string{"service"})
+)
 
 // WorkerGroup struct.
 type WorkerGroup struct {
@@ -92,8 +96,7 @@ func (worker *WorkerGroup) TimeTrack(start time.Time, name string) {
 // for some reason).
 func (worker *WorkerGroup) Consume() {
 	for {
-		now := time.Now()
-		// timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("worker"))
+		timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("worker"))
 		//
 		// fetch the message from kafka topic
 		m, err := worker.kafkaClient.Consumer.FetchMessage(worker.ctx)
@@ -164,9 +167,7 @@ func (worker *WorkerGroup) Consume() {
 
 		// mark message as read (commit)
 		worker.Commit(m)
-		// timer.ObserveDuration()
-
-		worker.TimeTrack(now, "CONSUME-TIME")
+		timer.ObserveDuration()
 	}
 }
 
@@ -295,28 +296,28 @@ func main() {
 	// Blocking main listening for requests
 	// Make a channel to listen for errors coming from the listener. Use a
 	// buffered channel so the goroutine can exit if we don't collect this error.
-	// errSingals := make(chan error, 1)
+	errSingals := make(chan error, 1)
 
 	// ========================================
 	// Create a registry and a web server for prometheus metrics
-	// registry := prometheus.NewRegistry()
-	// registry.MustRegister(grpcDuration)
-	// registry.MustRegister(workerProcessDuration)
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(grpcDuration)
+	registry.MustRegister(workerProcessDuration)
 
 	// create a prometheus http.Server
-	// promHandler := http.Server{
-	// 	Addr:           cfg.GetPrometheusURL(),
-	// 	Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
-	// 	ReadTimeout:    cfg.Prometheus.ReadTimeout,
-	// 	WriteTimeout:   cfg.Prometheus.WriteTimeout,
-	// 	MaxHeaderBytes: 1 << 20,
-	// }
+	promHandler := http.Server{
+		Addr:           cfg.GetPrometheusURL(),
+		Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
+		ReadTimeout:    cfg.Prometheus.ReadTimeout,
+		WriteTimeout:   cfg.Prometheus.WriteTimeout,
+		MaxHeaderBytes: 1 << 20,
+	}
 
 	// ========================================
 	// Start the http service for prometheus
-	// go func() {
-	// 	errSingals <- promHandler.ListenAndServe()
-	// }()
+	go func() {
+		errSingals <- promHandler.ListenAndServe()
+	}()
 
 	// ========================================
 	// Shutdown
@@ -334,20 +335,20 @@ func main() {
 			log.Errorf("Error from kafka: %s", err.Error())
 			continue
 
-		// case err := <-errSingals:
-		// 	log.Errorf("Error: %s", err.Error())
-		// 	os.Exit(1)
+		case err := <-errSingals:
+			log.Errorf("Error: %s", err.Error())
+			os.Exit(1)
 
 		case s := <-osSignals:
-			log.Fatalf("Worker shutdown signal: %s", s)
+			log.Debugf("Worker shutdown signal: %s", s)
 
 			// Asking prometheus to shutdown and load shed.
-			// if err := promHandler.Shutdown(context.Background()); err != nil {
-			// 	log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
-			// 	if err := promHandler.Close(); err != nil {
-			// 		log.Fatalf("Could not stop http server: %v", err)
-			// 	}
-			// }
+			if err := promHandler.Shutdown(context.Background()); err != nil {
+				log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
+				if err := promHandler.Close(); err != nil {
+					log.Fatalf("Could not stop http server: %v", err)
+				}
+			}
 		}
 	}
 }
@@ -408,8 +409,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	a.CrawledAt = in.CreatedAt
 
 	// =========================================================================
-	// timer := prometheus.NewTimer(grpcDuration.WithLabelValues("scraper"))
-	scrapeTime := time.Now()
+	timer := prometheus.NewTimer(grpcDuration.WithLabelValues("scraper"))
 
 	// =========================================================================
 	// Create the gRPC service clients
@@ -445,8 +445,8 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		worker.log.Errorf("Scrape error: %s", err.Error())
 		return errors.Wrap(err, "scrape error")
 	}
-	// timer.ObserveDuration()
-	worker.TimeTrack(scrapeTime, "SCRAPE-TIME")
+
+	timer.ObserveDuration()
 	worker.log.Debugf("SCRAPED: %s - %s", f.Hostname, in.Url)
 
 	// set scraped data to content
@@ -470,8 +470,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	}
 
 	// =========================================================================
-	// timer = prometheus.NewTimer(grpcDuration.WithLabelValues("enrich"))
-	enrichTime := time.Now()
+	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("enrich"))
 	// enrich client
 	// Create gRPC Enrich Connection
 	enrichGRPC, err := grpc.Dial(worker.ernrichHost, grpcOptions...)
@@ -496,7 +495,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		return errors.Wrap(err, "enrich error")
 	}
 
-	worker.TimeTrack(enrichTime, "ENRICH-TIME")
+	timer.ObserveDuration()
 	worker.log.Debugf("ENRICH:  %s - %s", f.Hostname, in.Url)
 
 	// set enriched data to nlp
@@ -508,10 +507,8 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	a.Nlp.Claims = enrichResp.Data.Nlp.Claims
 	a.Nlp.Entities = enrichResp.Data.Nlp.Entities
 
-	// timer.ObserveDuration()
-
 	// =========================================================================
-	indexTime := time.Now()
+	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("enrich"))
 	// Save the Document to Elasticsearch
 	data, err := json.Marshal(a)
 	if err != nil {
@@ -534,11 +531,12 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		return errors.New(index.String())
 	}
 	index.Body.Close()
-	worker.TimeTrack(indexTime, "INDEX-TIME")
+
+	timer.ObserveDuration()
 	worker.log.Debugf("INDEXED: %s - %s", f.Hostname, in.Url)
 
 	// =========================================================================
-	saveTime := time.Now()
+	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("save"))
 	// Create a new nodeAuthor if not exist for each Atuhor extracted
 	// by svc-scraper service and return the uid
 	var entities []*relationships.NodeEntity
@@ -610,7 +608,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		}
 	}
 
-	worker.TimeTrack(saveTime, "SAVE-TIME")
+	timer.ObserveDuration()
 
 	// marshal node article
 	b, err := json.Marshal(nArticle)
