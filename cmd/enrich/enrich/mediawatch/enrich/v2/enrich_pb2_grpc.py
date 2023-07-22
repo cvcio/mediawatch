@@ -2,7 +2,9 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from mediawatch.enrich.v2 import enrich_pb2 as mediawatch_dot_enrich_dot_v2_dot_enrich__pb2
+from mediawatch.enrich.v2 import (
+    enrich_pb2 as mediawatch_dot_enrich_dot_v2_dot_enrich__pb2,
+)
 
 
 class EnrichServiceStub(object):
@@ -15,45 +17,45 @@ class EnrichServiceStub(object):
             channel: A grpc.Channel.
         """
         self.NLP = channel.unary_unary(
-                '/mediawatch.enrich.v2.EnrichService/NLP',
-                request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
-                response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-                )
+            "/mediawatch.enrich.v2.EnrichService/NLP",
+            request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
+            response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
+        )
         self.StopWords = channel.unary_unary(
-                '/mediawatch.enrich.v2.EnrichService/StopWords',
-                request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
-                response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-                )
+            "/mediawatch.enrich.v2.EnrichService/StopWords",
+            request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
+            response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
+        )
         self.Keywords = channel.unary_unary(
-                '/mediawatch.enrich.v2.EnrichService/Keywords',
-                request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
-                response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-                )
+            "/mediawatch.enrich.v2.EnrichService/Keywords",
+            request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
+            response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
+        )
         self.Entities = channel.unary_unary(
-                '/mediawatch.enrich.v2.EnrichService/Entities',
-                request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
-                response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-                )
+            "/mediawatch.enrich.v2.EnrichService/Entities",
+            request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
+            response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
+        )
         self.Summary = channel.unary_unary(
-                '/mediawatch.enrich.v2.EnrichService/Summary',
-                request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
-                response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-                )
+            "/mediawatch.enrich.v2.EnrichService/Summary",
+            request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
+            response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
+        )
         self.Topics = channel.unary_unary(
-                '/mediawatch.enrich.v2.EnrichService/Topics',
-                request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
-                response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-                )
+            "/mediawatch.enrich.v2.EnrichService/Topics",
+            request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
+            response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
+        )
         self.Quotes = channel.unary_unary(
-                '/mediawatch.enrich.v2.EnrichService/Quotes',
-                request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
-                response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-                )
+            "/mediawatch.enrich.v2.EnrichService/Quotes",
+            request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
+            response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
+        )
         self.Claims = channel.unary_unary(
-                '/mediawatch.enrich.v2.EnrichService/Claims',
-                request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
-                response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-                )
+            "/mediawatch.enrich.v2.EnrichService/Claims",
+            request_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
+            response_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
+        )
 
 
 class EnrichServiceServicer(object):
@@ -62,236 +64,333 @@ class EnrichServiceServicer(object):
     def NLP(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def StopWords(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def Keywords(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def Entities(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def Summary(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def Topics(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def Quotes(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def Claims(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
 
 def add_EnrichServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'NLP': grpc.unary_unary_rpc_method_handler(
-                    servicer.NLP,
-                    request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
-                    response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
-            ),
-            'StopWords': grpc.unary_unary_rpc_method_handler(
-                    servicer.StopWords,
-                    request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
-                    response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
-            ),
-            'Keywords': grpc.unary_unary_rpc_method_handler(
-                    servicer.Keywords,
-                    request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
-                    response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
-            ),
-            'Entities': grpc.unary_unary_rpc_method_handler(
-                    servicer.Entities,
-                    request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
-                    response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
-            ),
-            'Summary': grpc.unary_unary_rpc_method_handler(
-                    servicer.Summary,
-                    request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
-                    response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
-            ),
-            'Topics': grpc.unary_unary_rpc_method_handler(
-                    servicer.Topics,
-                    request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
-                    response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
-            ),
-            'Quotes': grpc.unary_unary_rpc_method_handler(
-                    servicer.Quotes,
-                    request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
-                    response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
-            ),
-            'Claims': grpc.unary_unary_rpc_method_handler(
-                    servicer.Claims,
-                    request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
-                    response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
-            ),
+        "NLP": grpc.unary_unary_rpc_method_handler(
+            servicer.NLP,
+            request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
+            response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
+        ),
+        "StopWords": grpc.unary_unary_rpc_method_handler(
+            servicer.StopWords,
+            request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
+            response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
+        ),
+        "Keywords": grpc.unary_unary_rpc_method_handler(
+            servicer.Keywords,
+            request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
+            response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
+        ),
+        "Entities": grpc.unary_unary_rpc_method_handler(
+            servicer.Entities,
+            request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
+            response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
+        ),
+        "Summary": grpc.unary_unary_rpc_method_handler(
+            servicer.Summary,
+            request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
+            response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
+        ),
+        "Topics": grpc.unary_unary_rpc_method_handler(
+            servicer.Topics,
+            request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
+            response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
+        ),
+        "Quotes": grpc.unary_unary_rpc_method_handler(
+            servicer.Quotes,
+            request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
+            response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
+        ),
+        "Claims": grpc.unary_unary_rpc_method_handler(
+            servicer.Claims,
+            request_deserializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.FromString,
+            response_serializer=mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'mediawatch.enrich.v2.EnrichService', rpc_method_handlers)
+        "mediawatch.enrich.v2.EnrichService", rpc_method_handlers
+    )
     server.add_generic_rpc_handlers((generic_handler,))
 
 
- # This class is part of an EXPERIMENTAL API.
+# This class is part of an EXPERIMENTAL API.
 class EnrichService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def NLP(request,
+    def NLP(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/mediawatch.enrich.v2.EnrichService/NLP',
+            "/mediawatch.enrich.v2.EnrichService/NLP",
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def StopWords(request,
+    def StopWords(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/mediawatch.enrich.v2.EnrichService/StopWords',
+            "/mediawatch.enrich.v2.EnrichService/StopWords",
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def Keywords(request,
+    def Keywords(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/mediawatch.enrich.v2.EnrichService/Keywords',
+            "/mediawatch.enrich.v2.EnrichService/Keywords",
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def Entities(request,
+    def Entities(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/mediawatch.enrich.v2.EnrichService/Entities',
+            "/mediawatch.enrich.v2.EnrichService/Entities",
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def Summary(request,
+    def Summary(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/mediawatch.enrich.v2.EnrichService/Summary',
+            "/mediawatch.enrich.v2.EnrichService/Summary",
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def Topics(request,
+    def Topics(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/mediawatch.enrich.v2.EnrichService/Topics',
+            "/mediawatch.enrich.v2.EnrichService/Topics",
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def Quotes(request,
+    def Quotes(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/mediawatch.enrich.v2.EnrichService/Quotes',
+            "/mediawatch.enrich.v2.EnrichService/Quotes",
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def Claims(request,
+    def Claims(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/mediawatch.enrich.v2.EnrichService/Claims',
+            "/mediawatch.enrich.v2.EnrichService/Claims",
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichRequest.SerializeToString,
             mediawatch_dot_enrich_dot_v2_dot_enrich__pb2.EnrichResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )

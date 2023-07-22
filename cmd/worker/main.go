@@ -11,11 +11,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cvcio/mediawatch/pkg/interceptors"
 	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
 	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	enrich_pb "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	scrape_pb "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
+	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -23,6 +25,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/models/feed"
@@ -72,6 +75,8 @@ type WorkerGroup struct {
 	ernrichHost string
 
 	ackBefore string
+
+	rdb *redis.RedisClient
 }
 
 // Close closes the kafka client.
@@ -191,6 +196,14 @@ func (worker *WorkerGroup) Produce(msg kaf.Message) {
 	}
 }
 
+// Publish writes a new message to the corresponding redis pub/sub channel.
+func (worker *WorkerGroup) Publish(channel string, msg string) {
+	err := worker.rdb.Publish(channel, msg)
+	if err != nil {
+		worker.errChan <- errors.Wrap(err, "failed to publish message to redis")
+	}
+}
+
 // NewWorkerGroup implements a new WorkerGroup struct.
 func NewWorkerGroup(
 	log *zap.SugaredLogger,
@@ -203,6 +216,7 @@ func NewWorkerGroup(
 	scrapeHost string,
 	ernrichHost string,
 	ackBefore string,
+	rdb *redis.RedisClient,
 ) *WorkerGroup {
 	return &WorkerGroup{
 		context.Background(),
@@ -216,6 +230,7 @@ func NewWorkerGroup(
 		scrapeHost,
 		ernrichHost,
 		ackBefore,
+		rdb,
 	}
 }
 
@@ -232,7 +247,9 @@ func main() {
 
 	// ** LOGGER
 	// Create a reusable zap logger
-	log := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
+	sugar := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
+	defer sugar.Sync()
+	log := sugar.Sugar()
 
 	// =========================================================================
 	// Create mongo client
@@ -263,6 +280,15 @@ func main() {
 	}
 	defer neoClient.Client.Close()
 
+	// ============================================================
+	// Redis
+	// ============================================================
+	rdb, err := redis.NewRedisClient(context.Background(), cfg.GetRedisURL(), "")
+	if err != nil {
+		log.Fatalf("Error connecting to Redis: %s", err.Error())
+	}
+	defer rdb.Close()
+
 	// =========================================================================
 	// Create kafka consumer/producer worker
 
@@ -283,7 +309,7 @@ func main() {
 	// create a new worker
 	worker := NewWorkerGroup(
 		log, kafkaGoClient, kafkaChan,
-		dbConn, esClient, cfg.Elasticsearch.Index, neoClient, cfg.Scrape.Host, cfg.Enrich.Host, cfg.Kafka.AckBefore,
+		dbConn, esClient, cfg.Elasticsearch.Index, neoClient, cfg.Scrape.Host, cfg.Enrich.Host, cfg.Kafka.AckBefore, rdb,
 	)
 
 	// close connections on exit
@@ -338,7 +364,6 @@ func main() {
 		select {
 		case err := <-kafkaChan:
 			log.Errorf("Error from kafka: %s", err.Error())
-			continue
 
 		case err := <-errSingals:
 			log.Errorf("Error: %s", err.Error())
@@ -423,8 +448,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// =========================================================================
 	// Create the gRPC service clients
 	// Parse Server Options
-	var grpcOptions []grpc.DialOption
-	grpcOptions = append(grpcOptions, grpc.WithInsecure(), grpc.WithTimeout(60*time.Second))
+	grpcOptions := dialOpts()
 
 	// Create gRPC Scrape Connection
 	scrapeGRPC, err := grpc.Dial(worker.scrapeHost, grpcOptions...)
@@ -464,6 +488,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	a.Content.Body = scrapeResp.Data.Content.Body
 	a.Content.Authors = scrapeResp.Data.Content.Authors
 	a.Content.Tags = scrapeResp.Data.Content.Tags
+	a.FeedId = f.Id
 	if in.Title != "" {
 		a.Content.Title = in.Title
 	} else {
@@ -640,11 +665,35 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		worker.log.Errorf("Marshal article to message error: %s", err.Error())
 		return err
 	}
-
 	// write node article as a new message in the compare topic, so we can process it
 	// using the compare microservice.
 	go worker.Produce(kaf.Message{Value: []byte(b)})
+
+	// set values to stream to the frontend
+	a.Feed = f
+	a.Nlp.Stopwords = nil
+
+	// marshal article into string
+	s, err := json.Marshal(a)
+	if err != nil {
+		workerProcessErrors.WithLabelValues("marshal article error").Inc()
+		worker.log.Errorf("Marshal article to message error: %s", err.Error())
+		return err
+	}
+	// publish the article to the corresponding redis channel
+	go worker.Publish("mediawatch_articles_"+strings.ToLower(a.Lang), string(s))
+
 	worker.log.Infof("SAVED: %s - %s", f.Hostname, resNeo)
 
 	return nil
+}
+
+func dialOpts() []grpc.DialOption {
+	var grpcOptions []grpc.DialOption
+	grpcOptions = append(
+		grpcOptions,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(interceptors.TimeoutInterceptor(60*time.Second)),
+	)
+	return grpcOptions
 }

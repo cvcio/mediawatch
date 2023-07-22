@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/cvcio/mediawatch/internal/handlers"
@@ -103,7 +105,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 			"Grpc-Status-Details-Bin",
 		},
 		AllowCredentials: true,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
+		MaxAge:           int(2 * time.Hour / time.Second), // Maximum value not ignored by any of major browsers
 	})
 
 	// ============================================================
@@ -147,24 +149,28 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// Use WebsocketProxy to expose the underlying handler as a bidi
 	// websocket stream with newline-delimited JSON as the content encoding.
 	server := &http.Server{
-		Addr:           cfg.GetServiceURL(),
-		Handler:        h2c.NewHandler(cors.Handler(mux), &http2.Server{}),
-		ReadTimeout:    cfg.Service.ReadTimeout,
-		WriteTimeout:   cfg.Service.WriteTimeout,
-		MaxHeaderBytes: 1 << 20,
+		Addr:              cfg.GetServiceURL(),
+		Handler:           h2c.NewHandler(cors.Handler(mux), &http2.Server{}),
+		ReadHeaderTimeout: time.Second,
+		ReadTimeout:       cfg.Service.ReadTimeout,
+		WriteTimeout:      0, // set to 0 in order to stream to clients forever cfg.Service.WriteTimeout, //
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	// Start the service listening for requests.
 	go func() {
 		log.Debugf("[SERVER] Starting Connect/gRPC server on: %s", server.Addr)
-		errSingals <- server.ListenAndServe()
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Errorf("[SERVER] Connect/gRPC server failed to start: %s", err.Error())
+			errSingals <- err
+		}
 	}()
 
 	// ============================================================
 	// Termination
 	// ============================================================
 	// Listen for manual termination
-	signal.Notify(osSignals, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP, syscall.SIGQUIT)
+	signal.Notify(osSignals, syscall.SIGTERM, syscall.SIGINT)
 
 	// Blocking main and waiting for shutdown.
 	select {

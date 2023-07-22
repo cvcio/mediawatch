@@ -21,20 +21,28 @@ import (
 
 // ArticlesHandler implements feeds connect service
 type ArticlesHandler struct {
-	log           *zap.SugaredLogger
-	mg            *db.MongoDB
-	elastic       *es.Elastic
-	neo           *neo.Neo
-	authenticator *auth.JWTAuthenticator
-	rdb           *redis.RedisClient
+	log             *zap.SugaredLogger
+	mg              *db.MongoDB
+	elastic         *es.Elastic
+	neo             *neo.Neo
+	authenticator   *auth.JWTAuthenticator
+	rdb             *redis.RedisClient
+	articlesCh      chan []byte
+	relationshipsCh chan []byte
+
 	// Embed the unimplemented server
 	articlesv2connect.UnimplementedArticlesServiceHandler
 }
 
 // NewArticlesHandler returns a new ArticlesHandler service.
 func NewArticlesHandler(cfg *config.Config, log *zap.SugaredLogger, mg *db.MongoDB, elastic *es.Elastic, neo *neo.Neo, authenticator *auth.JWTAuthenticator, rdb *redis.RedisClient) *ArticlesHandler {
-	return &ArticlesHandler{log: log, mg: mg, elastic: elastic, neo: neo, authenticator: authenticator, rdb: rdb}
+	// articlesCh, _ := rdb.Subscribe("mediawatch_articles")
+	// relationshipsCh, _ := rdb.Subscribe("mediawatch_relationships")
+	return &ArticlesHandler{log: log, mg: mg, elastic: elastic, neo: neo, authenticator: authenticator, rdb: rdb, articlesCh: nil, relationshipsCh: nil}
 }
+
+// Consume implements aticles redis consumer
+func (h *ArticlesHandler) Consume() {}
 
 // GetArticle return a single article.
 func (h *ArticlesHandler) GetArticle(ctx context.Context, req *connect.Request[articlesv2.QueryArticle]) (*connect.Response[articlesv2.Article], error) {
@@ -114,6 +122,31 @@ func (h *ArticlesHandler) GetArticles(ctx context.Context, req *connect.Request[
 
 // Stream streams articles in real time.
 func (h *ArticlesHandler) StreamArticles(ctx context.Context, req *connect.Request[articlesv2.QueryArticle], stream *connect.ServerStream[articlesv2.ArticleList]) error {
+	pubsub, articlesCh, err := h.rdb.Subscribe(ctx, "mediawatch_articles_*")
+	if err != nil {
+		h.log.Errorf("[ARTICLES] Pub/Sub subscriprion error: %s", err.Error())
+		return connect.NewError(connect.CodeInternal, err)
+	}
+	defer pubsub.Close()
+
+	for m := range articlesCh {
+		var article *articlesv2.Article
+		if err := json.Unmarshal(m, &article); err != nil {
+			h.log.Errorf("[ARTICLES] Unmarshal error: %s", err.Error())
+			continue
+		}
+
+		data := &articlesv2.ArticleList{}
+		data.Data = append(data.Data, article)
+
+		h.log.Debugf("[ARTICLES] Streaming article: %s", article.DocId)
+
+		if err := stream.Send(data); err != nil {
+			h.log.Errorf("[ARTICLES] Internal error: %s", err.Error())
+			return connect.NewError(connect.CodeInternal, err)
+		}
+	}
+
 	return nil
 }
 

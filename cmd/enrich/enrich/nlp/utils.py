@@ -4,21 +4,17 @@ from nltk.tokenize import RegexpTokenizer
 from nltk.stem.porter import PorterStemmer
 
 
-"""
-    Remove accents from string
-"""
-
-
 def normalize_nfd(s):
+    """
+        Remove accents from string
+    """
     return "".join(c for c in normalize("NFD", s) if category(c) != "Mn")
 
 
-"""
-    Keep only unique elements in list
-"""
-
-
 def unique(l):
+    """
+        Keep only unique elements in list
+    """
     unique_list = []
     for x in l:
         if x not in unique_list:
@@ -27,14 +23,9 @@ def unique(l):
     return unique_list
 
 
-"""
-    Normalize text
-"""
-
-
 def normalize_text(s):
     """
-    Normalize input string
+    Normalize text - Normalize input string
     """
     if s is None or len(s) == 0:
         return ""
@@ -50,14 +41,9 @@ def normalize_text(s):
     return text
 
 
-"""
-    Normalize keyword
-"""
-
-
 def normalize_keyword(s, strict=False):
     """
-    Remove accents from input string
+    Normalize keyword - Remove accents from input string
     """
     if s is None or len(s) == 0:
         return ""
@@ -70,13 +56,11 @@ def normalize_keyword(s, strict=False):
     return text.upper()
 
 
-"""
-    Prepare text for keyword extraction using gensim
-    Tokenize and Stem the text to token list
-"""
-
-
 def prepare_text(text, stopwords):
+    """
+        Prepare text for keyword extraction using gensim
+        Tokenize and Stem the text to token list
+    """
     tokenizer = RegexpTokenizer(r"\w+")
     p_stemmer = PorterStemmer()
 
@@ -89,3 +73,24 @@ def prepare_text(text, stopwords):
     tokens = [p_stemmer.stem(i) for i in tokens]
 
     return tokens
+
+
+def tokenize_to_max_length(text, max_length:int = 512):
+    tokens = text.split(" ")
+    chunks = [tokens[i:i + max_length] for i in range(0, len(tokens), max_length)]
+    chunks = [" ".join([c for c in chunk]) for chunk in chunks]
+    return chunks
+
+
+def unique_entities(l):
+    """
+        Keep only unique elements in list of entities
+    """
+    unique_list = []
+    unique_items = []
+    for x in l:
+        if x["text"] not in unique_list:
+            unique_list.append(x["text"])
+            unique_items.append(x)
+
+    return unique_items

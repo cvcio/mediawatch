@@ -18,6 +18,7 @@ grpcio-status = "^1.46.0"
 networkx = "^2.8"
 googleapis-common-protos = "^1.56.0"
 transformers = "^4.26.1"
+safetensors = "^0.3.1"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"

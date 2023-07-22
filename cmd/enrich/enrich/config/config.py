@@ -15,12 +15,13 @@ class AppConfig:
     AppConfig class with required fields, default values, type checking,
     and typecasting for int and bool values
     """
+
     DEBUG: bool = False
     ENV: str = "development"
 
     LOG_NAME: str = "SVC-ENRICH"
     LOG_LEVEL: str = "DEBUG"
-    LOG_FORMAT: str
+    LOG_FORMAT: str = "%(asctime)s - (${LOG_NAME}) - %(levelname)s - %(message)s"
 
     HOST: str = "0.0.0.0"
     PORT: int = 50030

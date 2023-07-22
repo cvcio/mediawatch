@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package mediawatch.posts.v2;
+
+// third party imports
+import "google/protobuf/timestamp.proto";
+
+// mediawatch specific imports
+import "mediawatch/articles/v2/articles.proto";
+import "mediawatch/enrich/v2/enrich.proto";
+import "mediawatch/feeds/v2/feed.proto";
+import "mediawatch/common/v2/common.proto";
+
+message Post {
+    mediawatch.aricles.v2.Article article = 7;
+    mediawatch.feeds.v2.Feed feed = 9;
+    int64 rel_count = 11;
+};
+message PostRequest {};
+message PostResponse {
+    repeated Post data = 1;
+    mediawatch.common.v2.Pagination pagination = 2;
+};
+
+service PostService {
+    rpc GetPost(PostRequest) returns (PostResponse);
+    rpc GetPosts(PostRequest) returns (PostResponse);
+    rpc CreatePost(PostRequest) returns (PostResponse);
+    rpc UpdatePost(PostRequest) returns (PostResponse);
+    rpc DeletePost(PostRequest) returns (PostResponse);
+    rpc StreamPosts(PostRequest) returns (stream PostResponse);
+};

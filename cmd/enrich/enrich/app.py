@@ -4,21 +4,18 @@ Python implementation of the gRPC Enrich server.
 """
 
 import os
-import io
 import logging
 import grpc
 import time
 import glob
-import json
-import spacy
 import html
 import nltk
 
 from concurrent import futures
-from collections import namedtuple
 
 from dotenv import load_dotenv
 from config.config import AppConfig
+from nlp.model import Model
 
 from mediawatch.enrich.v2 import enrich_pb2_grpc
 from mediawatch.enrich.v2 import enrich_pb2
@@ -27,7 +24,6 @@ from google.rpc import code_pb2
 from google.rpc import status_pb2
 from grpc_status import rpc_status
 
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 from nlp.nlp import (
     extract_stopwords,
     extract_keywords,
@@ -35,105 +31,9 @@ from nlp.nlp import (
     summarize_doc,
     extract_topics,
     extract_quotes,
-    extract_claims
+    extract_claims,
+    extract_named_entities,
 )
-
-
-class Model:
-    """
-    Model class loads pretrained models for a specific language.
-    Options are defined inside each language configuration file
-    located under the models folder.
-
-    Available options are:
-
-    - lang: iso 639-1 language code (ex. el)
-    - spacy:spacy's base language model name (ex. en_core_web_sm). we only use
-    spacy's document parser (nlp) to extract entities and tokens.
-    - stopwods: a list of additional stopwords
-    - tokenizer: path or name of the tokenizer (via @huggingfaces)
-    - classifier: path or name of the classifier (via @huggingfaces). for the moment
-    we only support the { nlp: topics } field. in the future we should
-    add more classifiers on each model to support multiple classification
-    tasks.
-    """
-
-    def __init__(self, file):
-        """
-        initialize model object
-        """
-
-        # create an empty namedtuple with default values
-        p = namedtuple(
-            "model",
-            ["lang", "tokenizer", "classifier", "spacy", "stopwords"],
-            defaults=(None,)
-            * len(["lang", "tokenizer", "classifier", "spacy", "stopwords"]),
-        )
-        # read the configuration file
-        self.model = p(**self.read_file(file))
-        logging.debug("Config for model {} loaded ({})".format(self.model.lang, file))
-        # load spacy model (if available)
-        self.spacy = (
-            self.get_spacy() if self.model.spacy and self.model.spacy != "" else None
-        )
-        # load the topic classifier (if available)
-        self.topic_classification_pipeline = (
-            self.get_transformers()
-            if (self.model.tokenizer != None and self.model.classifier != None)
-            else None
-        )
-
-    def read_file(self, file):
-        """
-        read model configuration file and return a dict
-        """
-        with io.open(os.path.join(file), encoding="utf-8") as f:
-            return json.loads(
-                f.read(),
-            )
-
-    def get_spacy(self):
-        """
-        load spacy model
-        """
-        if os.environ["ENV"] != "development":
-            spacy.cli.download(self.model.spacy)
-        m = spacy.load(self.model.spacy)
-        m.Defaults.stop_words.update(self.model.stopwords)
-        logging.debug("Spacy model {} loaded".format(self.model.spacy))
-        return m
-
-    def get_transformers(self):
-        """
-        load tokenizer, text-classification and return the pipeline
-        """
-
-        # tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(
-            self.model.tokenizer,
-            use_fast=True,
-            truncate=True,
-            max_length=512,
-            use_auth_token=True
-        )
-        # text-calssification model
-        classifier = AutoModelForSequenceClassification.from_pretrained(
-            self.model.classifier,
-            use_auth_token=True
-        )
-
-        return (
-            pipeline(
-                "text-classification",
-                model=classifier,
-                tokenizer=tokenizer,
-                top_k=4,
-                device=-1,
-            )
-            if (tokenizer != None and classifier != None)
-            else None
-        )
 
 
 class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
@@ -147,7 +47,6 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
         """
         # add the models inside the stub
         self.models = models
-
 
     def StopWords(self, data, context):
         """
@@ -174,7 +73,9 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
                 )
             )
 
-        logging.info("Retrieve StopWords from document with language model: {}".format(data.lang))
+        logging.info(
+            "Retrieve StopWords from document with language model: {}".format(data.lang)
+        )
 
         # select language specific model (Model). language is defined
         # by the incoming request (field: lang).
@@ -214,7 +115,6 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
         )
         return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
 
-
     def Keywords(self, data, context):
         """
         Keywords gRPC endpoint
@@ -240,7 +140,9 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
                 )
             )
 
-        logging.info("Retrieve keywords from document with language model: {}".format(data.lang))
+        logging.info(
+            "Retrieve keywords from document with language model: {}".format(data.lang)
+        )
 
         # select language specific model (Model). language is defined
         # by the incoming request (field: lang).
@@ -283,7 +185,6 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             )
         )
         return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
-
 
     def Entities(self, data, context):
         """
@@ -354,7 +255,6 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
         )
         return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
 
-
     def Summary(self, data, context):
         """
         Summary gRPC endpoint
@@ -380,7 +280,9 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
                 )
             )
 
-        logging.info("Retrieve summary from document with language model: {}".format(data.lang))
+        logging.info(
+            "Retrieve summary from document with language model: {}".format(data.lang)
+        )
 
         # select language specific model (Model). language is defined
         # by the incoming request (field: lang).
@@ -419,7 +321,6 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
 
         return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
 
-
     def Topics(self, data, context):
         """
         Topics gRPC endpoint
@@ -445,7 +346,9 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
                 )
             )
 
-        logging.info("Retrieve topics from document with language model: {}".format(data.lang))
+        logging.info(
+            "Retrieve topics from document with language model: {}".format(data.lang)
+        )
 
         # select language specific model (Model). language is defined
         # by the incoming request (field: lang).
@@ -483,13 +386,9 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             )
 
         logging.info(
-            "Topics ({}) {}".format(
-                len(output["nlp"]["topics"]),
-                ", ".join(topics)
-            )
+            "Topics ({}) {}".format(len(output["nlp"]["topics"]), ", ".join(topics))
         )
         return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
-
 
     def Quotes(self, data, context):
         """
@@ -506,7 +405,9 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
                 )
             )
 
-        logging.info("Retrieve Quotes from document with language model: {}".format(data.lang))
+        logging.info(
+            "Retrieve Quotes from document with language model: {}".format(data.lang)
+        )
 
         output = {
             "nlp": {
@@ -540,7 +441,6 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
         )
         return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
 
-
     def Claims(self, data, context):
         """
         Claims gRPC endpoint
@@ -566,7 +466,9 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
                 )
             )
 
-        logging.info("Retrive claims from document with language model: {}".format(data.lang))
+        logging.info(
+            "Retrive claims from document with language model: {}".format(data.lang)
+        )
 
         # select language specific model (Model). language is defined
         # by the incoming request (field: lang).
@@ -610,7 +512,6 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
         )
         return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
 
-
     def NLP(self, data, context):
         """
         NLP gRPC endpoint
@@ -637,7 +538,7 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
                 )
             )
 
-        logging.info("Enrirch document with language model: {}".format(data.lang))
+        logging.debug("Enrirch document with language model: {}".format(data.lang))
 
         # select language specific model (Model). language is defined
         # by the incoming request (field: lang).
@@ -681,6 +582,18 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             logging.error("Error while getting topics: {}".format(str(err)))
 
         try:
+            # classify the text usign a pretrained classifier
+            named_entities = (
+                extract_named_entities(body, m.ner_classification_pipeline)
+                if m.ner_classification_pipeline != None
+                else []
+            )
+            # output["nlp"]["topics"] = topics
+            logging.info("Named Entities: {}".format(named_entities))
+        except Exception as err:
+            logging.error("Error while getting named entities: {}".format(str(err)))
+
+        try:
             # get the quotes
             quotes = extract_quotes(body)
             output["nlp"]["quotes"] = quotes
@@ -704,7 +617,7 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             # get the extracted entites
             entities = extract_entities(doc)
             output["nlp"]["entities"] = entities
-            logging.debug("Entities: {}".format(entities))
+            logging.info("Entities: {}".format(entities))
         except Exception as err:
             logging.error("Error while getting entities: {}".format(str(err)))
 
@@ -756,12 +669,12 @@ def main():
     load_dotenv(".env")
 
     # load conf from
-    AppConfig(os.environ)
+    env = AppConfig(os.environ)
 
     # set log format and level
-    logging.basicConfig(level=os.environ["LOG_LEVEL"], format=os.environ["LOG_FORMAT"])
+    logging.basicConfig(level=env.LOG_LEVEL, format=env.LOG_FORMAT)
 
-    if os.environ["ENV"] != "development":
+    if env.ENV != "development":
         nltk.download("punkt")
 
     """
@@ -777,17 +690,13 @@ def main():
     """
     logging.info("Starting gRPC server")
 
-    server = grpc.server(
-        futures.ThreadPoolExecutor(max_workers=int(os.environ["MAX_WORKERS"]))
-    )
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=int(env.MAX_WORKERS)))
 
-    server.add_insecure_port("%s:%s" % (os.environ["HOST"], os.environ["PORT"]))
+    server.add_insecure_port("%s:%s" % (env.HOST, env.PORT))
     enrich_pb2_grpc.add_EnrichServiceServicer_to_server(EnrichService(models), server)
     server.start()
 
-    logging.info(
-        "GRPC Server Listening on %s:%s", os.environ["HOST"], os.environ["PORT"]
-    )
+    logging.info("GRPC Server Listening on %s:%s", env.HOST, env.PORT)
 
     try:
         while True:

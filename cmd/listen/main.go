@@ -71,7 +71,9 @@ func main() {
 
 	// ** LOGGER
 	// Create a reusable zap logger
-	log := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
+	sugar := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
+	defer sugar.Sync()
+	log := sugar.Sugar()
 
 	// ============================================================
 	// Start Mongo

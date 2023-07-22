@@ -43,15 +43,16 @@ func (rdb *RedisClient) Publish(key string, value string) error {
 	return rdb.Client.Publish(rdb.ctx, key, value).Err()
 }
 
-// Subscribe
-func (rdb *RedisClient) Subscribe(key string, msg chan []byte) error {
-	pubsub := rdb.Client.Subscribe(rdb.ctx, key)
+// Subscribe to redis channel and return a channel of messages
+func (rdb *RedisClient) Subscribe(ctx context.Context, key string) (*redis.PubSub, chan []byte, error) {
+	pubsub := rdb.Client.PSubscribe(ctx, key)
+	msg := make(chan []byte)
 	go func(channel <-chan *redis.Message) {
 		for m := range channel {
 			msg <- []byte(m.Payload)
 		}
 	}(pubsub.Channel())
-	return nil
+	return pubsub, msg, nil
 }
 
 // Get

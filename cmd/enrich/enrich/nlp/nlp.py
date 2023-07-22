@@ -1,7 +1,14 @@
 import re
 import logging
 
-from nlp.utils import normalize_nfd, normalize_keyword, unique, normalize_text
+from nlp.utils import (
+    normalize_nfd,
+    normalize_keyword,
+    unique,
+    unique_entities,
+    normalize_text,
+    tokenize_to_max_length
+)
 from nltk.cluster.util import cosine_distance
 from nltk import word_tokenize
 
@@ -123,30 +130,83 @@ def extract_claims(doc, stopwords, per=0.25):
     if len(summary) == 0:
         return []
 
-    claims = [{"text": word.text, "type": "claim", "index": [word.start, word.end], "score": sentence_scores[word]} for word in summary]
-    claims = [{"text": c["text"].strip(), "type": c["type"], "index": c["index"], "score": c["score"]} for c in claims]
-    claims = [{"text": c["text"][0].upper() + c["text"][1:], "type": c["type"], "index": c["index"], "score": c["score"]} for c in claims]
+    claims = [
+        {
+            "text": word.text,
+            "type": "claim",
+            "index": [word.start, word.end],
+            "score": sentence_scores[word],
+        }
+        for word in summary
+    ]
+    claims = [
+        {
+            "text": c["text"].strip(),
+            "type": c["type"],
+            "index": c["index"],
+            "score": c["score"],
+        }
+        for c in claims
+    ]
+    claims = [
+        {
+            "text": c["text"][0].upper() + c["text"][1:],
+            "type": c["type"],
+            "index": c["index"],
+            "score": c["score"],
+        }
+        for c in claims
+    ]
 
     return claims
 
 
 def extract_topics(body, pipeline):
+    body = tokenize_to_max_length(body, 384)
     topics = []
+
     try:
-        topics = pipeline(
-            body,
-            padding=True,
-            truncation=True,
-            max_length=512,
-            top_k=4,
-        )
+        topics = [pipeline(text, top_k=4) for text in body]
+        topics = [topic for sublist in topics for topic in sublist]
     except:
         pass
-    topics = [
-        {"text": x["label"], "type": "topic", "score": x["score"]}
-        for x in topics if x["score"] > 0.2
-    ] if len(topics) > 0 else []
-    return topics
+    topics = (
+        [
+            {"text": x["label"], "type": "topic", "score": x["score"]}
+            for x in topics
+            if x["score"] > 0.2
+        ]
+        if len(topics) > 0
+        else []
+    )
+    topics = sorted(topics, key=lambda x: x["score"], reverse=True)
+    return unique_entities(topics)
+
+
+def extract_named_entities(body, pipeline):
+    body = tokenize_to_max_length(body, 384)
+    named_entities = []
+
+    try:
+        named_entities = [pipeline(text, aggregation_strategy="first") for text in body]
+        named_entities = [entity for sublist in named_entities for entity in sublist]
+    except:
+        pass
+    named_entities = (
+        [
+            {
+                "text": x["word"],
+                "type": x["entity_group"],
+                "score": x["score"],
+                "index": [x["start"], x["end"]],
+            }
+            for x in named_entities
+            if x["score"] > 0.2
+        ]
+        if len(named_entities) > 0
+        else []
+    )
+    return named_entities
 
 
 def extractive_summarization(doc, stopwords, top_n=3):
@@ -222,9 +282,11 @@ def extract_quotes(body):
             if group:
                 size = len(group.group().split())
                 if size > 2 and size <= 48:
-                    quotes.append({
-                        "text": normalize_text(group.group()),
-                        "type": "quote",
-                        "index": [group.start(), group.end()]
-                    })
+                    quotes.append(
+                        {
+                            "text": normalize_text(group.group()),
+                            "type": "quote",
+                            "index": [group.start(), group.end()],
+                        }
+                    )
     return quotes

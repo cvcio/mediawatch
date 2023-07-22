@@ -475,6 +475,25 @@ socks = ["PySocks (>=1.5.6,!=1.5.7)", "win-inet-pton"]
 use_chardet_on_py3 = ["chardet (>=3.0.2,<5)"]
 
 [[package]]
+name = "safetensors"
+version = "0.3.1"
+description = "Fast and Safe Tensor serialization"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+all = ["torch (>=1.10)", "numpy (>=1.21.6)", "tensorflow (>=2.11.0)", "jax (>=0.3.25)", "flax (>=0.6.3)", "jaxlib (>=0.3.25)", "paddlepaddle (>=2.4.1)", "black (==22.3)", "isort (>=5.5.4)", "flake8 (>=3.8.3)", "click (==8.0.4)", "setuptools-rust (>=1.5.2)", "huggingface-hub (>=0.12.1)", "pytest (>=7.2.0)", "pytest-benchmark (>=4.0.0)", "h5py (>=3.7.0)"]
+dev = ["torch (>=1.10)", "numpy (>=1.21.6)", "tensorflow (>=2.11.0)", "jax (>=0.3.25)", "flax (>=0.6.3)", "jaxlib (>=0.3.25)", "paddlepaddle (>=2.4.1)", "black (==22.3)", "isort (>=5.5.4)", "flake8 (>=3.8.3)", "click (==8.0.4)", "setuptools-rust (>=1.5.2)", "huggingface-hub (>=0.12.1)", "pytest (>=7.2.0)", "pytest-benchmark (>=4.0.0)", "h5py (>=3.7.0)"]
+jax = ["jax (>=0.3.25)", "flax (>=0.6.3)", "jaxlib (>=0.3.25)"]
+numpy = ["numpy (>=1.21.6)"]
+paddlepaddle = ["paddlepaddle (>=2.4.1)"]
+quality = ["black (==22.3)", "isort (>=5.5.4)", "flake8 (>=3.8.3)", "click (==8.0.4)"]
+tensorflow = ["tensorflow (>=2.11.0)"]
+testing = ["setuptools-rust (>=1.5.2)", "huggingface-hub (>=0.12.1)", "pytest (>=7.2.0)", "pytest-benchmark (>=4.0.0)", "h5py (>=3.7.0)", "numpy (>=1.21.6)"]
+torch = ["torch (>=1.10)"]
+
+[[package]]
 name = "scipy"
 version = "1.6.1"
 description = "SciPy: Scientific Library for Python"
@@ -799,7 +818,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "01f111d1003338d074d393c4bbc5fc9fa4231a61bfa7a61db84d9de1a726079d"
+content-hash = "b3d9042d5f8fa8a5847692991fb684da1dfde45bd35f943558d1b3ea85adba63"
 
 [metadata.files]
 black = [
@@ -1342,6 +1361,7 @@ requests = [
     {file = "requests-2.27.1-py2.py3-none-any.whl", hash = "sha256:f22fa1e554c9ddfd16e6e41ac79759e17be9e492b3587efa038054674760e72d"},
     {file = "requests-2.27.1.tar.gz", hash = "sha256:68d7c56fd5a8999887728ef304a6d12edc7be74f1cfa47714fc8b414525c9a61"},
 ]
+safetensors = []
 scipy = [
     {file = "scipy-1.6.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:a15a1f3fc0abff33e792d6049161b7795909b40b97c6cc2934ed54384017ab76"},
     {file = "scipy-1.6.1-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:e79570979ccdc3d165456dd62041d9556fb9733b86b4b6d818af7a0afc15f092"},

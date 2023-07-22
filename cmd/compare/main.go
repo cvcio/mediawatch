@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -11,6 +12,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	"github.com/kelseyhightower/envconfig"
@@ -27,13 +31,13 @@ import (
 	kaf "github.com/segmentio/kafka-go"
 )
 
-// var (
-// 	compareProcessDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
-// 		Name:       "consumer_process_duration_seconds",
-// 		Help:       "Duration of consumer processing requests.",
-// 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-// 	}, []string{"service"})
-// )
+var (
+	compareProcessDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
+		Name:       "consumer_process_duration_seconds",
+		Help:       "Duration of consumer processing requests.",
+		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+	}, []string{"service"})
+)
 
 const SIZE = 64
 
@@ -45,6 +49,19 @@ type Compare struct {
 	cfg            *config.Config
 	neoClient      *neo.Neo
 	serviceErrChan chan error
+}
+
+func (c *Compare) SetElasticsearch() {
+	// =========================================================================
+	// Start elasticsearch
+	c.log.Info("[SVC-COMPARE] Initialize Elasticsearch")
+	esClient, err := es.NewElasticsearch(c.cfg.Elasticsearch.Host, c.cfg.Elasticsearch.User, c.cfg.Elasticsearch.Pass)
+	if err != nil {
+		c.log.Fatalf("[SVC-COMPARE] Register Elasticsearch: %v", err)
+	}
+
+	c.log.Info("[SVC-COMPARE] Connected to Elasticsearch")
+	c.es = esClient
 }
 
 // CompareGroup struct.
@@ -68,7 +85,7 @@ func (worker *CompareGroup) Close() {
 // this particular message again.
 func (worker *CompareGroup) Consume() {
 	for {
-		// timer := prometheus.NewTimer(compareProcessDuration.WithLabelValues("compare"))
+		timer := prometheus.NewTimer(compareProcessDuration.WithLabelValues("compare"))
 		// read the message from kafka topic
 		m, err := worker.kafkaClient.Consumer.FetchMessage(worker.ctx)
 		if err != nil {
@@ -93,15 +110,18 @@ func (worker *CompareGroup) Consume() {
 		worker.log.Infof("[SVC-COMPARE] FAC: %s - %s", msg.DocId, msg.CrawledAt)
 
 		// test the article for similar
-		go worker.compare.FindAndCompare(msg.DocId, msg.Lang)
-		// if err := worker.compare.FindAndCompare(msg.DocId, msg.Lang); err != nil {
-		// 	worker.log.Errorf("[SCV-COMPARE] FAC: %s", err.Error())
-		// 	continue
-		// }
+		// go worker.compare.FindAndCompare(msg.DocId, msg.Lang)
+		if err := worker.compare.FindAndCompare(msg.DocId, msg.Lang); err != nil {
+			if strings.Contains(err.Error(), "connect: cannot assign requested address") {
+				worker.compare.SetElasticsearch()
+			}
+			worker.log.Errorf("[SCV-COMPARE] FAC: %s", err.Error())
+			continue
+		}
 
 		// mark message as read (commit)
 		worker.Commit(m)
-		// timer.ObserveDuration()
+		timer.ObserveDuration()
 	}
 }
 
@@ -144,18 +164,22 @@ func main() {
 
 	// ** LOGGER
 	// Create a reusable zap logger
-	log := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
+	sugar := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
+	defer sugar.Sync()
+
+	log := sugar.Sugar()
+
 	log.Info("[SVC-COMPARE] Starting")
 
-	// =========================================================================
-	// Start elasticsearch
-	log.Info("[SVC-COMPARE] Initialize Elasticsearch")
-	esClient, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
-	if err != nil {
-		log.Fatalf("[SVC-COMPARE] Register Elasticsearch: %v", err)
-	}
+	// // =========================================================================
+	// // Start elasticsearch
+	// log.Info("[SVC-COMPARE] Initialize Elasticsearch")
+	// esClient, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
+	// if err != nil {
+	// 	log.Fatalf("[SVC-COMPARE] Register Elasticsearch: %v", err)
+	// }
 
-	log.Info("[SVC-COMPARE] Connected to Elasticsearch")
+	// log.Info("[SVC-COMPARE] Connected to Elasticsearch")
 
 	// =========================================================================
 	// Start neo4j client
@@ -175,17 +199,17 @@ func main() {
 
 	// Create compare struct
 	compareCLient := new(Compare)
-	compareCLient.es = esClient
 	compareCLient.index = cfg.Elasticsearch.Index
 	compareCLient.log = log
 	compareCLient.cfg = cfg
 	compareCLient.neoClient = neoClient
 	compareCLient.serviceErrChan = errSingals
+	compareCLient.SetElasticsearch()
 
 	// ========================================
 	// Create a registry and a web server for prometheus metrics
-	// registry := prometheus.NewRegistry()
-	// registry.MustRegister(compareProcessDuration)
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(compareProcessDuration)
 
 	// =========================================================================
 	// Create kafka consumer/producer worker
@@ -222,19 +246,19 @@ func main() {
 	}()
 
 	// api will be our http.Server
-	// promHandler := http.Server{
-	// 	Addr:           cfg.GetPrometheusURL(),
-	// 	Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
-	// 	ReadTimeout:    cfg.Prometheus.ReadTimeout,
-	// 	WriteTimeout:   cfg.Prometheus.WriteTimeout,
-	// 	MaxHeaderBytes: 1 << 20,
-	// }
+	promHandler := http.Server{
+		Addr:           cfg.GetPrometheusURL(),
+		Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
+		ReadTimeout:    cfg.Prometheus.ReadTimeout,
+		WriteTimeout:   cfg.Prometheus.WriteTimeout,
+		MaxHeaderBytes: 1 << 20,
+	}
 	// ========================================
 	// Start the http service
-	// go func() {
-	// 	log.Infof("[SVC-COMPARE] Starting prometheus web server listening %s", cfg.GetPrometheusURL())
-	// 	errSingals <- promHandler.ListenAndServe()
-	// }()
+	go func() {
+		log.Infof("[SVC-COMPARE] Starting prometheus web server listening %s", cfg.GetPrometheusURL())
+		errSingals <- promHandler.ListenAndServe()
+	}()
 
 	// Listen for os signals
 	osSignals := make(chan os.Signal, 1)
@@ -253,15 +277,15 @@ func main() {
 			os.Exit(1)
 
 		case s := <-osSignals:
-			log.Fatalf("[SVC-COMPARE] gRPC Server shutdown signal: %s", s)
+			log.Debugf("[SVC-COMPARE] gRPC Server shutdown signal: %s", s)
 
-			// // Asking prometheus to shutdown and load shed.
-			// if err := promHandler.Shutdown(context.Background()); err != nil {
-			// 	log.Errorf("[SVC-COMPARE] Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
-			// 	if err := promHandler.Close(); err != nil {
-			// 		log.Fatalf("[SVC-COMPARE] Could not stop http server: %v", err)
-			// 	}
-			// }
+			// Asking prometheus to shutdown and load shed.
+			if err := promHandler.Shutdown(context.Background()); err != nil {
+				log.Errorf("[SVC-COMPARE] Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
+				if err := promHandler.Close(); err != nil {
+					log.Fatalf("[SVC-COMPARE] Could not stop http server: %v", err)
+				}
+			}
 		}
 	}
 }

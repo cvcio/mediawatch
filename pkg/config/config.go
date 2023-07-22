@@ -12,7 +12,7 @@ import (
 
 // Config struct holds all the configuration elements for our apps
 type Config struct {
-	Env string `envconfig:"ENV" default:"development"`
+	Env string `envconfig:"ENV" default:"production"`
 	Log struct {
 		Dev   bool   `envconfig:"DEV" default:"false"`
 		Level string `envconfig:"LOG_LEVEL" default:"debug"`
