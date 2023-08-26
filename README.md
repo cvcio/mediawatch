@@ -14,13 +14,10 @@ To corelate passages or claims within articles we use [go-plagiarism](https://gi
 
 ## How it works
 
-MediaWatch comprises of multiple micro-servives. **Listen** micro-service is responsible for streaming data using Twitter API as a source of articles. To stream data from Twitter we developed a [client library](https://github.com/cvcio/twitter) that implements Twitter's v2 API endpoints. The **worker** micro-service orchestrates tasks and i/o tranfers between other micro-services, **scraper** responsible for extracting data from news sources, **enrich** responsible for enriching data using various AI models, and **compare** responsible for creating relationships between entities (articles, feeds, authors etc.).
+MediaWatch comprises of multiple micro-servives. In genereal: we collect data for rss feeds using the [feeds](cmd/feeds) micro-service, from twitter using [listen](cmd/listen) and [twitter](cmd/twitter) (which will deprecate*), scrape the data using the [scraper](cmd/scraper) micro-service, enrich the data using [enrich](cmd/enrich) micro-service and using various [AI models](https://huggingface.co/cvcio), and finally create the relationships usgin [compare](cmd/compare) micro-service. All internall communication between micro-services is handled by [kafka](https://kafka.apache.org/) and the [worker](microservice). To store raw articles we use [elasticsearch](https://www.elastic.co/) -different [indices](pkg/es/indeces/) for each language, for the relationships we use [neo4j](https://neo4j.com/), and for any other data we use [mongodb](https://www.mongodb.com/).
 
-## Micro Services Architecture
-
-![MediaWatch CORE](./assets/MediaWatch%20Core.drawio.png)
-
-MediaWatch comprises of five distinct micro-servives, [listen](cmd/listen/) responsible for streaming data using Twitter API as a source, [worker](cmd/worker/) for orchestrating tasks and i/o tranfers between micro-services, [scraper](cmd/scraper/) responsible for extracting data from news sources, [enrich](cmd/enrich/) responsible for enriching data using various AI models, but not limited to, and [compare](cmd/compare/) responsible for creating relationships between entities (articles, feeds, authors etc.).
+![MediaWatch CORE](./assets/MediaWatch%20Core.drawio.png) 
+*micro-services architecture*
 
 ## Roadmap
 
@@ -32,8 +29,6 @@ In the -not so- near future we plan to introduce multiple new features and micro
 - Hidden Votes
 - Important Features Highlighter (claims, quotes, etc.)
 - Fully Integrated Lucene Search
-- Twitter Analytics
-- RSS as a Source
 - Data Exports
 - Open Source Application
 - Public API (gRPC, HTTP)
