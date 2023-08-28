@@ -118,6 +118,11 @@ services-build:
 
 services: services-build
 
+docker:
+	cp cmd/${APP}/Dockerfile.$(APP) .
+	docker build -f Dockerfile.${APP} --rm -t ${APP}:$(TAG) .
+	rm Dockerfile.${APP}
+
 prod:
 	go mod vendor
 	cp cmd/${APP}/Dockerfile.$(APP) .

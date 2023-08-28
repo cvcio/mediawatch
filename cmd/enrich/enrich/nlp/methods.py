@@ -1,5 +1,12 @@
+"""nlp.nlp module"""
+
 import re
 import logging
+
+from collections import Counter
+from heapq import nlargest
+from string import punctuation
+from gensim.summarization import keywords
 
 from nlp.utils import (
     normalize_nfd,
@@ -7,27 +14,40 @@ from nlp.utils import (
     unique,
     unique_entities,
     normalize_text,
-    tokenize_to_max_length
+    tokenize_to_max_length,
 )
+
 from nltk.cluster.util import cosine_distance
 from nltk import word_tokenize
-
-from gensim.summarization import keywords
-from collections import Counter
-from heapq import nlargest
-
-from string import punctuation
-
 import numpy as np
 import networkx as nx
 
 
-def extract_stopwords(text, stopwords):
+async def extract_stopwords(text: str, stopwords: list[str]) -> list[str]:
+    """Extract stopwords from text
+
+    Args:
+        text (str): The text to extract stopwords from
+        stopwords (list[str]): The list of stopwords
+
+    Returns:
+        list[str]: A list of stopwords
+    """
+
     tokens = word_tokenize(normalize_nfd(text.lower()))
     return [token for token in tokens if token in stopwords]
 
 
-def extract_keywords(doc):
+async def extract_keywords(doc) -> list[str]:
+    """Extract keywords from text using spacy
+
+    Args:
+        doc (spacy.tokens.doc.Doc): Spacy Doc object
+
+    Returns:
+        list[str]: A list of keywords
+    """
+
     pos_tags = ["PROPN", "ADJ", "NOUN", "VERB"]
     tokens = []
     for token in doc:
@@ -43,11 +63,20 @@ def extract_keywords(doc):
             "\n"
         )
         return " ".join(keys).upper().split()
-    except (ValueError, TypeError, Exception):
+    except (ValueError, TypeError):
         return [x[0] for x in Counter(tokens).most_common(6)]
 
 
-def extract_entities(doc):
+async def extract_entities(doc) -> list[dict]:
+    """Extract entities from text using spacy
+
+    Args:
+        doc (spacy.tokens.doc.Doc): Spacy Doc object
+
+    Returns:
+        list[dict]: A list of entities
+    """
+
     entities = [
         {"text": normalize_keyword(w.text), "type": w.label_, "index": [w.start, w.end]}
         for w in doc.ents
@@ -56,41 +85,60 @@ def extract_entities(doc):
     return unique(entities)
 
 
-def get_freq_word(doc):
+def get_freq_word(doc) -> Counter:
+    """Get frequency of words in text
+
+    Args:
+        doc (spacy.tokens.doc.Doc): Spacy Doc object
+
+    Returns:
+        Counter: A Counter object
+    """
+
     # Filter Tokens, remove stopwords, punctuation
     # && keep only specific pos_tags
-    keywords = []
+
+    keys = []
     pos_tags = ["PROPN", "ADJ", "NOUN", "VERB"]
     for token in doc:
         if token.is_stop or token.is_punct or len(token.text) < 4:
             continue
         if token.pos_ in pos_tags:
-            keywords.append(token.text)
+            keys.append(token.text)
 
     # Calculate the frequency of each token
-    freq_word = Counter(keywords)
+    freq_word = Counter(keys)
 
     # Normalize frequency
-    max_freq = Counter(keywords).most_common(1)[0][1]
+    max_freq = Counter(keys).most_common(1)[0][1]
     for word in freq_word.keys():
         freq_word[word] = freq_word[word] / max_freq
 
     return freq_word
 
 
-def summarize_doc(doc, limit):
+async def summarize_doc(doc, limit: int = 5) -> str:
+    """Simple document extractive summarization
+
+    Args:
+        doc (spacy.tokens.doc.Doc): Spacy Doc object
+        limit (int, optional): Number of sentenses. Defaults to 5.
+
+    Returns:
+        str: The summarized text
+    """
     try:
         freq_word = get_freq_word(doc)
     except Exception as err:
-        logging.error("Document summarization error: {}".format(err))
+        logging.error("Document summarization error: %s", err)
         return ""
 
     # Calculate sentences weight
     sent_strength = {}
     for sent in doc.sents:
         for word in sent:
-            if word.text in freq_word.keys():
-                if sent in sent_strength.keys():
+            if word.text in freq_word:
+                if sent in sent_strength:
                     sent_strength[sent] += freq_word[word.text]
                 else:
                     sent_strength[sent] = freq_word[word.text]
@@ -102,25 +150,35 @@ def summarize_doc(doc, limit):
     return format_sentences(final_sentences)
 
 
-def extract_claims(doc, stopwords, per=0.25):
+async def extract_claims(doc, stopwords: list[str], per: float = 0.25) -> list[dict]:
+    """Extract claims from text
+
+    Args:
+        doc (spacy.tokens.doc.Doc): Spacy Doc object
+        stopwords (list[str]): A list of stopwords
+        per (float, optional): Percentage. Defaults to 0.25.
+
+    Returns:
+        list[dict]: _description_
+    """
     word_frequencies = {}
     for word in doc:
-        if word.text.lower() not in list(stopwords):
+        if word.text.lower() not in stopwords:
             if word.text.lower() not in punctuation:
-                if word.text not in word_frequencies.keys():
+                if word.text not in word_frequencies:
                     word_frequencies[word.text] = 1
                 else:
                     word_frequencies[word.text] += 1
     max_frequency = max(word_frequencies.values())
-    for word in word_frequencies.keys():
+    for word in word_frequencies:
         word_frequencies[word] = word_frequencies[word] / max_frequency
-    sentence_tokens = [sent for sent in doc.sents]
+    sentence_tokens = list(doc.sents)
 
     sentence_scores = {}
     for sent in sentence_tokens:
         for word in sent:
-            if word.text.lower() in word_frequencies.keys():
-                if sent not in sentence_scores.keys():
+            if word.text.lower() in word_frequencies:
+                if sent not in sentence_scores:
                     sentence_scores[sent] = word_frequencies[word.text.lower()]
                 else:
                     sentence_scores[sent] += word_frequencies[word.text.lower()]
@@ -130,43 +188,27 @@ def extract_claims(doc, stopwords, per=0.25):
     if len(summary) == 0:
         return []
 
-    claims = [
-        {
-            "text": word.text,
+    claims = []
+    for word in summary:
+        text = word.text.strip()
+        text = text[0].upper() + text[1:] if len(text) > 1 else text
+        claim = {
             "type": "claim",
             "index": [word.start, word.end],
             "score": sentence_scores[word],
+            "text": text,
         }
-        for word in summary
-    ]
-    claims = [
-        {
-            "text": c["text"].strip(),
-            "type": c["type"],
-            "index": c["index"],
-            "score": c["score"],
-        }
-        for c in claims
-    ]
-    claims = [
-        {
-            "text": c["text"][0].upper() + c["text"][1:],
-            "type": c["type"],
-            "index": c["index"],
-            "score": c["score"],
-        }
-        for c in claims
-    ]
+        claims.append(claim)
 
     return claims
 
 
-def extract_topics(body, pipeline):
+async def extract_topics(body, pipeline) -> list[dict]:
     body = tokenize_to_max_length(body, 384)
     topics = []
 
     try:
-        topics = [pipeline(text, top_k=4) for text in body]
+        topics = [pipeline(text, return_all_scores=True, top_k=4) for text in body]
         topics = [topic for sublist in topics for topic in sublist]
     except:
         pass
@@ -174,7 +216,7 @@ def extract_topics(body, pipeline):
         [
             {"text": x["label"], "type": "topic", "score": x["score"]}
             for x in topics
-            if x["score"] > 0.2
+            if x["score"] > 0.1
         ]
         if len(topics) > 0
         else []
@@ -183,7 +225,7 @@ def extract_topics(body, pipeline):
     return unique_entities(topics)
 
 
-def extract_named_entities(body, pipeline):
+async def extract_named_entities(body, pipeline):
     body = tokenize_to_max_length(body, 384)
     named_entities = []
 
@@ -223,7 +265,15 @@ def extractive_summarization(doc, stopwords, top_n=3):
     return format_sentences(sentences_to_summarize)
 
 
-def format_sentences(sentences_to_summarize):
+def format_sentences(sentences_to_summarize: list[str]) -> str:
+    """Format sentences to summarize
+
+    Args:
+        sentences_to_summarize (list[str]): A list of sentences
+
+    Returns:
+        str: A string of sentences
+    """
     sentences = [
         sentence[0].upper() + sentence[1:] for sentence in sentences_to_summarize
     ]
@@ -236,14 +286,14 @@ def extract_sentences(doc):
     return list(set(sentences))
 
 
-def build_similarity_matrix(sentences, stopwords):
+def build_similarity_matrix(sentences, stopwords) -> np.ndarray:
     similarity_matrix = np.zeros((len(sentences), len(sentences)))
-    for idx1 in range(len(sentences)):
-        for idx2 in range(len(sentences)):
-            if idx1 == idx2:  # ignore if both are same sentences
+    for i, _ in enumerate(sentences):
+        for j, _ in enumerate(sentences):
+            if i == j:  # ignore if both are same sentences
                 continue
-            similarity_matrix[idx1][idx2] = sentence_similarity(
-                sentences[idx1], sentences[idx2], stopwords
+            similarity_matrix[i][j] = sentence_similarity(
+                sentences[i], sentences[j], stopwords
             )
     return similarity_matrix
 
@@ -251,24 +301,28 @@ def build_similarity_matrix(sentences, stopwords):
 def sentence_similarity(sent1, sent2, stopwords):
     sent1 = [w.lower() for w in sent1]
     sent2 = [w.lower() for w in sent2]
+
     all_words = list(set(sent1 + sent2))
+
     vector1 = [0] * len(all_words)
     vector2 = [0] * len(all_words)
+
     # build the vector for the first sentence
     for w in sent1:
         if w in stopwords:
             continue
         vector1[all_words.index(w)] += 1
+
     # build the vector for the second sentence
     for w in sent2:
         if w in stopwords:
             continue
         vector2[all_words.index(w)] += 1
+
     return 1 - cosine_distance(vector1, vector2)
 
 
-def extract_quotes(body):
-    # ([\"'“«‹])(.*?)(\1|[\”»›])
+async def extract_quotes(body):
     expressions = [
         r"([\"'«‹])((.*?))(\1|[\»›])",
         r"([“])((.*?))([”])",

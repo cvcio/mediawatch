@@ -1,9 +1,17 @@
 {
     "lang": "el",
-    "tokenizer": "cvcio/roberta-el-news",
-    "topics": "cvcio/mediawatch-el-topics",
-    "ner": "cvcio/roberta-el-ner4",
-    "spacy": "el_core_news_md",
+    "tokenizer": {
+        "type": "transformers",
+        "path": "cvcio/roberta-el-news"
+    },
+    "topics": {
+        "type": "transformers",
+        "path": "cvcio/mediawatch-el-topics"
+    },
+    "spacy": {
+        "type": "spacy",
+        "path": "el_core_news_md"
+    },
     "stopwords": [
         "αδιακοπα",
         "αι",

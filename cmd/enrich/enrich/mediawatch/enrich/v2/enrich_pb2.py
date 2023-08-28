@@ -80,7 +80,6 @@ _sym_db.RegisterMessage(EnrichResponse)
 
 _ENRICHSERVICE = DESCRIPTOR.services_by_name["EnrichService"]
 if _descriptor._USE_C_DESCRIPTORS == False:
-
     DESCRIPTOR._options = None
     DESCRIPTOR._serialized_options = b"\n\030com.mediawatch.enrich.v2B\013EnrichProtoP\001\242\002\003MEX\252\002\024Mediawatch.Enrich.V2\312\002\024Mediawatch\\Enrich\\V2\342\002 Mediawatch\\Enrich\\V2\\GPBMetadata\352\002\026Mediawatch::Enrich::V2"
     _ENRICHREQUEST._serialized_start = 59
