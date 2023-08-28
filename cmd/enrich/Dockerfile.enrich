@@ -1,6 +1,7 @@
-FROM python:3.8-buster AS venv
+FROM python:3.9-buster AS venv
 
-RUN pip install poetry
+RUN pip install poetry==1.1.15
+
 ENV PATH /root/.poetry/bin:$PATH
 
 WORKDIR /svc
@@ -9,10 +10,11 @@ COPY cmd/enrich/pyproject.toml cmd/enrich/poetry.lock ./
 RUN python -m venv --copies /svc/venv
 RUN . /svc/venv/bin/activate && poetry install --no-dev
 
-FROM python:3.8-slim as prod
+FROM python:3.9-slim as prod
 
 COPY --from=venv /svc/venv /svc/venv/
 ENV PATH /svc/venv/bin:$PATH
+RUN pip install torch==2.0.0 --index-url https://download.pytorch.org/whl/cpu
 
 WORKDIR /svc
 COPY cmd/enrich/ /svc

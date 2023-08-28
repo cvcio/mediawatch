@@ -1,28 +1,29 @@
 [tool.poetry]
-name = "server"
-version = "2.2.0"
-description = ""
+name = "enrich"
+version = "2.3.0"
+description = "MediaWatch Enrichment Microservice"
 authors = ["andefined <dimitris.papaevagelou@andefined.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-gensim = "^3.8.1"
-nltk = "^3.7"
-python-dateutil = "^2.8.2"
-spacy = "3.2"
-spacy-lookups-data = "^1.0.3"
-torch = "1.10.2"
-python-dotenv = "^0.20.0"
-grpcio = "^1.46.0"
-grpcio-status = "^1.46.0"
-networkx = "^2.8"
-googleapis-common-protos = "^1.56.0"
-transformers = "^4.26.1"
-safetensors = "^0.3.1"
+python = "^3.9"
+gensim = "3.8.3"
+nltk = "^3.8.1"
+spacy = "^3.6.1"
+python-dotenv = "^1.0.0"
+grpcio = "^1.57.0"
+networkx = "2.7.1"
+googleapis-common-protos = "^1.60.0"
+transformers = "^4.32.0"
+safetensors = "^0.3.3"
+uvloop = "^0.17.0"
+asyncio = "^3.4.3"
+grpc-interceptor = "^0.15.3"
 
 [tool.poetry.dev-dependencies]
-black = "^22.3.0"
-poetry2setup = "^1.0.0"
+black = "^23.7.0"
+pytest = "^7.4.0"
+pylint = "^2.17.5"
+pytest-asyncio = "^0.21.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

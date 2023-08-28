@@ -1,13 +1,15 @@
-import os
-from typing import get_type_hints, Union
+"""config module with AppConfig class"""
+
+from __future__ import annotations
+from typing import get_type_hints
 
 
 class AppConfigError(Exception):
-    pass
+    """Custom exception for AppConfig class"""
 
 
-def _parse_bool(val: Union[str, bool]) -> bool:
-    return val if type(val) == bool else val.lower() in ["true", "yes", "1"]
+def _parse_bool(val: (str | bool)) -> bool:
+    return val if isinstance(val, bool) else val.lower() in set("true", "yes", "1")
 
 
 class AppConfig:
@@ -27,6 +29,10 @@ class AppConfig:
     PORT: int = 50030
 
     MAX_WORKERS: int = 2
+    SUPPORTED_LANGUAGES: list = ["el", "en"]
+    DEVICE: int = -1
+
+    HUGGING_FACE_HUB_TOKEN: str = ""
 
     """
     Map environment variables to class fields according to these rules:
@@ -36,6 +42,7 @@ class AppConfig:
     """
 
     def __init__(self, env):
+        # pylint: disable-next=no-member
         for field in self.__annotations__:
             if not field.isupper():
                 continue
@@ -43,23 +50,24 @@ class AppConfig:
             # Raise AppConfigError if required field not supplied
             default_value = getattr(self, field, None)
             if default_value is None and env.get(field) is None:
-                raise AppConfigError("The {} field is required".format(field))
+                raise AppConfigError(f"The {field} field is required")
 
             # Cast env var value to expected type and raise AppConfigError on failure
             try:
                 var_type = get_type_hints(AppConfig)[field]
                 if var_type == bool:
                     value = _parse_bool(env.get(field, default_value))
+                elif var_type == list:
+                    value = env.get(field, default_value)
+                    value = value if isinstance(value, list) else value.split(",")
                 else:
                     value = var_type(env.get(field, default_value))
 
                 self.__setattr__(field, value)
-            except ValueError:
+            except ValueError as exc:
                 raise AppConfigError(
-                    'Unable to cast value of "{}" to type "{}" for "{}" field'.format(
-                        env[field], var_type, field
-                    )
-                )
+                    f"Unable to cast value of {env[field]} to type {var_type} for {field} field"
+                ) from exc
 
     def __repr__(self):
         return str(self.__dict__)

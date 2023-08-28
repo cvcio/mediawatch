@@ -1,6 +1,9 @@
 {
     "lang": "en",
-    "spacy": "en_core_web_sm",
+    "spacy": {
+        "type": "spacy",
+        "path": "en_core_web_sm"
+    },
     "stopwords": [
         "a",
         "about",
