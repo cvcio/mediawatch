@@ -106,78 +106,76 @@ func (worker *WorkerGroup) TimeTrack(start time.Time, name string) {
 // for some reason).
 func (worker *WorkerGroup) Consume() {
 	for {
-		timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("worker"))
-		//
-		// fetch the message from kafka topic
-		m, err := worker.kafkaClient.Consumer.FetchMessage(worker.ctx)
-		if err != nil {
-			// at this point we don't have a message, as such we don't commit
-			// send the error to channel
-			worker.errChan <- errors.Wrap(err, "failed to fetch messages from kafka")
-			// go to next
-			continue
-		}
+		func() {
+			timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("worker"))
+			defer timer.ObserveDuration()
+			//
+			// fetch the message from kafka topic
+			m, err := worker.kafkaClient.Consumer.FetchMessage(worker.ctx)
+			if err != nil {
+				// at this point we don't have a message, as such we don't commit
+				// send the error to channel
+				worker.errChan <- errors.Wrap(err, "failed to fetch messages from kafka")
+				return
+			}
 
-		// Unmarshal incoming json message
-		var msg link.CatchedURL
-		if err := json.Unmarshal(m.Value, &msg); err != nil {
-			// mark message as read (commit)
-			worker.Commit(m)
-			// send the error to channel
-			worker.errChan <- errors.Wrap(err, "failed to unmarshall messages from kafka")
-			// go to next
-			continue
-		}
+			// Unmarshal incoming json message
+			var msg link.CatchedURL
+			if err := json.Unmarshal(m.Value, &msg); err != nil {
+				// mark message as read (commit)
+				worker.Commit(m)
+				// send the error to channel
+				worker.errChan <- errors.Wrap(err, "failed to unmarshall messages from kafka")
+				return
+			}
 
-		// Commit messages if the AckBefore environment variable is present and valid
-		if worker.ackBefore != "" {
-			if s, err := time.Parse(time.DateOnly, worker.ackBefore); err == nil {
-				if e, err := time.Parse(time.RFC3339, msg.CreatedAt); err == nil {
-					if e.Before(s) {
-						worker.Commit(m)
-						worker.log.Debugf("SKIPPED: %s - %s", msg.CreatedAt, msg.Url)
-						continue
+			// Commit messages if the AckBefore environment variable is present and valid
+			if worker.ackBefore != "" {
+				if s, err := time.Parse(time.DateOnly, worker.ackBefore); err == nil {
+					if e, err := time.Parse(time.RFC3339, msg.CreatedAt); err == nil {
+						if e.Before(s) {
+							worker.Commit(m)
+							worker.log.Debugf("SKIPPED: %s - %s", msg.CreatedAt, msg.Url)
+							return
+						}
 					}
 				}
 			}
-		}
 
-		// re-validate link and make sure it is a valid url
-		if _, err := link.Validate(msg.Url); err != nil {
-			// mark message as read (commit)
-			worker.Commit(m)
-			// send the error to channel
-			worker.errChan <- errors.Wrap(err, "url is not valid, skipping")
-			// go to next
-			continue
-		}
+			// re-validate link and make sure it is a valid url
+			if _, err := link.Validate(msg.Url); err != nil {
+				// mark message as read (commit)
+				worker.Commit(m)
+				worker.log.Warnf("SKIPPED: Url is not valid %s - %s", msg.CreatedAt, msg.Url)
+				return
+			}
 
-		name := msg.Hostname
-		if msg.Type == "twitter" {
-			name = msg.UserName
-		}
-		worker.log.Debugf("CONSUME: %s - %s - %s", name, msg.CreatedAt, msg.DocId)
+			name := msg.Hostname
+			if msg.Type == "twitter" {
+				name = msg.UserName
+			}
+			worker.log.Debugf("CONSUME: %s - %s - %s", name, msg.CreatedAt, msg.DocId)
 
-		// check if article exists before processing it
-		// on nil error the article exists
-		if exists := worker.ArticleExists(msg.Url); !exists {
-			// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
-			// process the article
-			if err := worker.ProcessArticle(msg); err != nil {
-				worker.log.Errorf("ERRORED: %s - %s", msg.Hostname, err.Error())
-				// send the error to channel
-				worker.errChan <- errors.Wrap(err, "failed process article")
+			// check if article exists before processing it
+			// on nil error the article exists
+			if exists := worker.ArticleExists(msg.Url); !exists {
+				// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
+				// process the article
+				if err := worker.ProcessArticle(msg); err != nil {
+					worker.log.Errorf("ERRORED: %s - %s", msg.Hostname, err.Error())
+					// send the error to channel
+					worker.errChan <- errors.Wrap(err, "failed process article")
 
-				// do not commit unprocessed articles
-				if strings.Contains(err.Error(), "GRPC Connection Error") {
-					continue
+					// do not commit unprocessed articles
+					if strings.Contains(err.Error(), "GRPC Connection Error") {
+						return
+					}
 				}
 			}
-		}
 
-		// mark message as read (commit)
-		worker.Commit(m)
-		timer.ObserveDuration()
+			// mark message as read (commit)
+			worker.Commit(m)
+		}()
 	}
 }
 
@@ -528,7 +526,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	enrichResp, err := enrich.NLP(context.Background(), &enrichReq)
 	if err != nil {
 		workerProcessErrors.WithLabelValues("enrich error").Inc()
-		// TODO: check what to do here
+		// if there is an error while enriching, return.
 		worker.log.Errorf("Enrich error: %s", err.Error())
 		return errors.Wrap(err, "enrich error")
 	}
