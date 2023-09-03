@@ -313,32 +313,16 @@ func Update(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) error {
 	fields := make(bson.M)
 	fields["updated_at"] = timestamppb.New(now)
 
-	m := make(map[string]interface{})
 	j, err := json.Marshal(feed)
-
 	if err != nil {
 		return errors.New("unable to marshal proto")
 	}
 
-	if err := bson.UnmarshalExtJSON(j, true, m); err != nil {
+	if err := bson.UnmarshalExtJSON(j, true, fields); err != nil {
 		return errors.New("unable to unmarshal json to bson")
 	}
 
-	// iterate over the first two levels and append values as a flat map of the interfaces
-	// ex. map[localization:map[country:Greece]] => map[localization.country:Greece]
-	for k, v := range m {
-		if _, ok := v.(map[string]interface{}); ok {
-			for nk, nv := range v.(map[string]interface{}) {
-				fields[k+"."+nk] = nv
-			}
-		} else {
-			fields[k] = v
-		}
-	}
-
-	if _, ok := fields["id"]; ok {
-		delete(fields, "id")
-	}
+	delete(fields, "id")
 
 	update := bson.M{"$set": fields}
 	filter := bson.M{"_id": oid}
