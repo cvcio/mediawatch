@@ -100,7 +100,11 @@ func Country(s string) func(*ListOpts) {
 
 func SortKey(i string) func(*ListOpts) {
 	return func(l *ListOpts) {
-		l.SortKey = i
+		if i == "" {
+			l.SortKey = "_id"
+		} else {
+			l.SortKey = i
+		}
 	}
 }
 

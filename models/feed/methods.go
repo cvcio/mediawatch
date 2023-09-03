@@ -210,7 +210,7 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 	}
 
 	if opts.StreamStatus > 0 {
-		filter["stream.streams_tatus"] = opts.StreamStatus
+		filter["stream.stream_status"] = opts.StreamStatus
 	}
 
 	if opts.Q != "" {
