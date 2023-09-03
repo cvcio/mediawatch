@@ -106,6 +106,11 @@ func SortKey(i string) func(*ListOpts) {
 
 func SortOrder(s int) func(*ListOpts) {
 	return func(l *ListOpts) {
-		l.SortOrder = s
+		values := map[int]bool{-1: true, 1: true}
+		if _, ok := values[s]; !ok {
+			l.SortOrder = 1
+		} else {
+			l.SortOrder = s
+		}
 	}
 }

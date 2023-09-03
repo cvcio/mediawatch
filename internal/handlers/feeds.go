@@ -94,6 +94,8 @@ func (h *FeedsHandler) GetFeeds(ctx context.Context, req *connect.Request[feedsv
 		feed.Country(req.Msg.Country),
 		feed.Limit(int(req.Msg.Limit)),
 		feed.Offset(int(req.Msg.Offset)),
+		feed.SortOrder(int(req.Msg.SortOrder)),
+		feed.SortKey(req.Msg.SortKey),
 	)
 
 	if err != nil {
