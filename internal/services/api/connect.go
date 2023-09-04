@@ -45,7 +45,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ============================================================
 	elastic, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
 	if err != nil {
-		log.Errorf("[SERVER] Elasticsearch connection failed with error: %", err.Error())
+		log.Errorf("[SERVER] Elasticsearch connection failed with error: %s", err.Error())
 		return err
 	}
 	log.Debugf("[SERVER] Elasticsearch connected on: %s", cfg.GetElasticsearchURL())
