@@ -1,10 +1,14 @@
 """String utils for NLP"""
 
 import re
+import string
+
+from typing import Union
 
 from unicodedata import normalize, category
 from nltk.tokenize import RegexpTokenizer
 from nltk.stem.porter import PorterStemmer
+from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 
 
 def normalize_nfd(value):
@@ -78,20 +82,35 @@ def prepare_text(text, stopwords):
     return tokens
 
 
-def tokenize_to_max_length(text, max_length: int = 512):
+def tokenize_to_max_length(
+    text,
+    max_length: int = 512,
+    tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast] = None,
+):
     """Tokenize text to max length
 
     Args:
         text (str): Input test
-        max_length (int, optional): Max length. Defaults to 512.
+        max_length (int, optional): Max length. Defaults to 512
+        tokenizer: Tokenizer. Defaults to None
 
     Returns:
         list[str]: A list of text chunks of max length
     """
-    tokens = text.split(" ")
-    chunks = [tokens[i : i + max_length] for i in range(0, len(tokens), max_length)]
-    chunks = [" ".join(list(chunk)) for chunk in chunks]
-    return chunks
+    if tokenizer is None:
+        tokens = text.split(" ")
+        chunks = [tokens[i : i + max_length] for i in range(0, len(tokens), max_length)]
+        chunks = [" ".join(list(chunk)) for chunk in chunks]
+        return chunks
+    else:
+        output = tokenizer.encode(text, add_special_tokens=False)
+        encoded_chunks = [
+            output[i : i + max_length] for i in range(0, len(output), max_length)
+        ]
+        decoded_chunks = [
+            tokenizer.decode(c, skip_special_tokens=True) for c in encoded_chunks
+        ]
+        return decoded_chunks
 
 
 def unique_entities(items):
@@ -106,3 +125,16 @@ def unique_entities(items):
             unique_items.append(item)
 
     return unique_items
+
+
+def has_numbers(value):
+    return bool(re.search(r"\d", value))
+
+
+def remove_punctuation(value):
+    translator = str.maketrans("", "", string.punctuation)
+    return value.translate(translator)
+
+
+def in_black_list(value, black_list):
+    return value in black_list

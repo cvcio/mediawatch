@@ -122,6 +122,7 @@ func (h *ArticlesHandler) GetArticles(ctx context.Context, req *connect.Request[
 
 // Stream streams articles in real time.
 func (h *ArticlesHandler) StreamArticles(ctx context.Context, req *connect.Request[articlesv2.QueryArticle], stream *connect.ServerStream[articlesv2.ArticleList]) error {
+	h.log.Infof("[ARTICLES] Streaming articles: %s", req.Msg.String())
 	pubsub, articlesCh, err := h.rdb.Subscribe(ctx, "mediawatch_articles_*")
 	if err != nil {
 		h.log.Errorf("[ARTICLES] Pub/Sub subscriprion error: %s", err.Error())

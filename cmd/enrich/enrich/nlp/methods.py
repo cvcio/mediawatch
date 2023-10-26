@@ -3,6 +3,8 @@
 import re
 import logging
 
+from typing import Union, List
+
 from collections import Counter
 from heapq import nlargest
 from string import punctuation
@@ -15,12 +17,17 @@ from nlp.utils import (
     unique_entities,
     normalize_text,
     tokenize_to_max_length,
+    has_numbers,
+    remove_punctuation,
 )
 
 from nltk.cluster.util import cosine_distance
 from nltk import word_tokenize
+
 import numpy as np
 import networkx as nx
+
+from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 
 
 async def extract_stopwords(text: str, stopwords: list[str]) -> list[str]:
@@ -81,6 +88,8 @@ async def extract_entities(doc) -> list[dict]:
         {"text": normalize_keyword(w.text), "type": w.label_, "index": [w.start, w.end]}
         for w in doc.ents
         if w.label_ in ["GPE", "ORG", "PRESON"]
+        and len(remove_punctuation(w.text)) >= 2
+        and not has_numbers(w.text)
     ]
     return unique(entities)
 
@@ -203,20 +212,28 @@ async def extract_claims(doc, stopwords: list[str], per: float = 0.25) -> list[d
     return claims
 
 
-async def extract_topics(body, pipeline) -> list[dict]:
-    body = tokenize_to_max_length(body, 384)
+async def extract_topics(
+    body: Union[str, List[str]],
+    pipeline,
+    tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast] = None,
+) -> list[dict]:
+    body = tokenize_to_max_length(body, 512, tokenizer)
     topics = []
 
     try:
-        topics = [pipeline(text, return_all_scores=True, top_k=4) for text in body]
+        topics = [
+            pipeline(text, return_all_scores=True, top_k=4, max_length=512, truncation=True)
+            for text in body
+        ]
         topics = [topic for sublist in topics for topic in sublist]
-    except:
-        pass
+    except Exception as err:
+        logging.error("Topic extraction error: %s", err)
+
     topics = (
         [
             {"text": x["label"], "type": "topic", "score": x["score"]}
             for x in topics
-            if x["score"] > 0.1
+            if x["score"] > 0.25
         ]
         if len(topics) > 0
         else []
@@ -225,8 +242,12 @@ async def extract_topics(body, pipeline) -> list[dict]:
     return unique_entities(topics)
 
 
-async def extract_named_entities(body, pipeline):
-    body = tokenize_to_max_length(body, 384)
+async def extract_named_entities(
+    body: Union[str, List[str]],
+    pipeline,
+    tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast] = None,
+) -> list[dict]:
+    body = tokenize_to_max_length(body, 512, tokenizer)
     named_entities = []
 
     try:
@@ -251,7 +272,7 @@ async def extract_named_entities(body, pipeline):
     return named_entities
 
 
-def extractive_summarization(doc, stopwords, top_n=3):
+async def extractive_summarization(doc, stopwords, top_n=3):
     sentences = extract_sentences(doc)
     sentences_to_summarize = []
     sentence_similarity_martix = build_similarity_matrix(sentences, stopwords)
@@ -344,3 +365,14 @@ async def extract_quotes(body):
                         }
                     )
     return quotes
+
+
+async def summarize(doc, limit: int = 5) -> str:
+    textrank = doc._.textrank
+    sentences = [
+        sentence.text
+        for sentence in textrank.summary(
+            limit_sentences=limit, limit_phrases=limit, preserve_order=True
+        )
+    ]
+    return format_sentences(list(set(sentences)))

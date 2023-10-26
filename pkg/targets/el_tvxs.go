@@ -15,7 +15,7 @@ import (
 type El_Tvxs struct{}
 
 func (h El_Tvxs) ParseList(client *http.Client) ([]*gofeed.Item, error) {
-	url := "https://tvxs.gr/news/all"
+	url := "https://tvxs.gr/latest-news/"
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {

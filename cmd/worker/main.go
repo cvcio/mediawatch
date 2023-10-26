@@ -146,7 +146,7 @@ func (worker *WorkerGroup) Consume() {
 			if _, err := link.Validate(msg.Url); err != nil {
 				// mark message as read (commit)
 				worker.Commit(m)
-				worker.log.Warnf("SKIPPED: Url is not valid %s - %s", msg.CreatedAt, msg.Url)
+				worker.log.Debugf("SKIPPED: Url is not valid %s - %s", msg.CreatedAt, msg.Url)
 				return
 			}
 

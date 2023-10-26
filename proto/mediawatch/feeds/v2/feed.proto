@@ -91,7 +91,7 @@ message Feed {
     // Feed update datetime in RFC3339 format
     google.protobuf.Timestamp updated_at = 3 [(tagger.tags) = "bson:\"updated_at,omitempty\""];
     // Name of the feed
-    string name = 4 ;
+    string name = 4;
     // Twitter user_name of the feed (if appliccable)
     string user_name = 5 [(tagger.tags) = "bson:\"user_name,omitempty\""];
     // A small description of the feed

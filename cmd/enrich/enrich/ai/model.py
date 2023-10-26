@@ -6,6 +6,8 @@ import io
 import json
 import logging
 
+from typing import Any, Union
+
 from collections import namedtuple
 from config.config import AppConfig
 
@@ -15,13 +17,14 @@ from transformers import (
     pipeline,
     AutoTokenizer,
     AutoModelForSequenceClassification,
+    PreTrainedTokenizer,
     PreTrainedTokenizerFast
 )
 
 from transformers.pipelines import Pipeline
 
 
-def read_model(file):
+def read_configuration(file: str) -> Any:
     """Read model from file"""
     with io.open(os.path.join(file), encoding="utf-8") as f:
         return json.loads(
@@ -33,7 +36,7 @@ class AIModel:
     """AIModel class loads pretrained models for a specific language."""
 
     def __init__(self, file: str):
-        self.conf = read_model(file)
+        self.conf = read_configuration(file)
         self.lang = self.conf.lang
 
         self.tokenizer = (
@@ -44,7 +47,7 @@ class AIModel:
 
         self.topic_classification_pipeline = (
             self.load_transformers_pipeline(
-                self.conf.topics.path, "text-classification", top_k=4
+                self.conf.topics.path, "text-classification",
             )
             if getattr(self.conf, "topics", None)
             else None
@@ -66,9 +69,7 @@ class AIModel:
 
         logging.info("Loaded model for lang: %s", self.conf.lang)
 
-    def load_transformers_pipeline(
-        self, path: str, task: str = "text-classification", **kwargs
-    ) -> Pipeline:
+    def load_transformers_pipeline(self, path: str, task: str = "text-classification", **kwargs) -> Pipeline:
         """Load transformers model"""
         return pipeline(
             task=task,
@@ -81,7 +82,7 @@ class AIModel:
             **kwargs,
         )
 
-    def load_transformers_tokenizer(self, path: str) -> PreTrainedTokenizerFast:
+    def load_transformers_tokenizer(self, path: str) -> Union[PreTrainedTokenizer, PreTrainedTokenizerFast]:
         """Load transformers tokenizer"""
         return AutoTokenizer.from_pretrained(
             path,
@@ -98,4 +99,5 @@ class AIModel:
 
         model = spacy.load(path)
         model.Defaults.stop_words.update(self.conf.stopwords)
+        model.add_pipe("textrank", config={"token_lookback": 10})
         return model

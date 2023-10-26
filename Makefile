@@ -93,15 +93,15 @@ lint:
 	golangci-lint run -e vendor
 
 db-start:
-	docker-compose up -d
+	docker compose up -d 
 
 db-logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 db: db-start db-logs
 
 db-stop:
-	docker-compose stop
+	docker compose stop
 
 clean-es:
 	docker-compose stop elasticsearch
