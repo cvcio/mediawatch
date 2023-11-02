@@ -19,6 +19,7 @@ message FeedTest {
     string description      = 6;
     string image            = 7;
     string url              = 8;
+    string status           = 9;
 }
 
 // FeedStream Model
@@ -163,4 +164,6 @@ service FeedService {
     rpc DeleteFeed (Feed) returns (mediawatch.common.v2.ResponseWithMessage) {};
     // get the stream list
     rpc GetFeedsStreamList (QueryFeed) returns (FeedList) {};
+    // test the feed e2e
+    rpc TestFeed (Feed) returns (FeedTest) {};
 }

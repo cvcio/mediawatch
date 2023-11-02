@@ -31,6 +31,8 @@ type FeedServiceClient interface {
 	DeleteFeed(ctx context.Context, in *Feed, opts ...grpc.CallOption) (*v2.ResponseWithMessage, error)
 	// get the stream list
 	GetFeedsStreamList(ctx context.Context, in *QueryFeed, opts ...grpc.CallOption) (*FeedList, error)
+	// test the feed e2e
+	TestFeed(ctx context.Context, in *Feed, opts ...grpc.CallOption) (*FeedTest, error)
 }
 
 type feedServiceClient struct {
@@ -95,6 +97,15 @@ func (c *feedServiceClient) GetFeedsStreamList(ctx context.Context, in *QueryFee
 	return out, nil
 }
 
+func (c *feedServiceClient) TestFeed(ctx context.Context, in *Feed, opts ...grpc.CallOption) (*FeedTest, error) {
+	out := new(FeedTest)
+	err := c.cc.Invoke(ctx, "/mediawatch.feeds.v2.FeedService/TestFeed", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FeedServiceServer is the server API for FeedService service.
 // All implementations should embed UnimplementedFeedServiceServer
 // for forward compatibility
@@ -111,6 +122,8 @@ type FeedServiceServer interface {
 	DeleteFeed(context.Context, *Feed) (*v2.ResponseWithMessage, error)
 	// get the stream list
 	GetFeedsStreamList(context.Context, *QueryFeed) (*FeedList, error)
+	// test the feed e2e
+	TestFeed(context.Context, *Feed) (*FeedTest, error)
 }
 
 // UnimplementedFeedServiceServer should be embedded to have forward compatible implementations.
@@ -134,6 +147,9 @@ func (UnimplementedFeedServiceServer) DeleteFeed(context.Context, *Feed) (*v2.Re
 }
 func (UnimplementedFeedServiceServer) GetFeedsStreamList(context.Context, *QueryFeed) (*FeedList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFeedsStreamList not implemented")
+}
+func (UnimplementedFeedServiceServer) TestFeed(context.Context, *Feed) (*FeedTest, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestFeed not implemented")
 }
 
 // UnsafeFeedServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -255,6 +271,24 @@ func _FeedService_GetFeedsStreamList_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FeedService_TestFeed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Feed)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FeedServiceServer).TestFeed(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mediawatch.feeds.v2.FeedService/TestFeed",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FeedServiceServer).TestFeed(ctx, req.(*Feed))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FeedService_ServiceDesc is the grpc.ServiceDesc for FeedService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -285,6 +319,10 @@ var FeedService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetFeedsStreamList",
 			Handler:    _FeedService_GetFeedsStreamList_Handler,
+		},
+		{
+			MethodName: "TestFeed",
+			Handler:    _FeedService_TestFeed_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

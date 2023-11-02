@@ -106,3 +106,5 @@ tmp/
 __pycache__
 .env*
 .pytest_cache
+.ruff_cache
+.benchmarks

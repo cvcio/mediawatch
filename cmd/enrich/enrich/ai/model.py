@@ -12,6 +12,7 @@ from collections import namedtuple
 from config.config import AppConfig
 
 import spacy
+import pytextrank
 
 from transformers import (
     pipeline,
@@ -75,7 +76,7 @@ class AIModel:
             task=task,
             model=AutoModelForSequenceClassification.from_pretrained(
                 path,
-                token=True if AppConfig(os.environ).ENV == "development" else AppConfig(os.environ).HUGGING_FACE_HUB_TOKEN,
+                # token=True if AppConfig(os.environ).ENV == "development" else AppConfig(os.environ).HUGGING_FACE_HUB_TOKEN,
             ),
             tokenizer=self.tokenizer,
             device=AppConfig(os.environ).DEVICE,
@@ -89,7 +90,7 @@ class AIModel:
             use_fast=True,
             truncate=True,
             max_length=512,
-            token=True if AppConfig(os.environ).ENV == "development" else AppConfig(os.environ).HUGGING_FACE_HUB_TOKEN,
+            # token=True if AppConfig(os.environ).ENV == "development" else AppConfig(os.environ).HUGGING_FACE_HUB_TOKEN,
         )
 
     def load_spacy_model(self, path: str) -> spacy.language.Language:

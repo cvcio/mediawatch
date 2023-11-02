@@ -12,9 +12,9 @@ import "mediawatch/feeds/v2/feed.proto";
 import "mediawatch/common/v2/common.proto";
 
 message Post {
-    mediawatch.aricles.v2.Article article = 7;
-    mediawatch.feeds.v2.Feed feed = 9;
-    int64 rel_count = 11;
+    mediawatch.articles.v2.Article article = 1;
+    mediawatch.feeds.v2.Feed feed = 2;
+    int64 rel_count = 3;
 };
 message PostRequest {};
 message PostResponse {

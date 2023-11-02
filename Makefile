@@ -36,6 +36,7 @@ buf-generate-py:
 		--exclude-path proto/mediawatch/compare \
 		--exclude-path proto/mediawatch/feeds \
 		--exclude-path proto/mediawatch/scrape \
+		--exclude-path proto/mediawatch/posts \
 		.  
 buf-clean:
 	rm -rf pkg/tagger
