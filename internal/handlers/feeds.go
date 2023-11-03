@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/cvcio/mediawatch/models/feed"
@@ -9,12 +11,16 @@ import (
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/es"
+	"github.com/cvcio/mediawatch/pkg/interceptors"
 	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2/feedsv2connect"
+	scrapev2 "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
 	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // FeedsHandler implements feeds connect service
@@ -176,5 +182,59 @@ func (h *FeedsHandler) GetFeedsStreamList(ctx context.Context, req *connect.Requ
 
 	return connect.NewResponse(&feedsv2.FeedList{
 		Data: data,
+	}), nil
+}
+
+// TestFeed tests a feed.
+func (h *FeedsHandler) TestFeed(ctx context.Context, req *connect.Request[feedsv2.Feed]) (*connect.Response[feedsv2.FeedTest], error) {
+	h.log.Debugf("TestFeed Request Message: %+v", req.Msg)
+
+	// Create the gRPC service clients
+	// Parse Server Options
+	var grpcOptions []grpc.DialOption
+	grpcOptions = append(
+		grpcOptions,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(interceptors.TimeoutInterceptor(15*time.Second)),
+	)
+	// Create gRPC Scrape Connection
+	scrapeGRPC, err := grpc.Dial(config.NewConfig().Scrape.Host, grpcOptions...)
+	if err != nil {
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to connect to scrape service"))
+		h.log.Errorf("Internal: %s", err.Error())
+		return nil, errorMessage
+	}
+
+	defer scrapeGRPC.Close()
+
+	// Create gRPC Scrape client
+	scrape := scrapev2.NewScrapeServiceClient(scrapeGRPC)
+
+	// scraper client
+	feedString, _ := json.Marshal(req.Msg)
+
+	// create the scrape request
+	scrapeReq := scrapev2.SimpleScrapeRequest{
+		Feed: string(feedString),
+		Url:  req.Msg.Test.Url,
+		Lang: req.Msg.Localization.Lang,
+	}
+	// scrape the article
+	scrapeResp, err := scrape.SimpleScrape(context.Background(), &scrapeReq)
+	if err != nil {
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to scrape url: %s. Error: %s", req.Msg.Test.Url, err.Error()))
+		h.log.Errorf("Internal: %s", err.Error())
+		return nil, errorMessage
+	}
+
+	return connect.NewResponse(&feedsv2.FeedTest{
+		Title:       scrapeResp.Data.Content.Title,
+		Body:        scrapeResp.Data.Content.Body,
+		Authors:     scrapeResp.Data.Content.Authors,
+		Tags:        scrapeResp.Data.Content.Tags,
+		PublishedAt: scrapeResp.Data.Content.PublishedAt,
+		Description: scrapeResp.Data.Content.Description,
+		Image:       scrapeResp.Data.Content.Image,
+		Status:      scrapeResp.Status,
 	}), nil
 }
