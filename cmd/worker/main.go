@@ -691,7 +691,7 @@ func dialOpts() []grpc.DialOption {
 	grpcOptions = append(
 		grpcOptions,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(interceptors.TimeoutInterceptor(15*time.Second)),
+		grpc.WithUnaryInterceptor(interceptors.TimeoutInterceptor(60*time.Second)),
 	)
 	return grpcOptions
 }
