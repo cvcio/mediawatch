@@ -8,7 +8,7 @@ const enumerateErrorFormat = winston.format((info) => {
 });
 
 const logger = winston.createLogger({
-	level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+	level: process.env.LOG_LEVEL || 'info',
 	format: winston.format.combine(winston.format.timestamp({
 		format: 'YYYY-MM-DD HH:mm:ss'
 	}),

@@ -71,8 +71,8 @@ type WorkerGroup struct {
 	esIndex   string
 	neoClient *neo.Neo
 
-	scrapeHost  string
-	ernrichHost string
+	scrapeGRPC *grpc.ClientConn
+	enrichGRPC *grpc.ClientConn
 
 	ackBefore string
 
@@ -99,7 +99,7 @@ func (worker *WorkerGroup) TimeTrack(start time.Time, name string) {
 }
 
 // Consume consumes kafka topics inside an infinite loop. In our logic we need
-// to fetch a message from a topic (FetcMessage), parse the json (Unmarshal)
+// to fetch a message from a topic (FetchMessage), parse the json (Unmarshal)
 // and process the content (articleProcess) if it doesn't already exists.
 // If, for any reason, any step fails with an error we will commit this message
 // to kafka as we don't want to process this particular message again (it failed
@@ -117,6 +117,15 @@ func (worker *WorkerGroup) Consume() {
 				// send the error to channel
 				worker.errChan <- errors.Wrap(err, "failed to fetch messages from kafka")
 				return
+			}
+
+			switch m.Topic {
+			case "worker":
+				// process the article
+				// worker.articleProcess(m)
+			case "compare":
+				// process the article
+				// worker.compareProcess(m)
 			}
 
 			// Unmarshal incoming json message
@@ -211,8 +220,8 @@ func NewWorkerGroup(
 	esClient *es.Elastic,
 	esIndex string,
 	neoClient *neo.Neo,
-	scrapeHost string,
-	ernrichHost string,
+	scrapeGRPC *grpc.ClientConn,
+	enrichGRPC *grpc.ClientConn,
 	ackBefore string,
 	rdb *redis.RedisClient,
 ) *WorkerGroup {
@@ -225,8 +234,8 @@ func NewWorkerGroup(
 		esClient,
 		esIndex,
 		neoClient,
-		scrapeHost,
-		ernrichHost,
+		scrapeGRPC,
+		enrichGRPC,
 		ackBefore,
 		rdb,
 	}
@@ -288,6 +297,27 @@ func main() {
 	defer rdb.Close()
 
 	// =========================================================================
+	// Create external microservice client connections
+	// Parse Server Options
+	grpcOptions := dialOpts()
+
+	// Create gRPC Scrape Connection
+	scrapeGRPC, err := grpc.Dial(cfg.Scrape.Host, grpcOptions...)
+	if err != nil {
+		workerProcessErrors.WithLabelValues("scraper offline").Inc()
+		log.Fatalf("GRPC Scrape did not connect: %v", err)
+	}
+	defer scrapeGRPC.Close()
+
+	// Create gRPC Enrich Connection
+	enrichGRPC, err := grpc.Dial(cfg.Enrich.Host, grpcOptions...)
+	if err != nil {
+		workerProcessErrors.WithLabelValues("enrich offline").Inc()
+		log.Fatalf("GRPC Enrich did not connect: %v", err)
+	}
+	defer enrichGRPC.Close()
+
+	// =========================================================================
 	// Create kafka consumer/producer worker
 
 	// create an error channel to forward errors
@@ -307,7 +337,7 @@ func main() {
 	// create a new worker
 	worker := NewWorkerGroup(
 		log, kafkaGoClient, kafkaChan,
-		dbConn, esClient, cfg.Elasticsearch.Index, neoClient, cfg.Scrape.Host, cfg.Enrich.Host, cfg.Kafka.AckBefore, rdb,
+		dbConn, esClient, cfg.Elasticsearch.Index, neoClient, scrapeGRPC, enrichGRPC, cfg.Kafka.AckBefore, rdb,
 	)
 
 	// close connections on exit
@@ -325,7 +355,7 @@ func main() {
 	// Blocking main listening for requests
 	// Make a channel to listen for errors coming from the listener. Use a
 	// buffered channel so the goroutine can exit if we don't collect this error.
-	errSingals := make(chan error, 1)
+	errSignals := make(chan error, 1)
 
 	// ========================================
 	// Create a registry and a web server for prometheus metrics
@@ -345,7 +375,7 @@ func main() {
 	// ========================================
 	// Start the http service for prometheus
 	go func() {
-		errSingals <- promHandler.ListenAndServe()
+		errSignals <- promHandler.ListenAndServe()
 	}()
 
 	// ========================================
@@ -363,7 +393,7 @@ func main() {
 		case err := <-kafkaChan:
 			log.Errorf("Error from kafka: %s", err.Error())
 
-		case err := <-errSingals:
+		case err := <-errSignals:
 			log.Errorf("Error: %s", err.Error())
 			os.Exit(1)
 
@@ -446,17 +476,17 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// =========================================================================
 	// Create the gRPC service clients
 	// Parse Server Options
-	grpcOptions := dialOpts()
+	// grpcOptions := dialOpts()
 
-	// Create gRPC Scrape Connection
-	scrapeGRPC, err := grpc.Dial(worker.scrapeHost, grpcOptions...)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("scraper offline").Inc()
-		worker.log.Fatalf("GRPC Scrape did not connect: %v", err)
-	}
-	defer scrapeGRPC.Close()
+	// // Create gRPC Scrape Connection
+	// scrapeGRPC, err := grpc.Dial(worker.scrapeHost, grpcOptions...)
+	// if err != nil {
+	// 	workerProcessErrors.WithLabelValues("scraper offline").Inc()
+	// 	worker.log.Fatalf("GRPC Scrape did not connect: %v", err)
+	// }
+	// defer scrapeGRPC.Close()
 	// Create gRPC Scrape client
-	scrape := scrape_pb.NewScrapeServiceClient(scrapeGRPC)
+	scrape := scrape_pb.NewScrapeServiceClient(worker.scrapeGRPC)
 
 	// scraper client
 	feedString, _ := json.Marshal(f)
@@ -507,15 +537,15 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("enrich"))
 	// enrich client
 	// Create gRPC Enrich Connection
-	enrichGRPC, err := grpc.Dial(worker.ernrichHost, grpcOptions...)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("enrich offline").Inc()
-		worker.log.Fatalf("GRPC Enrich did not connect: %v", err)
-	}
-	defer enrichGRPC.Close()
+	// enrichGRPC, err := grpc.Dial(worker.ernrichHost, grpcOptions...)
+	// if err != nil {
+	// 	workerProcessErrors.WithLabelValues("enrich offline").Inc()
+	// 	worker.log.Fatalf("GRPC Enrich did not connect: %v", err)
+	// }
+	// defer enrichGRPC.Close()
 
 	// Create gRPC Enrich Connection
-	enrich := enrich_pb.NewEnrichServiceClient(enrichGRPC)
+	enrich := enrich_pb.NewEnrichServiceClient(worker.enrichGRPC)
 	// create the enrich request
 	enrichReq := enrich_pb.EnrichRequest{
 		Body: a.Content.Body,

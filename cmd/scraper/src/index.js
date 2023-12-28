@@ -25,8 +25,14 @@ const shutdown = (err) => {
 
 const main = async () => {
 	logger.info('[SVC-SCRAPER] Starting gRPC server');
+
 	const mongo = new MongoClient(process.env.MONGODB_URL);
+	mongo.on('serverClosed', (event) => logger.info(`[SVC-SCRAPER] MongoDB connection closed: ${event.address}`));
 	await mongo.connect();
+	const db = mongo.db(process.env.MONGODB_DB);
+	const collection = db.collection('passages');
+	const passages = await collection.find({}).limit(5000).toArray();
+	mongo.close();
 
 	// Server Constructor
 	server = new grpc.Server();
@@ -42,7 +48,7 @@ const main = async () => {
 		});
 
 	const scrapeProto = grpc.loadPackageDefinition(packageDefinition);
-	const service = new services.ScrapeService(mongo);
+	const service = new services.ScrapeService(passages);
 
 	// Add Services (Endpoints)
 	server.addService(scrapeProto.mediawatch.scrape.v2.ScrapeService.service, service);

@@ -9,22 +9,9 @@ const { getProxy } = require('../utils/proxy');
 moment.suppressDeprecationWarnings = true;
 
 class ScrapeService {
-	constructor (mongo) {
-		this.passages = [];
-		this.mongo = mongo;
-		this.GetPassages();
-	}
-
-	async GetPassages () {
-		if (!this.mongo) return;
-
-		const db = this.mongo.db(process.env.MONGODB_DB);
-		const collection = db.collection('passages');
-
-		const passages = await collection.find({}).limit(5000).toArray();
-
+	constructor (passages) {
 		this.passages = passages.filter(m => m.type === 'trim');
-		logger.debug(`[SVC-SCRAPER] (${this.passages.length}) passages loaded`);
+		logger.info(`[SVC-SCRAPER] (${this.passages.length}) passages loaded`);
 	}
 
 	Scrape (req, callback) {
@@ -241,8 +228,8 @@ class ScrapeService {
 	}
 
 	ReloadPassages (req, callback) {
-		this.GetPassages();
-		return callback(null, null);
+		logger.info('[SVC-SCRAPER] ReloadPassages: ', this.passages.length);
+		return callback({ code: errorCode(500), details: 'Unimplemented method' }, null);
 	}
 
 	RetryWithProxy (request, feed, callback) {

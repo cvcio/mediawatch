@@ -47,3 +47,4 @@ node_modules
 dist
 *.env
 .DS_Store
+.mypy_cache

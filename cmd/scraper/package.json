@@ -1,6 +1,6 @@
 {
     "name": "svc-scraper",
-    "version": "2.5.0",
+    "version": "2.5.1",
     "description": "Javascript Scraper Microservice",
     "main": "src/index.js",
     "repository": "https://github.com/plagiari-sm/svc-scraper-js",
@@ -15,8 +15,8 @@
         "build": "cross-env BABEL_ENV=production babel src --out-dir dist --copy-files"
     },
     "dependencies": {
-        "@grpc/grpc-js": "^1.5.0",
-        "@grpc/proto-loader": "^0.6.9",
+        "@grpc/grpc-js": "^1.9.12",
+        "@grpc/proto-loader": "^0.7.10",
         "ascraper": "https://github.com/cvcio/ascraper",
         "axios": "^0.26.1",
         "dotenv": "^16.0.0",
