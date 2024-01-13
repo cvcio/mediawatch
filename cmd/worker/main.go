@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -16,7 +14,6 @@ import (
 	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	enrich_pb "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
-	scrape_pb "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
 	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
@@ -62,7 +59,7 @@ var (
 // WorkerGroup struct.
 type WorkerGroup struct {
 	ctx         context.Context
-	log         *zap.SugaredLogger
+	log         *zap.Logger
 	kafkaClient *kafka.KafkaClient
 	errChan     chan error
 
@@ -70,9 +67,6 @@ type WorkerGroup struct {
 	esClient  *es.Elastic
 	esIndex   string
 	neoClient *neo.Neo
-
-	scrapeGRPC *grpc.ClientConn
-	enrichGRPC *grpc.ClientConn
 
 	ackBefore string
 
@@ -95,7 +89,7 @@ func (worker *WorkerGroup) ArticleExists(url string) bool {
 
 func (worker *WorkerGroup) TimeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)
-	worker.log.Debugf("%s: %s", name, elapsed)
+	worker.log.Debug("Duration", zap.String("process", name), zap.Duration("elapsed", elapsed))
 }
 
 // Consume consumes kafka topics inside an infinite loop. In our logic we need
@@ -122,68 +116,63 @@ func (worker *WorkerGroup) Consume() {
 			switch m.Topic {
 			case "worker":
 				// process the article
-				// worker.articleProcess(m)
+				// Unmarshal incoming json message
+				var msg link.CatchedURL
+				if err := json.Unmarshal(m.Value, &msg); err != nil {
+					// mark message as read (commit)
+					worker.Commit(m)
+					worker.log.Error("Failed to unmarshal message from kafka", zap.Error(err))
+					return
+				}
+
+				// Commit messages if the AckBefore environment variable is present and valid
+				if worker.ackBefore != "" {
+					if s, err := time.Parse(time.DateOnly, worker.ackBefore); err == nil {
+						if e, err := time.Parse(time.RFC3339, msg.CreatedAt); err == nil {
+							if e.Before(s) {
+								worker.Commit(m)
+								worker.log.Warn("Skip message (AckBefore)", zap.String("createdAt", msg.CreatedAt), zap.String("url", msg.Url))
+								return
+							}
+						}
+					}
+				}
+
+				// re-validate link and make sure it is a valid url
+				if _, err := link.Validate(msg.Url); err != nil {
+					// mark message as read (commit)
+					worker.Commit(m)
+					worker.log.Warn("Skip message (Invalid)", zap.String("createdAt", msg.CreatedAt), zap.String("url", msg.Url))
+					return
+				}
+
+				name := msg.Hostname
+				if msg.Type == "twitter" {
+					name = msg.UserName
+				}
+				worker.log.Debug("Consume message", zap.String("hostname", name), zap.String("createdAt", msg.CreatedAt), zap.String("url", msg.Url))
+
+				// check if article exists before processing it
+				// on nil error the article exists
+				if exists := worker.ArticleExists(msg.Url); !exists {
+					// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
+					// process the article
+					if err := worker.ProcessArticle(msg); err != nil {
+						worker.log.Error("Error while processing message", zap.String("hostname", name), zap.String("createdAt", msg.CreatedAt), zap.String("url", msg.Url), zap.Error(err))
+
+						// send the error to channel
+						worker.errChan <- errors.Wrap(err, "failed process article")
+						return
+					}
+				}
+
 			case "compare":
 				// process the article
 				// worker.compareProcess(m)
 			}
 
-			// Unmarshal incoming json message
-			var msg link.CatchedURL
-			if err := json.Unmarshal(m.Value, &msg); err != nil {
-				// mark message as read (commit)
-				worker.Commit(m)
-				// send the error to channel
-				worker.errChan <- errors.Wrap(err, "failed to unmarshall messages from kafka")
-				return
-			}
-
-			// Commit messages if the AckBefore environment variable is present and valid
-			if worker.ackBefore != "" {
-				if s, err := time.Parse(time.DateOnly, worker.ackBefore); err == nil {
-					if e, err := time.Parse(time.RFC3339, msg.CreatedAt); err == nil {
-						if e.Before(s) {
-							worker.Commit(m)
-							worker.log.Debugf("SKIPPED: %s - %s", msg.CreatedAt, msg.Url)
-							return
-						}
-					}
-				}
-			}
-
-			// re-validate link and make sure it is a valid url
-			if _, err := link.Validate(msg.Url); err != nil {
-				// mark message as read (commit)
-				worker.Commit(m)
-				worker.log.Debugf("SKIPPED: Url is not valid %s - %s", msg.CreatedAt, msg.Url)
-				return
-			}
-
-			name := msg.Hostname
-			if msg.Type == "twitter" {
-				name = msg.UserName
-			}
-			worker.log.Debugf("CONSUME: %s - %s - %s", name, msg.CreatedAt, msg.DocId)
-
-			// check if article exists before processing it
-			// on nil error the article exists
-			if exists := worker.ArticleExists(msg.Url); !exists {
-				// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
-				// process the article
-				if err := worker.ProcessArticle(msg); err != nil {
-					worker.log.Errorf("ERRORED: %s - %s", msg.Hostname, err.Error())
-					// send the error to channel
-					worker.errChan <- errors.Wrap(err, "failed process article")
-
-					// do not commit unprocessed articles
-					if strings.Contains(err.Error(), "GRPC Connection Error") {
-						return
-					}
-				}
-			}
-
 			// mark message as read (commit)
-			worker.Commit(m)
+			// worker.Commit(m)
 		}()
 	}
 }
@@ -195,7 +184,7 @@ func (worker *WorkerGroup) Commit(m kaf.Message) {
 	}
 }
 
-// Procuce writes a new message to the kafka topic.
+// Produce writes a new message to the kafka topic.
 func (worker *WorkerGroup) Produce(msg kaf.Message) {
 	err := worker.kafkaClient.Producer.WriteMessages(worker.ctx, msg)
 	if err != nil {
@@ -213,15 +202,13 @@ func (worker *WorkerGroup) Publish(channel string, msg string) {
 
 // NewWorkerGroup implements a new WorkerGroup struct.
 func NewWorkerGroup(
-	log *zap.SugaredLogger,
+	log *zap.Logger,
 	kafkaClient *kafka.KafkaClient,
 	errChan chan error,
 	dbConn *db.MongoDB,
 	esClient *es.Elastic,
 	esIndex string,
 	neoClient *neo.Neo,
-	scrapeGRPC *grpc.ClientConn,
-	enrichGRPC *grpc.ClientConn,
 	ackBefore string,
 	rdb *redis.RedisClient,
 ) *WorkerGroup {
@@ -234,8 +221,6 @@ func NewWorkerGroup(
 		esClient,
 		esIndex,
 		neoClient,
-		scrapeGRPC,
-		enrichGRPC,
 		ackBefore,
 		rdb,
 	}
@@ -252,17 +237,21 @@ func main() {
 		panic(err)
 	}
 
-	// ** LOGGER
+	// ========================================
 	// Create a reusable zap logger
-	sugar := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
-	defer sugar.Sync()
-	log := sugar.Sugar()
+	log := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
+	// Sync the logger on exit
+	defer func() {
+		// ignore the error as Sync() is always returning nil
+		// sync: error syncing '/dev/stdout': Invalid argument
+		_ = log.Sync()
+	}()
 
 	// =========================================================================
 	// Create mongo client
 	dbConn, err := db.NewMongoDB(cfg.Mongo.URL, cfg.Mongo.Path, cfg.Mongo.DialTimeout)
 	if err != nil {
-		log.Fatalf("Register DB: %v", err)
+		log.Fatal("MongoDB connection error", zap.Error(err))
 	}
 	defer dbConn.Close()
 
@@ -270,20 +259,19 @@ func main() {
 	// Start elasticsearch
 	esClient, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
 	if err != nil {
-		log.Fatalf("Register Elasticsearch: %v", err)
+		log.Fatal("Elasticsearch connection error", zap.Error(err))
 	}
 
-	log.Info("Check for elasticsearch indexes")
-	err = esClient.CreateElasticIndexWithLanguages(cfg.Elasticsearch.Index, cfg.Langs)
-	if err != nil {
-		log.Fatalf("Index in elasticsearch: %v", err)
+	log.Debug("Checking for elasticsearch indices")
+	if err := esClient.CreateElasticIndexWithLanguages(cfg.Elasticsearch.Index, cfg.Langs); err != nil {
+		log.Fatal("Elasticsearch indices error", zap.Error(err))
 	}
 
 	// =========================================================================
 	// Start neo4j client
 	neoClient, err := neo.NewNeo(cfg.Neo.BOLT, cfg.Neo.User, cfg.Neo.Pass)
 	if err != nil {
-		log.Fatalf("Register Neo4J: %v", err)
+		log.Fatal("Neo4j connection error", zap.Error(err))
 	}
 	defer neoClient.Client.Close()
 
@@ -292,34 +280,12 @@ func main() {
 	// ============================================================
 	rdb, err := redis.NewRedisClient(context.Background(), cfg.GetRedisURL(), "")
 	if err != nil {
-		log.Fatalf("Error connecting to Redis: %s", err.Error())
+		log.Fatal("Redis connection error", zap.Error(err))
 	}
 	defer rdb.Close()
 
 	// =========================================================================
-	// Create external microservice client connections
-	// Parse Server Options
-	grpcOptions := dialOpts()
-
-	// Create gRPC Scrape Connection
-	scrapeGRPC, err := grpc.Dial(cfg.Scrape.Host, grpcOptions...)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("scraper offline").Inc()
-		log.Fatalf("GRPC Scrape did not connect: %v", err)
-	}
-	defer scrapeGRPC.Close()
-
-	// Create gRPC Enrich Connection
-	enrichGRPC, err := grpc.Dial(cfg.Enrich.Host, grpcOptions...)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("enrich offline").Inc()
-		log.Fatalf("GRPC Enrich did not connect: %v", err)
-	}
-	defer enrichGRPC.Close()
-
-	// =========================================================================
 	// Create kafka consumer/producer worker
-
 	// create an error channel to forward errors
 	kafkaChan := make(chan error, 1)
 
@@ -327,17 +293,17 @@ func main() {
 	kafkaGoClient := kafka.NewKafkaClient(
 		true, true,
 		[]string{cfg.Kafka.Broker},
-		cfg.Kafka.WorkerTopic,
-		cfg.Kafka.ConsumerGroupWorker,
-		cfg.Kafka.CompareTopic,
-		cfg.Kafka.ConsumerGroupCompare,
+		cfg.Kafka.ConsumerTopic,
+		cfg.Kafka.ConsumerGroup,
+		cfg.Kafka.ProducerTopic,
+		cfg.Kafka.ProducerGroup,
 		cfg.Kafka.WorkerOffsetOldest,
 	)
 
 	// create a new worker
 	worker := NewWorkerGroup(
 		log, kafkaGoClient, kafkaChan,
-		dbConn, esClient, cfg.Elasticsearch.Index, neoClient, scrapeGRPC, enrichGRPC, cfg.Kafka.AckBefore, rdb,
+		dbConn, esClient, cfg.Elasticsearch.Index, neoClient, cfg.Kafka.AckBefore, rdb,
 	)
 
 	// close connections on exit
@@ -346,7 +312,7 @@ func main() {
 	// run the worker
 	go func() {
 		defer close(kafkaChan)
-		log.Info("Starting kafka consumer")
+		log.Debug("Starting kafka consumer")
 		// consume messages from kafka
 		worker.Consume()
 	}()
@@ -366,7 +332,7 @@ func main() {
 	// create a prometheus http.Server
 	promHandler := http.Server{
 		Addr:           cfg.GetPrometheusURL(),
-		Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}), // api(cfg.Log.Debug, registry),
+		Handler:        promhttp.HandlerFor(registry, promhttp.HandlerOpts{}),
 		ReadTimeout:    cfg.Prometheus.ReadTimeout,
 		WriteTimeout:   cfg.Prometheus.WriteTimeout,
 		MaxHeaderBytes: 1 << 20,
@@ -391,20 +357,20 @@ func main() {
 	for {
 		select {
 		case err := <-kafkaChan:
-			log.Errorf("Error from kafka: %s", err.Error())
+			log.Error("Kafka Error", zap.Error(err))
 
 		case err := <-errSignals:
-			log.Errorf("Error: %s", err.Error())
+			log.Error("Prometheus Error", zap.Error(err))
 			os.Exit(1)
 
 		case s := <-osSignals:
-			log.Debugf("Worker shutdown signal: %s", s)
+			log.Debug("Worker shutdown signal", zap.String("signal", s.String()))
 
 			// Asking prometheus to shutdown and load shed.
 			if err := promHandler.Shutdown(context.Background()); err != nil {
-				log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
+				log.Error("Graceful shutdown did not complete", zap.Error(err))
 				if err := promHandler.Close(); err != nil {
-					log.Fatalf("Could not stop http server: %v", err)
+					log.Fatal("Could not stop http server", zap.Error(err))
 				}
 			}
 		}
@@ -427,7 +393,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		tf, err := feed.GetByUserName(context.Background(), worker.dbConn, in.UserName)
 		if err != nil {
 			workerProcessErrors.WithLabelValues("feed not found").Inc()
-			worker.log.Errorf("Feed not found: %s", err.Error())
+			worker.log.Error("Feed not found", zap.String("username", in.UserName), zap.Error(err))
 			return errors.Wrap(err, "feed not found")
 		}
 		f = tf
@@ -435,7 +401,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		tf, err := feed.GetByHostname(context.Background(), worker.dbConn, in.Hostname)
 		if err != nil {
 			workerProcessErrors.WithLabelValues("feed not found").Inc()
-			worker.log.Errorf("Feed not found: %s", err.Error())
+			worker.log.Error("Feed not found", zap.String("hostname", in.Hostname), zap.Error(err))
 			return errors.Wrap(err, "feed not found")
 		}
 		f = tf
@@ -444,17 +410,16 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// skip if offline
 	if f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
 		workerProcessErrors.WithLabelValues("feed offline").Inc()
-		worker.log.Debugf("SKIPPED: %s - %s", f.Hostname, in.Url)
+		worker.log.Warn("Skip message, feed is offline", zap.String("hostname", f.Hostname), zap.String("url", in.Url))
 		return nil
 	}
 
 	// create a new node into the neo4j database, if not exists
-	fUID, err := relationships.MergeNodeFeed(worker.ctx, worker.neoClient, f)
-	if err != nil {
+	if _, err := relationships.MergeNodeFeed(worker.ctx, worker.neoClient, f); err != nil {
 		workerProcessErrors.WithLabelValues("merge feed error").Inc()
 		// if there is an error during feed node creation return an error
 		// as will not be able to associate the article with a feed.
-		worker.log.Errorf("Merge feed failed: %s", err.Error())
+		worker.log.Error("Merge feed failed", zap.String("hostname", f.Hostname), zap.Error(err))
 		return errors.Wrap(err, "merge feed error")
 	}
 
@@ -469,252 +434,164 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	a.Hostname = f.Hostname
 	a.Lang = f.Localization.Lang
 	a.CrawledAt = in.CreatedAt
-
-	// =========================================================================
-	timer := prometheus.NewTimer(grpcDuration.WithLabelValues("scraper"))
-
-	// =========================================================================
-	// Create the gRPC service clients
-	// Parse Server Options
-	// grpcOptions := dialOpts()
-
-	// // Create gRPC Scrape Connection
-	// scrapeGRPC, err := grpc.Dial(worker.scrapeHost, grpcOptions...)
-	// if err != nil {
-	// 	workerProcessErrors.WithLabelValues("scraper offline").Inc()
-	// 	worker.log.Fatalf("GRPC Scrape did not connect: %v", err)
-	// }
-	// defer scrapeGRPC.Close()
-	// Create gRPC Scrape client
-	scrape := scrape_pb.NewScrapeServiceClient(worker.scrapeGRPC)
-
-	// scraper client
-	feedString, _ := json.Marshal(f)
-
-	// create the scrape request
-	scrapeReq := scrape_pb.ScrapeRequest{
-		Feed:       string(feedString),
-		Url:        in.Url,
-		Lang:       f.Localization.Lang,
-		ScreenName: strings.ToLower(f.UserName),
-		CrawledAt:  in.CreatedAt,
-	}
-
-	// scrape the article
-	scrapeResp, err := scrape.Scrape(context.Background(), &scrapeReq)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("scrape error").Inc()
-		// if there is an error while scraping, return.
-		worker.log.Errorf("Scrape error: %s", err.Error())
-		return errors.Wrap(err, "scrape error")
-	}
-
-	timer.ObserveDuration()
-	worker.log.Debugf("SCRAPED: %s - %s", f.Hostname, in.Url)
-
-	// set scraped data to content
-	a.Content.Body = scrapeResp.Data.Content.Body
-	a.Content.Authors = scrapeResp.Data.Content.Authors
-	a.Content.Tags = scrapeResp.Data.Content.Tags
+	a.Feed = f
 	a.FeedId = f.Id
 	if in.Title != "" {
 		a.Content.Title = in.Title
-	} else {
-		a.Content.Title = scrapeResp.Data.Content.Title
-	}
-	a.Content.Excerpt = scrapeResp.Data.Content.Description
-	a.Content.Image = scrapeResp.Data.Content.Image
-
-	// make sure to parse the datetime object
-	if _, err := time.Parse(time.RFC3339, scrapeResp.Data.Content.PublishedAt); err == nil {
-		a.Content.PublishedAt = scrapeResp.Data.Content.PublishedAt
-	} else {
-		// otherwise set published datetime to crawled time
-		a.Content.PublishedAt = a.CrawledAt
 	}
 
-	// =========================================================================
-	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("enrich"))
-	// enrich client
-	// Create gRPC Enrich Connection
-	// enrichGRPC, err := grpc.Dial(worker.ernrichHost, grpcOptions...)
-	// if err != nil {
-	// 	workerProcessErrors.WithLabelValues("enrich offline").Inc()
-	// 	worker.log.Fatalf("GRPC Enrich did not connect: %v", err)
-	// }
-	// defer enrichGRPC.Close()
-
-	// Create gRPC Enrich Connection
-	enrich := enrich_pb.NewEnrichServiceClient(worker.enrichGRPC)
-	// create the enrich request
-	enrichReq := enrich_pb.EnrichRequest{
-		Body: a.Content.Body,
-		Lang: f.Localization.Lang,
-	}
-
-	// send to enrich
-	enrichResp, err := enrich.NLP(context.Background(), &enrichReq)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("enrich error").Inc()
-		// if there is an error while enriching, return.
-		worker.log.Errorf("Enrich error: %s", err.Error())
-		return errors.Wrap(err, "enrich error")
-	}
-
-	timer.ObserveDuration()
-	worker.log.Debugf("ENRICH:  %s - %s", f.Hostname, in.Url)
-
-	// set enriched data to nlp
-	a.Nlp.Summary = enrichResp.Data.Nlp.Summary
-	a.Nlp.Keywords = enrichResp.Data.Nlp.Keywords
-	a.Nlp.Stopwords = enrichResp.Data.Nlp.Stopwords
-	a.Nlp.Topics = enrichResp.Data.Nlp.Topics
-	a.Nlp.Quotes = enrichResp.Data.Nlp.Quotes
-	a.Nlp.Claims = enrichResp.Data.Nlp.Claims
-	a.Nlp.Entities = enrichResp.Data.Nlp.Entities
-
-	// =========================================================================
-	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("enrich"))
-	// Save the Document to Elasticsearch
-	data, err := json.Marshal(a)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("json marshal error").Inc()
-		worker.log.Errorf("JSON marshal error: %s", err.Error())
-		return errors.Wrap(err, "json marshal error")
-	}
-
-	index, err := worker.esClient.Client.Index(
-		worker.esIndex+"_"+strings.ToLower(a.Lang),
-		bytes.NewReader(data),
-		worker.esClient.Client.Index.WithDocumentID(a.DocId),
-	)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("index error").Inc()
-		worker.log.Errorf("Article indexing error: %s", err.Error())
-		return errors.Wrap(err, "index error")
-	}
-
-	// retrun on response error
-	if index.IsError() {
-		workerProcessErrors.WithLabelValues("index error").Inc()
-		return errors.New(index.String())
-	}
-	index.Body.Close()
-
-	timer.ObserveDuration()
-	worker.log.Debugf("INDEXED: %s - %s", f.Hostname, in.Url)
-
-	// =========================================================================
-	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("save"))
-	// Create a new nodeAuthor if not exist for each Atuhor extracted
-	// by svc-scraper service and return the uid
-	var entities []*relationships.NodeEntity
-	for _, author := range a.Content.Authors {
-		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, author, "author")
-		if err != nil {
-			workerProcessErrors.WithLabelValues("merge authors error").Inc()
-			worker.log.Errorf("Merge author error: %s", err.Error())
-			continue
-		}
-		entities = append(entities, &relationships.NodeEntity{
-			Uid:   uid,
-			Type:  "author",
-			Label: author,
-		})
-	}
-
-	for _, topic := range a.Nlp.Topics {
-		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, topic.Text, "topic")
-		if err != nil {
-			workerProcessErrors.WithLabelValues("merge topics error").Inc()
-			worker.log.Errorf("Merge topic error: %s", err.Error())
-			continue
-		}
-		entities = append(entities, &relationships.NodeEntity{
-			Uid:   uid,
-			Type:  "topic",
-			Label: topic.Text,
-		})
-	}
-
-	// =========================================================================
-	// Create a new nodeArticle
-	nArticle := &relationships.NodeArticle{}
-	nArticle.Uid = a.DocId
-	nArticle.DocId = a.DocId
-	nArticle.Lang = a.Lang
-	nArticle.CrawledAt = a.CrawledAt
-	nArticle.Url = a.Url
-	nArticle.Title = a.Content.Title
-	nArticle.PublishedAt = a.Content.PublishedAt
-	nArticle.Hostname = f.Hostname
-	nArticle.Type = "article"
-
-	resNeo, err := relationships.CreateNodeArticle(worker.ctx, worker.neoClient, nArticle)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("create node article error").Inc()
-		worker.log.Errorf("Merge article error: %s", err.Error())
-		if !strings.Contains(err.Error(), "already exists with label `Article`") {
-			// since the article exists we don't need to save it again
-			// return nil to mark the message as read
-			return errors.Wrap(err, "neo4j error")
-		}
-	}
-
-	// =========================================================================
-	// Save relationships
-	// feed published at
-	if fUID != "" {
-		// disable lint for the error since we don't care about the response
-		// nolint:errcheck
-		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, fUID, "PUBLISHED_AT")
-	}
-	for _, entity := range entities {
-		// if entity.Type == "author" {
-		// 	go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, nArticle.DocId, "AUTHOR_OF")
-		// 	if fUID != "" {
-		// 		// writes for
-		// 		go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, fUID, "WRITES_FOR")
-		// 	}
-		// } else
-		if entity.Type == "topic" {
-			// disable lint for the error since we don't care about the response
-			// nolint:errcheck
-			go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
-		}
-	}
-
-	timer.ObserveDuration()
-
-	// marshal node article
-	b, err := json.Marshal(nArticle)
+	a.Content.PublishedAt = a.CrawledAt
+	b, err := json.Marshal(a)
 	if err != nil {
 		workerProcessErrors.WithLabelValues("marshal article error").Inc()
-		worker.log.Errorf("Marshal article to message error: %s", err.Error())
+		worker.log.Error("Marshal article to message error", zap.Error(err))
 		return err
 	}
-	// write node article as a new message in the compare topic, so we can process it
-	// using the compare microservice.
 	go worker.Produce(kaf.Message{Value: []byte(b)})
-
-	// set values to stream to the frontend
-	a.Feed = f
-	a.Nlp.Stopwords = nil
-
-	// marshal article into string
-	s, err := json.Marshal(a)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("marshal article error").Inc()
-		worker.log.Errorf("Marshal article to message error: %s", err.Error())
-		return err
-	}
-	// publish the article to the corresponding redis channel
-	go worker.Publish("mediawatch_articles_"+strings.ToLower(a.Lang), string(s))
-
-	worker.log.Infof("SAVED: %s - %s", f.Hostname, resNeo)
-
 	return nil
 }
+
+// func onter () {
+// 		// Save the Document to Elasticsearch
+// 	data, err := json.Marshal(a)
+// 	if err != nil {
+// 		workerProcessErrors.WithLabelValues("json marshal error").Inc()
+// 		worker.log.Errorf("JSON marshal error: %s", err.Error())
+// 		return errors.Wrap(err, "json marshal error")
+// 	}
+
+// 	index, err := worker.esClient.Client.Index(
+// 		worker.esIndex+"_"+strings.ToLower(a.Lang),
+// 		bytes.NewReader(data),
+// 		worker.esClient.Client.Index.WithDocumentID(a.DocId),
+// 	)
+// 	if err != nil {
+// 		workerProcessErrors.WithLabelValues("index error").Inc()
+// 		worker.log.Errorf("Article indexing error: %s", err.Error())
+// 		return errors.Wrap(err, "index error")
+// 	}
+
+// 	// retrun on response error
+// 	if index.IsError() {
+// 		workerProcessErrors.WithLabelValues("index error").Inc()
+// 		return errors.New(index.String())
+// 	}
+// 	index.Body.Close()
+
+// 	timer.ObserveDuration()
+// 	worker.log.Debugf("INDEXED: %s - %s", f.Hostname, in.Url)
+
+// 	// =========================================================================
+// 	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("save"))
+// 	// Create a new nodeAuthor if not exist for each Atuhor extracted
+// 	// by svc-scraper service and return the uid
+// 	var entities []*relationships.NodeEntity
+// 	for _, author := range a.Content.Authors {
+// 		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, author, "author")
+// 		if err != nil {
+// 			workerProcessErrors.WithLabelValues("merge authors error").Inc()
+// 			worker.log.Errorf("Merge author error: %s", err.Error())
+// 			continue
+// 		}
+// 		entities = append(entities, &relationships.NodeEntity{
+// 			Uid:   uid,
+// 			Type:  "author",
+// 			Label: author,
+// 		})
+// 	}
+
+// 	for _, topic := range a.Nlp.Topics {
+// 		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, topic.Text, "topic")
+// 		if err != nil {
+// 			workerProcessErrors.WithLabelValues("merge topics error").Inc()
+// 			worker.log.Errorf("Merge topic error: %s", err.Error())
+// 			continue
+// 		}
+// 		entities = append(entities, &relationships.NodeEntity{
+// 			Uid:   uid,
+// 			Type:  "topic",
+// 			Label: topic.Text,
+// 		})
+// 	}
+
+// 	// =========================================================================
+// 	// Create a new nodeArticle
+// 	nArticle := &relationships.NodeArticle{}
+// 	nArticle.Uid = a.DocId
+// 	nArticle.DocId = a.DocId
+// 	nArticle.Lang = a.Lang
+// 	nArticle.CrawledAt = a.CrawledAt
+// 	nArticle.Url = a.Url
+// 	nArticle.Title = a.Content.Title
+// 	nArticle.PublishedAt = a.Content.PublishedAt
+// 	nArticle.Hostname = f.Hostname
+// 	nArticle.Type = "article"
+
+// 	resNeo, err := relationships.CreateNodeArticle(worker.ctx, worker.neoClient, nArticle)
+// 	if err != nil {
+// 		workerProcessErrors.WithLabelValues("create node article error").Inc()
+// 		worker.log.Errorf("Merge article error: %s", err.Error())
+// 		if !strings.Contains(err.Error(), "already exists with label `Article`") {
+// 			// since the article exists we don't need to save it again
+// 			// return nil to mark the message as read
+// 			return errors.Wrap(err, "neo4j error")
+// 		}
+// 	}
+
+// 	// =========================================================================
+// 	// Save relationships
+// 	// feed published at
+// 	if fUID != "" {
+// 		// disable lint for the error since we don't care about the response
+// 		// nolint:errcheck
+// 		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, fUID, "PUBLISHED_AT")
+// 	}
+// 	for _, entity := range entities {
+// 		// if entity.Type == "author" {
+// 		// 	go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, nArticle.DocId, "AUTHOR_OF")
+// 		// 	if fUID != "" {
+// 		// 		// writes for
+// 		// 		go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, fUID, "WRITES_FOR")
+// 		// 	}
+// 		// } else
+// 		if entity.Type == "topic" {
+// 			// disable lint for the error since we don't care about the response
+// 			// nolint:errcheck
+// 			go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
+// 		}
+// 	}
+
+// 	timer.ObserveDuration()
+
+// 	// marshal node article
+// 	b, err := json.Marshal(nArticle)
+// 	if err != nil {
+// 		workerProcessErrors.WithLabelValues("marshal article error").Inc()
+// 		worker.log.Errorf("Marshal article to message error: %s", err.Error())
+// 		return err
+// 	}
+// 	// write node article as a new message in the compare topic, so we can process it
+// 	// using the compare microservice.
+// 	go worker.Produce(kaf.Message{Value: []byte(b)})
+
+// 	// set values to stream to the frontend
+// 	a.Feed = f
+// 	a.Nlp.Stopwords = nil
+
+// 	// marshal article into string
+// 	s, err := json.Marshal(a)
+// 	if err != nil {
+// 		workerProcessErrors.WithLabelValues("marshal article error").Inc()
+// 		worker.log.Errorf("Marshal article to message error: %s", err.Error())
+// 		return err
+// 	}
+// 	// publish the article to the corresponding redis channel
+// 	go worker.Publish("mediawatch_articles_"+strings.ToLower(a.Lang), string(s))
+
+// 	worker.log.Infof("SAVED: %s - %s", f.Hostname, resNeo)
+
+// 	return nil
+// }
 
 func dialOpts() []grpc.DialOption {
 	var grpcOptions []grpc.DialOption

@@ -35,8 +35,8 @@ module.exports = {
 		'import/prefer-default-export': 1
 	},
 	parserOptions: {
-		parser: 'babel-eslint',
-		sourceType: 'module',
-		ecmaVersion: 8
+		// parser: 'babel-eslint',
+		// sourceType: 'module',
+		// ecmaVersion: 8
 	}
 };

@@ -16,7 +16,7 @@ class ScrapeService {
 
 	Scrape (req, callback) {
 		const { request } = req;
-		const feed = JSON.parse(request.feed);
+		const feed = typeof request.feed === 'string' ? JSON.parse(request.feed) : request.feed;
 
 		logger.info(`[SVC-SCRAPER] Scrape - (${feed.hostname}) ${decodeURIComponent(request.url).toString()}`);
 
@@ -35,7 +35,7 @@ class ScrapeService {
 						logger.error(`[SVC-SCRAPER] Unable to scrape URL (response empty) (${feed.hostname}) ${request.url}`);
 						return callback({ code: 9, details: `Unable to scrape URL (response empty) (${feed.hostname}) ${request.url}` }, null);
 					}
-					logger.debug(`[SVC-SCRAPER] Data ${JSON.stringify(res)}`);
+					// logger.debug(`[SVC-SCRAPER] Data ${JSON.stringify(res)}`);
 
 					const article = res;
 
@@ -81,7 +81,7 @@ class ScrapeService {
 			extract(decodeURIComponent(request.url).toString(),
 				feed.stream.requires_proxy ? getProxy() : null)
 				.then(res => {
-					logger.debug(`[SVC-SCRAPER] Data ${JSON.stringify(res)}`);
+					// logger.debug(`[SVC-SCRAPER] Data ${JSON.stringify(res)}`);
 
 					const article = res;
 					if (article.date && moment(request.crawled_at).isBefore(moment(article.date))) {

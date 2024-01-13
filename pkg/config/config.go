@@ -14,10 +14,8 @@ import (
 type Config struct {
 	Env string `envconfig:"ENV" default:"production"`
 	Log struct {
-		Dev   bool   `envconfig:"DEV" default:"false"`
 		Level string `envconfig:"LOG_LEVEL" default:"debug"`
 		Path  string `envconfig:"LOG_PATH" default:"logs"`
-		Debug bool   `envconfig:"LOG_DEBUG" default:"false"`
 	}
 	Api struct {
 		Host            string        `default:"0.0.0.0" envconfig:"API_HOST"`
@@ -90,10 +88,10 @@ type Config struct {
 		ConsumerGroupWorker  string `envconfig:"KAFKA_CONSUMER_GROUP_WORKERS" default:"mw-worker"`
 		ConsumerGroupCompare string `envconfig:"KAFKA_CONSUMER_GROUP_COMPARE" default:"mw-compare"`
 		Version              string `envconfig:"KAFKA_VERSION" default:"2.5.0"`
-		InTopic              string `envconfig:"KAFKA_IN_COMPARE" default:"worker"`
-		OutTopic             string `envconfig:"KAFKA_OUT_COMPARE" default:""`
-		ConsumerGroupIn      string `envconfig:"KAFKA_CONSUMER_GROUP_IN" default:"mw-worker"`
-		ConsumerGroupOut     string `envconfig:"KAFKA_CONSUMER_GROUP_OUT" default:""`
+		ConsumerTopic        string `envconfig:"KAFKA_CONSUMER_TOPIC" default:""`
+		ProducerTopic        string `envconfig:"KAFKA_PRODUCER_TOPIC" default:""`
+		ConsumerGroup        string `envconfig:"KAFKA_CONSUMER_GROUP" default:""`
+		ProducerGroup        string `envconfig:"KAFKA_PRODUCER_GROUP" default:""`
 		WorkerOffsetOldest   bool   `envconfig:"KAFKA_WORKER_OFFSET_OLDEST" default:"false"`
 		AckBefore            string `envconfig:"KAFKA_ACK_BEFORE" default:""`
 	}

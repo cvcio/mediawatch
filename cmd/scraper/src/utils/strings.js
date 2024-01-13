@@ -1,3 +1,5 @@
+const moment = require('moment');
+
 const toUpperCase = (str) => {
 	if (!str) {
 		return '';
@@ -43,9 +45,28 @@ const trimRight = (str, passages) => {
 	return text;
 };
 
+const mergeArticle = (article, data) => {
+	if (!article.content) {
+		article.content = {};
+	}
+
+	if (!article.content.title || article.content.title === '') {
+		article.content.title = data.content.title;
+	}
+	article.content.body = data.content.body;
+	article.content.authors = data.content.authors;
+	article.content.tags = data.content.tags;
+	article.content.excerpt = data.content.description;
+	article.content.image = data.content.image;
+	article.content.published_at = moment(data.content.date_published).toISOString();
+
+	return article;
+};
+
 export {
 	trimRight,
 	toUpperCase,
 	normalizeString,
-	getParameterByName
+	getParameterByName,
+	mergeArticle
 };

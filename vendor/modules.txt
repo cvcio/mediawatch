@@ -667,8 +667,6 @@ github.com/go-chi/httprate
 # github.com/go-chi/render v1.0.1
 ## explicit
 github.com/go-chi/render
-# github.com/go-redis/cache/v9 v9.0.0
-## explicit; go 1.13
 # github.com/go-redis/redis/v9 v9.0.0-rc.2
 ## explicit; go 1.17
 github.com/go-redis/redis/v9
@@ -733,6 +731,8 @@ github.com/klauspost/compress/s2
 github.com/klauspost/compress/snappy
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
+# github.com/kr/pretty v0.3.0
+## explicit; go 1.12
 # github.com/lyft/protoc-gen-star v0.5.3
 ## explicit; go 1.14
 github.com/lyft/protoc-gen-star
@@ -871,8 +871,6 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/redis/go-redis/v9 v9.0.0-rc.4
-## explicit; go 1.17
 # github.com/rs/cors v1.8.0
 ## explicit; go 1.13
 github.com/rs/cors
@@ -939,12 +937,6 @@ github.com/stripe/stripe-go/v72/customer
 github.com/stripe/stripe-go/v72/form
 # github.com/tidwall/pretty v1.2.1
 ## explicit; go 1.16
-# github.com/vmihailenco/go-tinylfu v0.2.2
-## explicit; go 1.15
-# github.com/vmihailenco/msgpack/v5 v5.3.4
-## explicit; go 1.11
-# github.com/vmihailenco/tagparser/v2 v2.0.0
-## explicit; go 1.15
 # github.com/xdg/scram v1.0.5
 ## explicit
 github.com/xdg/scram
