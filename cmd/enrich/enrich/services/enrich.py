@@ -141,7 +141,7 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
         if request.body == "" or len(request.body) < 24:
             raise Internal("document body empty or too short")
 
-        logging.info("Enrirch document with language model: %s", request.lang)
+        logging.info("Enrich document with language model: %s", request.lang)
 
         # select language specific model (Model). language is defined
         # by the incoming request (field: lang).
@@ -356,7 +356,7 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
         if request.body == "" or len(request.body) < 24:
             raise Internal("document body empty or too short")
 
-        logging.debug("Enrirch document with language model: %s", request.lang)
+        logging.debug("Enrich document with language model: %s", request.lang)
 
         # select language specific model (Model). language is defined
         # by the incoming request (field: lang).

@@ -14,7 +14,7 @@ const { mergeArticle } = require('./utils/strings');
 let server;
 
 // Connect to Kafka
-const kafka = new Kafka({ clientId: 'mw-scraper', brokers: process.env.KAFKA_BROKERS.split(',') });
+const kafka = new Kafka({ brokers: process.env.KAFKA_BROKERS.split(',') });
 const consumer = kafka.consumer({ groupId: 'mw-scraper' });
 const producer = kafka.producer();
 const worker = new Worker(consumer, producer);

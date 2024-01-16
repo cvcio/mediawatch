@@ -68,6 +68,14 @@ class GRPCServer:
         """
         method(service(args), self.instance)
 
+    def register_service_method(self, method: Callable, service: Callable) -> None:
+        """
+        calls add_SERVICE_to_server method
+        method -- the grpc method that initializes the handler
+        service -- the service handler to register
+        """
+        method(service, self.instance)
+
     async def serve(self) -> None:
         """
         start the service server
@@ -77,12 +85,12 @@ class GRPCServer:
 
         # register signals
         self._server.add_insecure_port(url)
-        loop = asyncio.get_event_loop()
-        for signame in ('SIGINT', 'SIGTERM'):
-            loop.add_signal_handler(
-                getattr(signal, signame),
-                lambda: asyncio.ensure_future(self.stop())
-            )
+        # loop = asyncio.get_event_loop()
+        # for s in ('SIGINT', 'SIGTERM'):
+        #     loop.add_signal_handler(
+        #         getattr(signal, s),
+        #         lambda: asyncio.ensure_future(self.stop())
+        #     )
 
         # start the server
         await self._server.start()

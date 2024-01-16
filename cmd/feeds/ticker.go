@@ -208,6 +208,7 @@ func (ticker *Ticker) Produce(urls []link.CatchedURL) {
 		}
 		go ticker.worker.Produce(kafka.Message{
 			Value: []byte(message),
+			Topic: "worker",
 		})
 
 		time.Sleep(1 * time.Second)

@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -166,13 +168,26 @@ func (worker *WorkerGroup) Consume() {
 					}
 				}
 
-			case "compare":
-				// process the article
-				// worker.compareProcess(m)
+			case "store":
+				var msg articlesv2.Article
+				if err := json.Unmarshal(m.Value, &msg); err != nil {
+					// mark message as read (commit)
+					worker.Commit(m)
+					worker.log.Error("Failed to unmarshal message from kafka", zap.Error(err))
+					return
+				}
+				if err := worker.StoreArticle(&msg); err != nil {
+					worker.log.Error("Error while storing article", zap.String("hostname", msg.Hostname), zap.String("createdAt", msg.CrawledAt), zap.String("url", msg.Url), zap.Error(err))
+
+					// send the error to channel
+					worker.errChan <- errors.Wrap(err, "failed to store article")
+					return
+				}
+				worker.log.Info("Store message", zap.String("doc_id", string(msg.DocId)))
 			}
 
 			// mark message as read (commit)
-			// worker.Commit(m)
+			worker.Commit(m)
 		}()
 	}
 }
@@ -387,7 +402,9 @@ func main() {
 // information using the enrich microservice, compare the body with other articles using the
 // compare microservice and finally write to storage.
 func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
-	// retrieve feed infoirmation (language, id, etc.)
+	timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("process"))
+	defer timer.ObserveDuration()
+
 	var f *feedsv2.Feed
 	if in.Type == "twitter" {
 		tf, err := feed.GetByUserName(context.Background(), worker.dbConn, in.UserName)
@@ -414,15 +431,6 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		return nil
 	}
 
-	// create a new node into the neo4j database, if not exists
-	if _, err := relationships.MergeNodeFeed(worker.ctx, worker.neoClient, f); err != nil {
-		workerProcessErrors.WithLabelValues("merge feed error").Inc()
-		// if there is an error during feed node creation return an error
-		// as will not be able to associate the article with a feed.
-		worker.log.Error("Merge feed failed", zap.String("hostname", f.Hostname), zap.Error(err))
-		return errors.Wrap(err, "merge feed error")
-	}
-
 	// create a new article document
 	a := new(articlesv2.Article)
 	a.Content = new(articlesv2.Content)
@@ -447,7 +455,153 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 		worker.log.Error("Marshal article to message error", zap.Error(err))
 		return err
 	}
-	go worker.Produce(kaf.Message{Value: []byte(b)})
+	go worker.Produce(kaf.Message{Value: []byte(b), Topic: "scrape"})
+	return nil
+}
+
+func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
+	timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("store"))
+	defer timer.ObserveDuration()
+
+	// Save the Document to Elasticsearch
+	c := a
+	c.Feed = &feedsv2.Feed{}
+	data, err := json.Marshal(c)
+	if err != nil {
+		workerProcessErrors.WithLabelValues("json marshal error").Inc()
+		worker.log.Error("JSON marshal error", zap.Error(err))
+		return errors.Wrap(err, "json marshal error")
+	}
+
+	index, err := worker.esClient.Client.Index(
+		worker.esIndex+"_"+strings.ToLower(a.Lang),
+		bytes.NewReader(data),
+		worker.esClient.Client.Index.WithDocumentID(a.DocId),
+	)
+	if err != nil {
+		workerProcessErrors.WithLabelValues("index error").Inc()
+		worker.log.Error("Article indexing error", zap.Error(err))
+		return errors.Wrap(err, "index error")
+	}
+
+	if index.IsError() {
+		workerProcessErrors.WithLabelValues("index error").Inc()
+		return errors.New(index.String())
+	}
+	index.Body.Close()
+
+	// Create a new nodeAuthor if not exist for each author extracted
+	// by svc-scraper service and return the uid
+	var entities []*relationships.NodeEntity
+	for _, author := range a.Content.Authors {
+		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, author, "author")
+		if err != nil {
+			workerProcessErrors.WithLabelValues("merge authors error").Inc()
+			worker.log.Error("Merge author error", zap.Error(err))
+			continue
+		}
+		entities = append(entities, &relationships.NodeEntity{
+			Uid:   uid,
+			Type:  "author",
+			Label: author,
+		})
+	}
+
+	for _, topic := range a.Nlp.Topics {
+		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, topic.Text, "topic")
+		if err != nil {
+			workerProcessErrors.WithLabelValues("merge topics error").Inc()
+			worker.log.Error("Merge topic error", zap.Error(err))
+			continue
+		}
+		entities = append(entities, &relationships.NodeEntity{
+			Uid:   uid,
+			Type:  "topic",
+			Label: topic.Text,
+		})
+	}
+
+	// =========================================================================
+	// Create a new nodeArticle
+	nArticle := &relationships.NodeArticle{}
+	nArticle.Uid = a.DocId
+	nArticle.DocId = a.DocId
+	nArticle.Lang = a.Lang
+	nArticle.CrawledAt = a.CrawledAt
+	nArticle.Url = a.Url
+	nArticle.Title = a.Content.Title
+	nArticle.PublishedAt = a.Content.PublishedAt
+	nArticle.Hostname = a.Hostname
+	nArticle.Type = "article"
+
+	if _, err := relationships.CreateNodeArticle(worker.ctx, worker.neoClient, nArticle); err != nil {
+		workerProcessErrors.WithLabelValues("create node article error").Inc()
+		worker.log.Error("Merge article error", zap.Error(err))
+		if !strings.Contains(err.Error(), "already exists with label `Article`") {
+			// since the article exists we don't need to save it again
+			// return nil to mark the message as read
+			return errors.Wrap(err, "neo4j error")
+		}
+	}
+
+	// create a new node into the neo4j database, if not exists
+	fUID, err := relationships.MergeNodeFeed(worker.ctx, worker.neoClient, a.Feed)
+	if err != nil {
+		workerProcessErrors.WithLabelValues("merge feed error").Inc()
+		// if there is an error during feed node creation return an error
+		// as will not be able to associate the article with a feed.
+		worker.log.Error("Merge feed failed", zap.String("hostname", a.Hostname), zap.Error(err))
+		return errors.Wrap(err, "merge feed error")
+	}
+
+	// =========================================================================
+	// Save relationships
+	// feed published at
+	if fUID != "" {
+		// disable lint for the error since we don't care about the response
+		// nolint:errcheck
+		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, a.FeedId, "PUBLISHED_AT")
+	}
+	for _, entity := range entities {
+		// if entity.Type == "author" {
+		// 	go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, nArticle.DocId, "AUTHOR_OF")
+		// 	if fUID != "" {
+		// 		// writes for
+		// 		go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, fUID, "WRITES_FOR")
+		// 	}
+		// } else
+		if entity.Type == "topic" {
+			// disable lint for the error since we don't care about the response
+			// nolint:errcheck
+			go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
+		}
+	}
+
+	timer.ObserveDuration()
+
+	// marshal node article
+	b, err := json.Marshal(nArticle)
+	if err != nil {
+		workerProcessErrors.WithLabelValues("marshal article error").Inc()
+		worker.log.Error("Marshal article to message error", zap.Error(err))
+		return err
+	}
+	// write node article as a new message in the compare topic, so we can process it
+	// using the compare microservice.
+	go worker.Produce(kaf.Message{Value: []byte(b), Topic: "compare"})
+
+	// set values to stream to the frontend
+	a.Nlp.Stopwords = nil
+
+	// marshal article into string
+	s, err := json.Marshal(a)
+	if err != nil {
+		workerProcessErrors.WithLabelValues("marshal article error").Inc()
+		worker.log.Error("Marshal article to message error", zap.Error(err))
+		return err
+	}
+	// publish the article to the corresponding redis channel
+	go worker.Publish("mediawatch_articles_"+strings.ToLower(a.Lang), string(s))
 	return nil
 }
 

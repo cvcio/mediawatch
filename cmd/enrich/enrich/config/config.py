@@ -34,6 +34,13 @@ class AppConfig:
 
     HUGGING_FACE_HUB_TOKEN: str = ""
 
+    KAFKA_BOOTSTRAP_SERVERS: list[str] = ["kafka:9092"]
+    KAFKA_CONSUMER_TOPIC: str = "enrich"
+    KAFKA_PRODUCER_TOPIC: str = "store"
+    KAFKA_CONSUMER_GROUP_ID: str = "mw-enrich"
+    KAFKA_AUTO_OFFSET_RESET: str = "latest"
+    KAFKA_ENABLE_AUTO_COMMIT: bool = True
+
     """
     Map environment variables to class fields according to these rules:
       - Field won't be parsed unless it has a type annotation
