@@ -11,10 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cvcio/mediawatch/pkg/interceptors"
 	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
 	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
-	enrich_pb "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
+	enrichv2 "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
 	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/kelseyhightower/envconfig"
@@ -23,8 +22,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/models/feed"
@@ -40,12 +37,6 @@ import (
 )
 
 var (
-	grpcDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
-		Name:       "grpc_response_time_seconds",
-		Help:       "Duration of GRPC requests.",
-		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-	}, []string{"service"})
-
 	workerProcessDuration = promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Name:       "consumer_process_duration_seconds",
 		Help:       "Duration of consumer processing requests.",
@@ -80,6 +71,7 @@ func (worker *WorkerGroup) Close() {
 	worker.kafkaClient.Close()
 }
 
+// ArticleExists checks if an article exists in elasticsearch.
 func (worker *WorkerGroup) ArticleExists(url string) bool {
 	opts := article.NewOpts()
 	opts.Index = worker.esIndex + "_*"
@@ -89,6 +81,7 @@ func (worker *WorkerGroup) ArticleExists(url string) bool {
 	return exists
 }
 
+// TimeTrack logs the duration of a process.
 func (worker *WorkerGroup) TimeTrack(start time.Time, name string) {
 	elapsed := time.Since(start)
 	worker.log.Debug("Duration", zap.String("process", name), zap.Duration("elapsed", elapsed))
@@ -119,7 +112,7 @@ func (worker *WorkerGroup) Consume() {
 			case "worker":
 				// process the article
 				// Unmarshal incoming json message
-				var msg link.CatchedURL
+				var msg link.Link
 				if err := json.Unmarshal(m.Value, &msg); err != nil {
 					// mark message as read (commit)
 					worker.Commit(m)
@@ -157,7 +150,6 @@ func (worker *WorkerGroup) Consume() {
 				// check if article exists before processing it
 				// on nil error the article exists
 				if exists := worker.ArticleExists(msg.Url); !exists {
-					// if exists := nodes.ArticleNodeExtist(worker.ctx, worker.neoClient, fmt.Sprintf("%d", msg.TweetID)); !exists {
 					// process the article
 					if err := worker.ProcessArticle(msg); err != nil {
 						worker.log.Error("Error while processing message", zap.String("hostname", name), zap.String("createdAt", msg.CreatedAt), zap.String("url", msg.Url), zap.Error(err))
@@ -341,7 +333,7 @@ func main() {
 	// ========================================
 	// Create a registry and a web server for prometheus metrics
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(grpcDuration)
+	registry.MustRegister(workerProcessErrors)
 	registry.MustRegister(workerProcessDuration)
 
 	// create a prometheus http.Server
@@ -392,19 +384,15 @@ func main() {
 	}
 }
 
-// ProcessArticle processes an incoming link (potential article). At this step we process
-// incoming links catched by the listen microservice. If there is an error at any point and
-// for any reason, it will return an error. The message is always commited to the kafka topic
-// even if it fails, otherwise we save the article in the elasticsearch index and any relations
-// in the neo4j database. To save the final article object we first need to retrieve the
-// corresponding feed from the mongo database, create a new article object to save within
-// elasticsearch, scrape the article using the scraper microservice, enrich/extract contextual
-// information using the enrich microservice, compare the body with other articles using the
-// compare microservice and finally write to storage.
-func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
+// ProcessArticle processes a potential article from an incoming link.
+//
+// For each link we need to check if it contains a valid url, from a valid source,
+// and save it into the next kafka topic for further processing.
+func (worker *WorkerGroup) ProcessArticle(in link.Link) error {
 	timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("process"))
 	defer timer.ObserveDuration()
 
+	// check if article exists before processing it
 	var f *feedsv2.Feed
 	if in.Type == "twitter" {
 		tf, err := feed.GetByUserName(context.Background(), worker.dbConn, in.UserName)
@@ -434,31 +422,33 @@ func (worker *WorkerGroup) ProcessArticle(in link.CatchedURL) error {
 	// create a new article document
 	a := new(articlesv2.Article)
 	a.Content = new(articlesv2.Content)
-	a.Nlp = new(enrich_pb.NLP)
-
+	a.Nlp = new(enrichv2.NLP)
 	a.DocId = in.DocId
-	a.Url = in.Url
-	a.ScreenName = f.UserName
-	a.Hostname = f.Hostname
-	a.Lang = f.Localization.Lang
 	a.CrawledAt = in.CreatedAt
+	a.Content.PublishedAt = a.CrawledAt
+	a.Hostname = f.Hostname
+	a.ScreenName = f.UserName
+	a.Lang = f.Localization.Lang
+	a.Url = in.Url
 	a.Feed = f
 	a.FeedId = f.Id
 	if in.Title != "" {
 		a.Content.Title = in.Title
 	}
 
-	a.Content.PublishedAt = a.CrawledAt
+	// marshal the article
 	b, err := json.Marshal(a)
 	if err != nil {
 		workerProcessErrors.WithLabelValues("marshal article error").Inc()
 		worker.log.Error("Marshal article to message error", zap.Error(err))
 		return err
 	}
+	// write article as a new message in the scrape topic, so we can process it
 	go worker.Produce(kaf.Message{Value: []byte(b), Topic: "scrape"})
 	return nil
 }
 
+// StoreArticle stores an article into elasticsearch and neo4j.
 func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 	timer := prometheus.NewTimer(workerProcessDuration.WithLabelValues("store"))
 	defer timer.ObserveDuration()
@@ -521,7 +511,6 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 		})
 	}
 
-	// =========================================================================
 	// Create a new nodeArticle
 	nArticle := &relationships.NodeArticle{}
 	nArticle.Uid = a.DocId
@@ -577,8 +566,6 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 		}
 	}
 
-	timer.ObserveDuration()
-
 	// marshal node article
 	b, err := json.Marshal(nArticle)
 	if err != nil {
@@ -603,156 +590,4 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 	// publish the article to the corresponding redis channel
 	go worker.Publish("mediawatch_articles_"+strings.ToLower(a.Lang), string(s))
 	return nil
-}
-
-// func onter () {
-// 		// Save the Document to Elasticsearch
-// 	data, err := json.Marshal(a)
-// 	if err != nil {
-// 		workerProcessErrors.WithLabelValues("json marshal error").Inc()
-// 		worker.log.Errorf("JSON marshal error: %s", err.Error())
-// 		return errors.Wrap(err, "json marshal error")
-// 	}
-
-// 	index, err := worker.esClient.Client.Index(
-// 		worker.esIndex+"_"+strings.ToLower(a.Lang),
-// 		bytes.NewReader(data),
-// 		worker.esClient.Client.Index.WithDocumentID(a.DocId),
-// 	)
-// 	if err != nil {
-// 		workerProcessErrors.WithLabelValues("index error").Inc()
-// 		worker.log.Errorf("Article indexing error: %s", err.Error())
-// 		return errors.Wrap(err, "index error")
-// 	}
-
-// 	// retrun on response error
-// 	if index.IsError() {
-// 		workerProcessErrors.WithLabelValues("index error").Inc()
-// 		return errors.New(index.String())
-// 	}
-// 	index.Body.Close()
-
-// 	timer.ObserveDuration()
-// 	worker.log.Debugf("INDEXED: %s - %s", f.Hostname, in.Url)
-
-// 	// =========================================================================
-// 	timer = prometheus.NewTimer(grpcDuration.WithLabelValues("save"))
-// 	// Create a new nodeAuthor if not exist for each Atuhor extracted
-// 	// by svc-scraper service and return the uid
-// 	var entities []*relationships.NodeEntity
-// 	for _, author := range a.Content.Authors {
-// 		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, author, "author")
-// 		if err != nil {
-// 			workerProcessErrors.WithLabelValues("merge authors error").Inc()
-// 			worker.log.Errorf("Merge author error: %s", err.Error())
-// 			continue
-// 		}
-// 		entities = append(entities, &relationships.NodeEntity{
-// 			Uid:   uid,
-// 			Type:  "author",
-// 			Label: author,
-// 		})
-// 	}
-
-// 	for _, topic := range a.Nlp.Topics {
-// 		uid, err := relationships.MergeNodeEntity(worker.ctx, worker.neoClient, topic.Text, "topic")
-// 		if err != nil {
-// 			workerProcessErrors.WithLabelValues("merge topics error").Inc()
-// 			worker.log.Errorf("Merge topic error: %s", err.Error())
-// 			continue
-// 		}
-// 		entities = append(entities, &relationships.NodeEntity{
-// 			Uid:   uid,
-// 			Type:  "topic",
-// 			Label: topic.Text,
-// 		})
-// 	}
-
-// 	// =========================================================================
-// 	// Create a new nodeArticle
-// 	nArticle := &relationships.NodeArticle{}
-// 	nArticle.Uid = a.DocId
-// 	nArticle.DocId = a.DocId
-// 	nArticle.Lang = a.Lang
-// 	nArticle.CrawledAt = a.CrawledAt
-// 	nArticle.Url = a.Url
-// 	nArticle.Title = a.Content.Title
-// 	nArticle.PublishedAt = a.Content.PublishedAt
-// 	nArticle.Hostname = f.Hostname
-// 	nArticle.Type = "article"
-
-// 	resNeo, err := relationships.CreateNodeArticle(worker.ctx, worker.neoClient, nArticle)
-// 	if err != nil {
-// 		workerProcessErrors.WithLabelValues("create node article error").Inc()
-// 		worker.log.Errorf("Merge article error: %s", err.Error())
-// 		if !strings.Contains(err.Error(), "already exists with label `Article`") {
-// 			// since the article exists we don't need to save it again
-// 			// return nil to mark the message as read
-// 			return errors.Wrap(err, "neo4j error")
-// 		}
-// 	}
-
-// 	// =========================================================================
-// 	// Save relationships
-// 	// feed published at
-// 	if fUID != "" {
-// 		// disable lint for the error since we don't care about the response
-// 		// nolint:errcheck
-// 		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, fUID, "PUBLISHED_AT")
-// 	}
-// 	for _, entity := range entities {
-// 		// if entity.Type == "author" {
-// 		// 	go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, nArticle.DocId, "AUTHOR_OF")
-// 		// 	if fUID != "" {
-// 		// 		// writes for
-// 		// 		go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, fUID, "WRITES_FOR")
-// 		// 	}
-// 		// } else
-// 		if entity.Type == "topic" {
-// 			// disable lint for the error since we don't care about the response
-// 			// nolint:errcheck
-// 			go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
-// 		}
-// 	}
-
-// 	timer.ObserveDuration()
-
-// 	// marshal node article
-// 	b, err := json.Marshal(nArticle)
-// 	if err != nil {
-// 		workerProcessErrors.WithLabelValues("marshal article error").Inc()
-// 		worker.log.Errorf("Marshal article to message error: %s", err.Error())
-// 		return err
-// 	}
-// 	// write node article as a new message in the compare topic, so we can process it
-// 	// using the compare microservice.
-// 	go worker.Produce(kaf.Message{Value: []byte(b)})
-
-// 	// set values to stream to the frontend
-// 	a.Feed = f
-// 	a.Nlp.Stopwords = nil
-
-// 	// marshal article into string
-// 	s, err := json.Marshal(a)
-// 	if err != nil {
-// 		workerProcessErrors.WithLabelValues("marshal article error").Inc()
-// 		worker.log.Errorf("Marshal article to message error: %s", err.Error())
-// 		return err
-// 	}
-// 	// publish the article to the corresponding redis channel
-// 	go worker.Publish("mediawatch_articles_"+strings.ToLower(a.Lang), string(s))
-
-// 	worker.log.Infof("SAVED: %s - %s", f.Hostname, resNeo)
-
-// 	return nil
-// }
-
-func dialOpts() []grpc.DialOption {
-	var grpcOptions []grpc.DialOption
-	grpcOptions = append(
-		grpcOptions,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(interceptors.TimeoutInterceptor(15*time.Second)),
-	)
-	return grpcOptions
 }
