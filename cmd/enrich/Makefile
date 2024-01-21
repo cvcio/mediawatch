@@ -48,5 +48,8 @@ deployment: # Update the deployment
 
 prod: docker docker-push deployment ## Publish to production
 
+lint: ## Lint the code
+	PYTHONPATH=. pylint --fail-under=9 enrich
+
 .DEFAULT_GOAL := help
 .PHONY: help dev buf-install proto proto-get proto-build proto-cleanup docker docker-push deployment prod

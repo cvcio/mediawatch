@@ -1,25 +1,26 @@
 """AIModel module loads pretrained models
 for a specific language and multiple tasks."""
+from __future__ import annotations
 
 import os
 import io
 import json
 import logging
 
-from typing import Any, Union
+from typing import Any
 
 from collections import namedtuple
 from config.config import AppConfig
 
 import spacy
-import pytextrank
+import pytextrank # noqa # pylint: disable=unused-import
 
 from transformers import (
     pipeline,
     AutoTokenizer,
     AutoModelForSequenceClassification,
     PreTrainedTokenizer,
-    PreTrainedTokenizerFast
+    PreTrainedTokenizerFast,
 )
 
 from transformers.pipelines import Pipeline
@@ -48,7 +49,8 @@ class AIModel:
 
         self.topic_classification_pipeline = (
             self.load_transformers_pipeline(
-                self.conf.topics.path, "text-classification",
+                self.conf.topics.path,
+                "text-classification",
             )
             if getattr(self.conf, "topics", None)
             else None
@@ -70,7 +72,9 @@ class AIModel:
 
         logging.info("Loaded model for lang: %s", self.conf.lang)
 
-    def load_transformers_pipeline(self, path: str, task: str = "text-classification", **kwargs) -> Pipeline:
+    def load_transformers_pipeline(
+        self, path: str, task: str = "text-classification", **kwargs
+    ) -> Pipeline:
         """Load transformers model"""
         return pipeline(
             task=task,
@@ -83,7 +87,9 @@ class AIModel:
             **kwargs,
         )
 
-    def load_transformers_tokenizer(self, path: str) -> Union[PreTrainedTokenizer, PreTrainedTokenizerFast]:
+    def load_transformers_tokenizer(
+        self, path: str
+    ) -> (PreTrainedTokenizer | PreTrainedTokenizerFast):
         """Load transformers tokenizer"""
         return AutoTokenizer.from_pretrained(
             path,

@@ -3,8 +3,6 @@
 import logging
 import html
 
-from typing import List
-
 from ai.model import AIModel
 from nlp.methods import (
     extract_stopwords,
@@ -13,11 +11,11 @@ from nlp.methods import (
     extract_topics,
     extract_quotes,
     extract_claims,
-    summarize
+    summarize,
 )
 
-from mediawatch.enrich.v2 import enrich_pb2_grpc
-from mediawatch.enrich.v2 import enrich_pb2
+from mediawatch.enrich.v2.enrich_pb2 import EnrichRequest, EnrichResponse
+from mediawatch.enrich.v2.enrich_pb2_grpc import EnrichServiceServicer
 
 from grpc_interceptor.exceptions import NotFound, Internal
 
@@ -26,12 +24,12 @@ class NLPException(Exception):
     """Custom exception for NLP errors"""
 
 
-class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
+class EnrichService(EnrichServiceServicer):
     """
     EnrichService stub implementation of the gRPC EnrichService servicer.
     """
 
-    def __init__(self, models: List[AIModel]) -> None:
+    def __init__(self, models: list[AIModel]) -> None:
         """
         initialize gRPC stub
         """
@@ -39,10 +37,12 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
         self.models = models
 
     def _get_model_by_lang(self, lang: str) -> AIModel:
-        return next((model for model in self.models if model.lang == lang.lower()), None)
+        return next(
+            (model for model in self.models if model.lang == lang.lower()), None
+        )
 
     # pylint: disable-next=invalid-overridden-method
-    async def StopWords(self, request, ctx):
+    async def StopWords(self, request: EnrichRequest, context):
         """
         StopWords gRPC endpoint
         """
@@ -82,10 +82,10 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             raise Internal(f"An error occurred: {type(err).__name__} - {err}") from err
 
         logging.info("Stopwords (%d)", len(output["nlp"]["stopwords"]))
-        return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
+        return EnrichResponse(code=200, status="success", data=output)
 
     # pylint: disable-next=invalid-overridden-method
-    async def Keywords(self, request, ctx):
+    async def Keywords(self, request: EnrichRequest, context):
         """
         Keywords gRPC endpoint
         """
@@ -127,10 +127,10 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             raise Internal(f"An error occurred: {type(err).__name__} - {err}") from err
 
         logging.info("Keywords (%d)", len(output["nlp"]["keywords"]))
-        return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
+        return EnrichResponse(code=200, status="success", data=output)
 
     # pylint: disable-next=invalid-overridden-method
-    async def Entities(self, request, ctx):
+    async def Entities(self, request: EnrichRequest, context):
         """
         Entities gRPC endpoint
         """
@@ -169,12 +169,11 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             logging.error("Error while getting entities: %s", err)
             raise Internal(f"An error occurred: {type(err).__name__} - {err}") from err
 
-
         logging.info("Entities (%d)", len(output["nlp"]["entities"]))
-        return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
+        return EnrichResponse(code=200, status="success", data=output)
 
     # pylint: disable-next=invalid-overridden-method
-    async def Summary(self, request, ctx):
+    async def Summary(self, request: EnrichRequest, context):
         """
         Summary gRPC endpoint
         """
@@ -215,10 +214,10 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             logging.error("Error while getting summary: %s", err)
             raise Internal(f"An error occurred: {type(err).__name__} - {err}") from err
 
-        return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
+        return EnrichResponse(code=200, status="success", data=output)
 
     # pylint: disable-next=invalid-overridden-method
-    async def Topics(self, request, ctx):
+    async def Topics(self, request: EnrichRequest, context):
         """
         Topics gRPC endpoint
         """
@@ -260,10 +259,10 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             raise Internal(f"An error occurred: {type(err).__name__} - {err}") from err
 
         logging.info("Topics (%s) %s", len(output["nlp"]["topics"]), ", ".join(topics))
-        return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
+        return EnrichResponse(code=200, status="success", data=output)
 
     # pylint: disable-next=invalid-overridden-method
-    async def Quotes(self, request, ctx):
+    async def Quotes(self, request: EnrichRequest, context):
         """
         Quotes gRPC endpoint
         """
@@ -294,10 +293,10 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             raise Internal(f"An error occurred: {type(err).__name__} - {err}") from err
 
         logging.info("Quotes (%s)", len(output["nlp"]["quotes"]))
-        return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
+        return EnrichResponse(code=200, status="success", data=output)
 
     # pylint: disable-next=invalid-overridden-method
-    async def Claims(self, request, ctx):
+    async def Claims(self, request: EnrichRequest, context):
         """
         Claims gRPC endpoint
         """
@@ -341,10 +340,10 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             raise Internal(f"An error occurred: {type(err).__name__} - {err}") from err
 
         logging.info("Claims (%d)", len(output["nlp"]["claims"]))
-        return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
+        return EnrichResponse(code=200, status="success", data=output)
 
     # pylint: disable-next=invalid-overridden-method
-    async def NLP(self, request, ctx):
+    async def NLP(self, request: EnrichRequest, context):
         """
         NLP gRPC endpoint
         """
@@ -456,4 +455,4 @@ class EnrichService(enrich_pb2_grpc.EnrichServiceServicer):
             len(output["nlp"]["claims"]),
         )
 
-        return enrich_pb2.EnrichResponse(code=200, status="success", data=output)
+        return EnrichResponse(code=200, status="success", data=output)

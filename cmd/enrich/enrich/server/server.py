@@ -1,8 +1,6 @@
 """GRPC Server Module"""
 
 import logging
-import signal
-import asyncio
 from typing import Any
 from collections.abc import Callable
 from concurrent import futures
@@ -15,16 +13,17 @@ from grpc_interceptor.exceptions import GrpcException
 
 class ExceptionToStatusInterceptor(AsyncServerInterceptor):
     """ExceptionToStatusInterceptor class implements a new
-    asyncio grpc server insterceptor"""
+    asyncio grpc server interceptor that converts exceptions"""
+
     async def intercept(
         self,
         method: Callable,
-        request: Any,
+        request_or_iterator: Any,
         context: grpc.aio.ServicerContext,
         method_name: str,
     ) -> Any:
         try:
-            return await method(request, context)
+            return await method(request_or_iterator, context)
         except GrpcException as err:
             context.set_code(err.status_code)
             context.set_details(err.details)
@@ -49,8 +48,8 @@ class GRPCServer:
 
         self._server = grpc.aio.server(
             futures.ThreadPoolExecutor(max_workers=max_workers),
-            options = options,
-            interceptors = [ExceptionToStatusInterceptor()]
+            options=options,
+            interceptors=[ExceptionToStatusInterceptor()],
         )
 
     async def stop(self) -> None:

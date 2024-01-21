@@ -18,20 +18,10 @@ from ai.model import AIModel
 
 from server.server import GRPCServer
 from services.enrich import EnrichService
-from mediawatch.enrich.v2 import enrich_pb2_grpc, enrich_pb2
+
+from mediawatch.enrich.v2.enrich_pb2_grpc import add_EnrichServiceServicer_to_server
+
 from worker.kafka import Worker
-import inspect
-
-
-async def process(msg, method):
-    try:
-        a = enrich_pb2.EnrichRequest(
-            body=msg.value["content"]["body"], lang=msg.value["lang"].lower()
-        )
-        response = await method(a, None)
-    except Exception as e:
-        logging.error(e, stack_info=True)
-        pass
 
 
 async def main():
@@ -51,6 +41,11 @@ async def main():
     if env.ENV != "development":
         nltk.download("punkt")
 
+    loop = asyncio.get_running_loop()
+
+    worker = Worker(env, loop)
+    await worker.connect()
+
     # Load Models
     models = []
     for lang in env.SUPPORTED_LANGUAGES:
@@ -65,28 +60,16 @@ async def main():
 
     enrich_service = EnrichService(models)
 
-    worker = Worker(env)
-    await worker.connect()
-
     server = GRPCServer(env.HOST, env.PORT, env.MAX_WORKERS)
-    server.register_service_method(
-        enrich_pb2_grpc.add_EnrichServiceServicer_to_server, enrich_service
-    )
+    server.register_service_method(add_EnrichServiceServicer_to_server, enrich_service)
 
     def on_signal_exit():
         logging.info("Received exit signal")
         asyncio.create_task(server.stop())
         asyncio.create_task(worker.stop())
 
-    loop = asyncio.get_running_loop()
-
     loop.add_signal_handler(signal.SIGTERM, on_signal_exit)
     loop.add_signal_handler(signal.SIGINT, on_signal_exit)
-
-    # loop.create_task(worker.run_consumer(process, enrich_service.NLP))
-    # Start GRPC Server
-    # logging.info("Starting gRPC server")
-    # await server.serve()
 
     await asyncio.gather(
         worker.run_consumer(worker.process, enrich_service.NLP), server.serve()

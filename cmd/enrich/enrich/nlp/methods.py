@@ -1,9 +1,8 @@
 """nlp.nlp module"""
+from __future__ import annotations
 
 import re
 import logging
-
-from typing import Union, List
 
 from collections import Counter
 from heapq import nlargest
@@ -87,7 +86,7 @@ async def extract_entities(doc) -> list[dict]:
     entities = [
         {"text": normalize_keyword(w.text), "type": w.label_, "index": [w.start, w.end]}
         for w in doc.ents
-        if w.label_ in ["GPE", "ORG", "PRESON"]
+        if w.label_ in {"GPE", "ORG", "PRESON"}
         and len(remove_punctuation(w.text)) >= 2
         and not has_numbers(w.text)
     ]
@@ -121,7 +120,7 @@ def get_freq_word(doc) -> Counter:
     # Normalize frequency
     max_freq = Counter(keys).most_common(1)[0][1]
     for word in freq_word.keys():
-        freq_word[word] = freq_word[word] / max_freq
+        freq_word[word] = int(freq_word[word] / max_freq)
 
     return freq_word
 
@@ -180,7 +179,7 @@ async def extract_claims(doc, stopwords: list[str], per: float = 0.25) -> list[d
                     word_frequencies[word.text] += 1
     max_frequency = max(word_frequencies.values())
     for word in word_frequencies:
-        word_frequencies[word] = word_frequencies[word] / max_frequency
+        word_frequencies[word] = int(word_frequencies[word] / max_frequency)
     sentence_tokens = list(doc.sents)
 
     sentence_scores = {}
@@ -213,16 +212,18 @@ async def extract_claims(doc, stopwords: list[str], per: float = 0.25) -> list[d
 
 
 async def extract_topics(
-    body: Union[str, List[str]],
+    body: (str | list[str]),
     pipeline,
-    tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast] = None,
+    tokenizer: (PreTrainedTokenizer | PreTrainedTokenizerFast) = None,
 ) -> list[dict]:
     body = tokenize_to_max_length(body, 512, tokenizer)
     topics = []
 
     try:
         topics = [
-            pipeline(text, return_all_scores=True, top_k=4, max_length=512, truncation=True)
+            pipeline(
+                text, return_all_scores=True, top_k=4, max_length=512, truncation=True
+            )
             for text in body
         ]
         topics = [topic for sublist in topics for topic in sublist]
@@ -243,9 +244,9 @@ async def extract_topics(
 
 
 async def extract_named_entities(
-    body: Union[str, List[str]],
+    body: (str | list[str]),
     pipeline,
-    tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast] = None,
+    tokenizer: (PreTrainedTokenizer | PreTrainedTokenizerFast) = None,
 ) -> list[dict]:
     body = tokenize_to_max_length(body, 512, tokenizer)
     named_entities = []
@@ -253,8 +254,8 @@ async def extract_named_entities(
     try:
         named_entities = [pipeline(text, aggregation_strategy="first") for text in body]
         named_entities = [entity for sublist in named_entities for entity in sublist]
-    except:
-        pass
+    except Exception as err:
+        logging.error("Named entity extraction error: %s", err)
     named_entities = (
         [
             {
@@ -356,7 +357,7 @@ async def extract_quotes(body):
         for group in regex:
             if group:
                 size = len(group.group().split())
-                if size > 2 and size <= 48:
+                if size > 2 <= 48:
                     quotes.append(
                         {
                             "text": normalize_text(group.group()),
