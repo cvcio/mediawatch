@@ -30,7 +30,7 @@ func NewKafkaClient(
 	if read {
 		client.Consumer = NewConsumer(brokers, consumerTopic, consumerGroup, readOldest)
 		if readOldest {
-			client.Consumer.SetOffset(kaf.FirstOffset) // EARLIEST = -2
+			_ = client.Consumer.SetOffset(kaf.FirstOffset) // EARLIEST = -2
 		}
 	}
 
