@@ -1,3 +1,5 @@
+const logger = require('../logger');
+
 class Worker {
 	constructor (consumer, producer) {
 		this.consumer = consumer;
@@ -5,8 +7,13 @@ class Worker {
 	}
 
 	async initialize () {
-		await this.consumer.connect();
-		await this.producer.connect();
+		try {
+			await this.consumer.connect();
+			await this.producer.connect();
+		} catch (err) {
+			logger.error(`[SVC-SCRAPER] Kafka connection error: ${err.message}`);
+			process.exit(1);
+		}
 	}
 
 	async consume (topic, callback) {
@@ -19,7 +26,7 @@ class Worker {
 				this.consumer.pause([{ topic }]);
 				setTimeout(() => {
 					this.consumer.resume([{ topic }]);
-				}, 100);
+				}, 10);
 			}
 		});
 	}

@@ -1,7 +1,11 @@
 require('dotenv').config();
 
+const os = require('os');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
+const { HealthImplementation } = require('grpc-health-check');
+
+// const health = require('grpc-health-check');
 const { MongoClient } = require('mongodb');
 const { Kafka } = require('kafkajs');
 const moment = require('moment');
@@ -12,26 +16,33 @@ const logger = require('./logger');
 const { mergeArticle } = require('./utils/strings');
 
 let server;
+const statusMap = { '': 'SERVING', service: 'SERVING' };
 
 // Connect to Kafka
-const kafka = new Kafka({ brokers: process.env.KAFKA_BROKERS.split(',') });
+const kafka = new Kafka({ clientId: `${os.hostname}`, brokers: process.env.KAFKA_BROKERS.split(','), logger });
 const consumer = kafka.consumer({ groupId: 'mw-scraper' });
 const producer = kafka.producer();
 const worker = new Worker(consumer, producer);
 
-const shutdown = (err) => {
+const shutdown = async (err) => {
 	if (err) {
+		logger.error(err);
 		logger.error(`[SVC-SCRAPER] gRPC server error: ${err.message}`);
 	}
 
 	if (server) {
 		server.tryShutdown(() => {
 			logger.info('[SVC-SCRAPER] gRPC server closed');
-			process.exit(err ? 1 : 0);
 		});
-	} else {
-		process.exit(err ? 1 : 0);
 	}
+
+	if (consumer) {
+		await consumer.disconnect();
+	}
+	if (producer) {
+		await producer.disconnect();
+	}
+	process.exit(err ? 1 : 0);
 };
 
 const main = async () => {
@@ -61,6 +72,9 @@ const main = async () => {
 
 	const scrapeProto = grpc.loadPackageDefinition(packageDefinition);
 	const service = new services.ScrapeService(passages);
+
+	const healthImpl = new HealthImplementation(statusMap);
+	healthImpl.addToServer(server);
 
 	// Add Services (Endpoints)
 	server.addService(scrapeProto.mediawatch.scrape.v2.ScrapeService.service, service);
@@ -96,8 +110,12 @@ const main = async () => {
 	});
 };
 
-process.on('unhandledRejection', shutdown);
-process.on('uncaughtException', shutdown);
-process.on('SIGTERM', shutdown);
+main().catch((e) => {
+	logger.error(`[SVC-SCRAPER] main: ${e.message}`, e);
+	process.exit(1);
+});
 
-main();
+process.on('unhandledRejection', async (err) => shutdown(err));
+process.on('uncaughtException', async (err) => shutdown(err));
+process.once('SIGTERM', async (err) => shutdown(err));
+process.once('SIGINT', async (err) => shutdown(err));
