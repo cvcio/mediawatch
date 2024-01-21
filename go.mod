@@ -1,6 +1,7 @@
 module github.com/cvcio/mediawatch
 
 require (
+	connectrpc.com/connect v1.14.0
 	github.com/ChimeraCoder/anaconda v2.0.0+incompatible
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/amsokol/mongo-go-driver-protobuf v1.0.0-rc5
@@ -20,7 +21,7 @@ require (
 	github.com/neo4j/neo4j-go-driver/v5 v5.7.0
 	github.com/olivere/elastic/v7 v7.0.22
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.24.1
+	github.com/onsi/gomega v1.25.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/rs/cors v1.8.0
@@ -31,13 +32,13 @@ require (
 	go.mongodb.org/mongo-driver v1.3.4
 	go.opencensus.io v0.23.0
 	go.uber.org/zap v1.22.0
-	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
-	golang.org/x/net v0.8.0
+	golang.org/x/crypto v0.14.0
+	golang.org/x/net v0.17.0
 	golang.org/x/oauth2 v0.6.0
-	golang.org/x/text v0.8.0
+	golang.org/x/text v0.13.0
 	google.golang.org/grpc v1.46.2
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
-	google.golang.org/protobuf v1.30.0
+	google.golang.org/protobuf v1.32.0
 	gopkg.in/go-playground/validator.v8 v8.18.2
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )
@@ -48,7 +49,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/azr/backoff v0.0.0-20160115115103-53511d3c7330 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-jsonpointer v0.0.0-20160814072949-ba0abeacc3dc // indirect
 	github.com/dustin/gojson v0.0.0-20160307161227-2e71ec9dd5ad // indirect
@@ -83,8 +84,8 @@ require (
 	github.com/xdg/stringprep v1.0.3 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
-	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220519153652-3a47de7e79bd // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
@@ -93,4 +94,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-go 1.18
+go 1.20

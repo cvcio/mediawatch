@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/models/relationships"
 	"github.com/cvcio/mediawatch/pkg/auth"

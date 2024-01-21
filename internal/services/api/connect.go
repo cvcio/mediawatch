@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/cvcio/mediawatch/internal/handlers"
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/config"
@@ -119,7 +119,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// Blocking main listening for requests
 	// Make a channel to listen for errors coming from the listener. Use a
 	// buffered channel so the goroutine can exit if we don't collect this error.
-	errSingals := make(chan error, 1)
+	errSignals := make(chan error, 1)
 
 	// Listen for os signals
 	osSignals := make(chan os.Signal, 1)
@@ -129,6 +129,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ============================================================
 	// ...
 	mux := http.NewServeMux()
+
 	// feeds
 	feedsHandler, err := handlers.NewFeedsHandler(cfg, log, mongo, elastic, authenticator, rdb)
 	if err != nil {
@@ -162,7 +163,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 		log.Debugf("[SERVER] Starting Connect/gRPC server on: %s", server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Errorf("[SERVER] Connect/gRPC server failed to start: %s", err.Error())
-			errSingals <- err
+			errSignals <- err
 		}
 	}()
 
@@ -174,7 +175,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 
 	// Blocking main and waiting for shutdown.
 	select {
-	case err := <-errSingals:
+	case err := <-errSignals:
 		log.Errorf("[SERVER] Server error: %s", err.Error())
 		return err
 

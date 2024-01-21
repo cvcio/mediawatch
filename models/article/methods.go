@@ -19,7 +19,6 @@ func GetById(ctx context.Context, es *es.Elastic, index string, id string) (*art
 
 	defer res.Body.Close()
 
-	// retrun on response error
 	if res.IsError() {
 		return nil, errors.New(res.Status())
 	}
@@ -48,7 +47,6 @@ func Count(ctx context.Context, es *es.Elastic, opts *Opts) (int64, error) {
 
 	defer res.Body.Close()
 
-	// retrun on response error
 	if res.IsError() {
 		return 0, errors.New(res.Status())
 	}
@@ -75,7 +73,6 @@ func Search(ctx context.Context, es *es.Elastic, opts *Opts) (*articlesv2.Articl
 
 	defer res.Body.Close()
 
-	// retrun on response error
 	if res.IsError() {
 		return nil, errors.New(res.String())
 	}
@@ -118,7 +115,6 @@ func scroll(ctx context.Context, es *es.Elastic, scrollId string) ([]*articlesv2
 			return nil, err
 		}
 
-		// retrun on response error
 		if res.IsError() {
 			return nil, errors.New(res.String())
 		}
@@ -151,9 +147,7 @@ func scroll(ctx context.Context, es *es.Elastic, scrollId string) ([]*articlesv2
 		}
 	}
 
-	if err := clearScroll(ctx, es, scrollId); err != nil {
-		// do nothing
-	}
+	_ = clearScroll(ctx, es, scrollId)
 	return data, nil
 }
 
@@ -180,7 +174,6 @@ func Exists(ctx context.Context, es *es.Elastic, opts *Opts) bool {
 
 	defer res.Body.Close()
 
-	// retrun on response error
 	if res.IsError() {
 		return false
 	}

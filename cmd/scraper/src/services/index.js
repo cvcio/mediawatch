@@ -9,27 +9,14 @@ const { getProxy } = require('../utils/proxy');
 moment.suppressDeprecationWarnings = true;
 
 class ScrapeService {
-	constructor (mongo) {
-		this.passages = [];
-		this.mongo = mongo;
-		this.GetPassages();
-	}
-
-	async GetPassages () {
-		if (!this.mongo) return;
-
-		const db = this.mongo.db(process.env.MONGODB_DB);
-		const collection = db.collection('passages');
-
-		const passages = await collection.find({}).limit(5000).toArray();
-
+	constructor (passages) {
 		this.passages = passages.filter(m => m.type === 'trim');
-		logger.debug(`[SVC-SCRAPER] (${this.passages.length}) passages loaded`);
+		logger.info(`[SVC-SCRAPER] (${this.passages.length}) passages loaded`);
 	}
 
 	Scrape (req, callback) {
 		const { request } = req;
-		const feed = JSON.parse(request.feed);
+		const feed = typeof request.feed === 'string' ? JSON.parse(request.feed) : request.feed;
 
 		logger.info(`[SVC-SCRAPER] Scrape - (${feed.hostname}) ${decodeURIComponent(request.url).toString()}`);
 
@@ -48,7 +35,7 @@ class ScrapeService {
 						logger.error(`[SVC-SCRAPER] Unable to scrape URL (response empty) (${feed.hostname}) ${request.url}`);
 						return callback({ code: 9, details: `Unable to scrape URL (response empty) (${feed.hostname}) ${request.url}` }, null);
 					}
-					logger.debug(`[SVC-SCRAPER] Data ${JSON.stringify(res)}`);
+					// logger.debug(`[SVC-SCRAPER] Data ${JSON.stringify(res)}`);
 
 					const article = res;
 
@@ -94,7 +81,7 @@ class ScrapeService {
 			extract(decodeURIComponent(request.url).toString(),
 				feed.stream.requires_proxy ? getProxy() : null)
 				.then(res => {
-					logger.debug(`[SVC-SCRAPER] Data ${JSON.stringify(res)}`);
+					// logger.debug(`[SVC-SCRAPER] Data ${JSON.stringify(res)}`);
 
 					const article = res;
 					if (article.date && moment(request.crawled_at).isBefore(moment(article.date))) {
@@ -241,8 +228,8 @@ class ScrapeService {
 	}
 
 	ReloadPassages (req, callback) {
-		this.GetPassages();
-		return callback(null, null);
+		logger.info('[SVC-SCRAPER] ReloadPassages: ', this.passages.length);
+		return callback({ code: errorCode(500), details: 'Unimplemented method' }, null);
 	}
 
 	RetryWithProxy (request, feed, callback) {

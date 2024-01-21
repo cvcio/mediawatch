@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"log"
+	"strings"
 	"time"
 
 	kaf "github.com/segmentio/kafka-go"
@@ -29,7 +30,7 @@ func NewKafkaClient(
 	if read {
 		client.Consumer = NewConsumer(brokers, consumerTopic, consumerGroup, readOldest)
 		if readOldest {
-			client.Consumer.SetOffset(kaf.FirstOffset) // EARLIEST = -2
+			_ = client.Consumer.SetOffset(kaf.FirstOffset) // EARLIEST = -2
 		}
 	}
 
@@ -43,20 +44,20 @@ func NewKafkaClient(
 // NewConsumer creates a new kafka consumer.
 func NewConsumer(brokers []string, topic string, group string, oldest bool) *kaf.Reader {
 	return kaf.NewReader(kaf.ReaderConfig{
-		Brokers:  brokers,
-		Topic:    topic,
-		GroupID:  group,
-		MinBytes: 1,
-		MaxBytes: 1e5,
-		MaxWait:  3 * time.Second,
+		Brokers:     brokers,
+		GroupTopics: strings.Split(topic, ","),
+		GroupID:     group,
+		MinBytes:    1,
+		MaxBytes:    1e5,
+		MaxWait:     3 * time.Second,
 	})
 }
 
 // NewProducer creates a new kafka producer.
 func NewProducer(brokers []string, topic string) *kaf.Writer {
 	return &kaf.Writer{
-		Addr:                   kaf.TCP(brokers...),
-		Topic:                  topic,
+		Addr: kaf.TCP(brokers...),
+		// Topic:                  topic,
 		AllowAutoTopicCreation: true,
 		BatchSize:              1,
 		BatchTimeout:           2 * time.Second,

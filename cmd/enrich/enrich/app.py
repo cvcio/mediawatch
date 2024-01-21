@@ -6,6 +6,7 @@ Python implementation of the gRPC Enrich server.
 import os
 import logging
 import asyncio
+import signal
 
 import nltk
 import uvloop
@@ -17,7 +18,10 @@ from ai.model import AIModel
 
 from server.server import GRPCServer
 from services.enrich import EnrichService
-from mediawatch.enrich.v2 import enrich_pb2_grpc
+
+from mediawatch.enrich.v2.enrich_pb2_grpc import add_EnrichServiceServicer_to_server
+
+from worker.kafka import Worker
 
 
 async def main():
@@ -37,6 +41,11 @@ async def main():
     if env.ENV != "development":
         nltk.download("punkt")
 
+    loop = asyncio.get_running_loop()
+
+    worker = Worker(env, loop)
+    await worker.connect()
+
     # Load Models
     models = []
     for lang in env.SUPPORTED_LANGUAGES:
@@ -49,15 +58,22 @@ async def main():
 
     logging.info("Loaded %d models", len(models))
 
-    # Start GRPC Server
-    logging.info("Starting gRPC server")
+    enrich_service = EnrichService(models)
 
     server = GRPCServer(env.HOST, env.PORT, env.MAX_WORKERS)
-    server.register_service(
-        enrich_pb2_grpc.add_EnrichServiceServicer_to_server, EnrichService, *models
-    )
+    server.register_service_method(add_EnrichServiceServicer_to_server, enrich_service)
 
-    await server.serve()
+    def on_signal_exit():
+        logging.info("Received exit signal")
+        asyncio.create_task(server.stop())
+        asyncio.create_task(worker.stop())
+
+    loop.add_signal_handler(signal.SIGTERM, on_signal_exit)
+    loop.add_signal_handler(signal.SIGINT, on_signal_exit)
+
+    await asyncio.gather(
+        worker.run_consumer(worker.process, enrich_service.NLP), server.serve()
+    )
 
 
 if __name__ == "__main__":

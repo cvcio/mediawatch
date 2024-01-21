@@ -24,7 +24,7 @@ import (
 
 type Ticker struct {
 	cfg      *config.Config
-	log      *zap.SugaredLogger
+	log      *zap.Logger
 	worker   *ListenGroup
 	rdb      *redis.RedisClient
 	ticker   time.Ticker
@@ -41,7 +41,7 @@ type CacheLast struct {
 	LastArticleLink string    `json:"last_article_link"`
 }
 
-func NewTicker(cfg *config.Config, log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, done chan bool, targets []*feedsv2.Feed, init bool, interval time.Duration) *Ticker {
+func NewTicker(cfg *config.Config, log *zap.Logger, worker *ListenGroup, rdb *redis.RedisClient, done chan bool, targets []*feedsv2.Feed, init bool, interval time.Duration) *Ticker {
 	return &Ticker{
 		cfg:      cfg,
 		log:      log,
@@ -59,8 +59,8 @@ func (ticker *Ticker) Fetch() {
 	// delay := time.Duration((ticker.interval / time.Duration(math.Ceil(float64(len(ticker.targets))/100))) / 100)
 	for _, v := range ticker.targets {
 		if _, err := url.Parse(v.Stream.StreamTarget); err != nil {
-			ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
-			ticker.log.Errorf("Unable to validate URL: %s", v.Stream.StreamTarget)
+			_ = ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
+			ticker.log.Error("Unable to validate URL", zap.String("url", v.Stream.StreamTarget), zap.Error(err))
 			continue
 		}
 		if status, _ := ticker.rdb.Get("feed:status:" + v.Id); status == "offline" {
@@ -87,12 +87,12 @@ func (ticker *Ticker) Fetch() {
 			if err != nil {
 				// TODO: Investigate how often this happens
 				// TODO: Add prometheus metrics with error codes per feed
-				ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
-				ticker.log.Errorf("Error parsing RSS feed for: (%s) - %s", v.Hostname, err.Error())
+				_ = ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
+				ticker.log.Error("Error parsing RSS feed", zap.String("hostname", v.Hostname), zap.Error(err))
 				continue
 			}
 
-			if &data.Items == nil || len(data.Items) == 0 {
+			if len(data.Items) == 0 {
 				continue
 			}
 
@@ -111,8 +111,8 @@ func (ticker *Ticker) Fetch() {
 			if err != nil {
 				// TODO: Investigate how often this happens
 				// TODO: Add prometheus metrics with error codes per feed
-				ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
-				ticker.log.Errorf("Error parsing RSS feed for: (%s) - %s", v.Hostname, err.Error())
+				_ = ticker.rdb.Set("feed:status:"+v.Id, "offline", time.Hour*3)
+				ticker.log.Error("Error parsing RSS feed", zap.String("hostname", v.Hostname), zap.Error(err))
 				continue
 			}
 			if len(data) == 0 {
@@ -129,7 +129,7 @@ func (ticker *Ticker) Fetch() {
 			return slice[i].PublishedParsed.Before(*slice[j].PublishedParsed)
 		})
 		// populate all urls in a list and send in a go routine
-		var urls []link.CatchedURL
+		var urls []link.Link
 		// iter over the items and check if the article is already processed.
 		// we assume that the article is processed if the publish time of an item
 		// is before or equal to the time stored in redis key/value store.
@@ -145,11 +145,11 @@ func (ticker *Ticker) Fetch() {
 			if last, _ := ticker.rdb.Get("feed:last:" + v.Id); last != "" {
 				var lastCache CacheLast
 				if err := json.Unmarshal([]byte(last), &lastCache); err != nil {
-					ticker.log.Errorf("Unable to unmarshal cache: %v", last)
+					ticker.log.Error("Unable to unmarshal cache", zap.Error(err))
 					continue
 				}
 
-				if lastCache.LastArticleAt.Before(timePublished) == false {
+				if !lastCache.LastArticleAt.Before(timePublished) {
 					continue
 				}
 
@@ -158,9 +158,9 @@ func (ticker *Ticker) Fetch() {
 				}
 			}
 
-			ticker.log.Debugf("%s (%s) %s", timePublished.Format(time.RFC3339), v.Hostname, l.Title)
+			ticker.log.Debug("New feed item", zap.String("published_at", timePublished.Format(time.RFC3339)), zap.String("hostname", v.Hostname), zap.String("link", l.Link), zap.String("title", l.Title))
 
-			catchedURL := link.CatchedURL{
+			item := link.Link{
 				DocId:     uuid.New().String(),
 				Type:      "rss",
 				Url:       l.Link,
@@ -174,21 +174,21 @@ func (ticker *Ticker) Fetch() {
 				Id:              v.Id,
 				Hostname:        v.Hostname,
 				LastArticleAt:   timePublished,
-				LastArticleLink: catchedURL.Url,
+				LastArticleLink: item.Url,
 			})
 			if err != nil {
-				ticker.log.Errorf("Unable to marshal cache: %s", err.Error())
+				ticker.log.Error("Unable to marshal cache", zap.Error(err))
 				continue
 			}
 
 			// update last time published per target in redis key/value store
-			ticker.rdb.Set("feed:last:"+v.Id, string(newCache), 0)
+			_ = ticker.rdb.Set("feed:last:"+v.Id, string(newCache), 0)
 
 			if ticker.init {
 				continue
 			}
 
-			urls = append(urls, catchedURL)
+			urls = append(urls, item)
 		}
 
 		if len(urls) > 0 {
@@ -198,16 +198,17 @@ func (ticker *Ticker) Fetch() {
 	}
 }
 
-func (ticker *Ticker) Produce(urls []link.CatchedURL) {
+func (ticker *Ticker) Produce(urls []link.Link) {
 	for _, v := range urls {
 		// write message to kafka
 		message, err := json.Marshal(&v)
 		if err != nil {
-			ticker.log.Errorf("Unable to marshal message: %s", err.Error())
+			ticker.log.Error("Unable to marshal message", zap.Error(err))
 			continue
 		}
 		go ticker.worker.Produce(kafka.Message{
 			Value: []byte(message),
+			Topic: "worker",
 		})
 
 		time.Sleep(1 * time.Second)

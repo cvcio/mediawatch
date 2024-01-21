@@ -5,9 +5,9 @@
 package feedsv2connect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	connect_go "github.com/bufbuild/connect-go"
 	v21 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	v2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	http "net/http"
@@ -19,29 +19,66 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// FeedServiceName is the fully-qualified name of the FeedService service.
 	FeedServiceName = "mediawatch.feeds.v2.FeedService"
 )
 
+// These constants are the fully-qualified names of the RPCs defined in this package. They're
+// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+//
+// Note that these are different from the fully-qualified method names used by
+// google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
+// reflection-formatted method names, remove the leading slash and convert the remaining slash to a
+// period.
+const (
+	// FeedServiceCreateFeedProcedure is the fully-qualified name of the FeedService's CreateFeed RPC.
+	FeedServiceCreateFeedProcedure = "/mediawatch.feeds.v2.FeedService/CreateFeed"
+	// FeedServiceGetFeedProcedure is the fully-qualified name of the FeedService's GetFeed RPC.
+	FeedServiceGetFeedProcedure = "/mediawatch.feeds.v2.FeedService/GetFeed"
+	// FeedServiceGetFeedsProcedure is the fully-qualified name of the FeedService's GetFeeds RPC.
+	FeedServiceGetFeedsProcedure = "/mediawatch.feeds.v2.FeedService/GetFeeds"
+	// FeedServiceUpdateFeedProcedure is the fully-qualified name of the FeedService's UpdateFeed RPC.
+	FeedServiceUpdateFeedProcedure = "/mediawatch.feeds.v2.FeedService/UpdateFeed"
+	// FeedServiceDeleteFeedProcedure is the fully-qualified name of the FeedService's DeleteFeed RPC.
+	FeedServiceDeleteFeedProcedure = "/mediawatch.feeds.v2.FeedService/DeleteFeed"
+	// FeedServiceGetFeedsStreamListProcedure is the fully-qualified name of the FeedService's
+	// GetFeedsStreamList RPC.
+	FeedServiceGetFeedsStreamListProcedure = "/mediawatch.feeds.v2.FeedService/GetFeedsStreamList"
+	// FeedServiceTestFeedProcedure is the fully-qualified name of the FeedService's TestFeed RPC.
+	FeedServiceTestFeedProcedure = "/mediawatch.feeds.v2.FeedService/TestFeed"
+)
+
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	feedServiceServiceDescriptor                  = v2.File_mediawatch_feeds_v2_feed_proto.Services().ByName("FeedService")
+	feedServiceCreateFeedMethodDescriptor         = feedServiceServiceDescriptor.Methods().ByName("CreateFeed")
+	feedServiceGetFeedMethodDescriptor            = feedServiceServiceDescriptor.Methods().ByName("GetFeed")
+	feedServiceGetFeedsMethodDescriptor           = feedServiceServiceDescriptor.Methods().ByName("GetFeeds")
+	feedServiceUpdateFeedMethodDescriptor         = feedServiceServiceDescriptor.Methods().ByName("UpdateFeed")
+	feedServiceDeleteFeedMethodDescriptor         = feedServiceServiceDescriptor.Methods().ByName("DeleteFeed")
+	feedServiceGetFeedsStreamListMethodDescriptor = feedServiceServiceDescriptor.Methods().ByName("GetFeedsStreamList")
+	feedServiceTestFeedMethodDescriptor           = feedServiceServiceDescriptor.Methods().ByName("TestFeed")
+)
+
 // FeedServiceClient is a client for the mediawatch.feeds.v2.FeedService service.
 type FeedServiceClient interface {
 	// create a new feed
-	CreateFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v2.Feed], error)
+	CreateFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v2.Feed], error)
 	// get a single feed
-	GetFeed(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.Feed], error)
+	GetFeed(context.Context, *connect.Request[v2.QueryFeed]) (*connect.Response[v2.Feed], error)
 	// get list of feeds by query
-	GetFeeds(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error)
+	GetFeeds(context.Context, *connect.Request[v2.QueryFeed]) (*connect.Response[v2.FeedList], error)
 	// update a feed
-	UpdateFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v21.ResponseWithMessage], error)
+	UpdateFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v21.ResponseWithMessage], error)
 	// delete a feed
-	DeleteFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v21.ResponseWithMessage], error)
+	DeleteFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v21.ResponseWithMessage], error)
 	// get the stream list
-	GetFeedsStreamList(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error)
+	GetFeedsStreamList(context.Context, *connect.Request[v2.QueryFeed]) (*connect.Response[v2.FeedList], error)
 	// test the feed e2e
-	TestFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v2.FeedTest], error)
+	TestFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v2.FeedTest], error)
 }
 
 // NewFeedServiceClient constructs a client for the mediawatch.feeds.v2.FeedService service. By
@@ -51,109 +88,116 @@ type FeedServiceClient interface {
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewFeedServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) FeedServiceClient {
+func NewFeedServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) FeedServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &feedServiceClient{
-		createFeed: connect_go.NewClient[v2.Feed, v2.Feed](
+		createFeed: connect.NewClient[v2.Feed, v2.Feed](
 			httpClient,
-			baseURL+"/mediawatch.feeds.v2.FeedService/CreateFeed",
-			opts...,
+			baseURL+FeedServiceCreateFeedProcedure,
+			connect.WithSchema(feedServiceCreateFeedMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		getFeed: connect_go.NewClient[v2.QueryFeed, v2.Feed](
+		getFeed: connect.NewClient[v2.QueryFeed, v2.Feed](
 			httpClient,
-			baseURL+"/mediawatch.feeds.v2.FeedService/GetFeed",
-			opts...,
+			baseURL+FeedServiceGetFeedProcedure,
+			connect.WithSchema(feedServiceGetFeedMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		getFeeds: connect_go.NewClient[v2.QueryFeed, v2.FeedList](
+		getFeeds: connect.NewClient[v2.QueryFeed, v2.FeedList](
 			httpClient,
-			baseURL+"/mediawatch.feeds.v2.FeedService/GetFeeds",
-			opts...,
+			baseURL+FeedServiceGetFeedsProcedure,
+			connect.WithSchema(feedServiceGetFeedsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		updateFeed: connect_go.NewClient[v2.Feed, v21.ResponseWithMessage](
+		updateFeed: connect.NewClient[v2.Feed, v21.ResponseWithMessage](
 			httpClient,
-			baseURL+"/mediawatch.feeds.v2.FeedService/UpdateFeed",
-			opts...,
+			baseURL+FeedServiceUpdateFeedProcedure,
+			connect.WithSchema(feedServiceUpdateFeedMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		deleteFeed: connect_go.NewClient[v2.Feed, v21.ResponseWithMessage](
+		deleteFeed: connect.NewClient[v2.Feed, v21.ResponseWithMessage](
 			httpClient,
-			baseURL+"/mediawatch.feeds.v2.FeedService/DeleteFeed",
-			opts...,
+			baseURL+FeedServiceDeleteFeedProcedure,
+			connect.WithSchema(feedServiceDeleteFeedMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		getFeedsStreamList: connect_go.NewClient[v2.QueryFeed, v2.FeedList](
+		getFeedsStreamList: connect.NewClient[v2.QueryFeed, v2.FeedList](
 			httpClient,
-			baseURL+"/mediawatch.feeds.v2.FeedService/GetFeedsStreamList",
-			opts...,
+			baseURL+FeedServiceGetFeedsStreamListProcedure,
+			connect.WithSchema(feedServiceGetFeedsStreamListMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		testFeed: connect_go.NewClient[v2.Feed, v2.FeedTest](
+		testFeed: connect.NewClient[v2.Feed, v2.FeedTest](
 			httpClient,
-			baseURL+"/mediawatch.feeds.v2.FeedService/TestFeed",
-			opts...,
+			baseURL+FeedServiceTestFeedProcedure,
+			connect.WithSchema(feedServiceTestFeedMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
 
 // feedServiceClient implements FeedServiceClient.
 type feedServiceClient struct {
-	createFeed         *connect_go.Client[v2.Feed, v2.Feed]
-	getFeed            *connect_go.Client[v2.QueryFeed, v2.Feed]
-	getFeeds           *connect_go.Client[v2.QueryFeed, v2.FeedList]
-	updateFeed         *connect_go.Client[v2.Feed, v21.ResponseWithMessage]
-	deleteFeed         *connect_go.Client[v2.Feed, v21.ResponseWithMessage]
-	getFeedsStreamList *connect_go.Client[v2.QueryFeed, v2.FeedList]
-	testFeed           *connect_go.Client[v2.Feed, v2.FeedTest]
+	createFeed         *connect.Client[v2.Feed, v2.Feed]
+	getFeed            *connect.Client[v2.QueryFeed, v2.Feed]
+	getFeeds           *connect.Client[v2.QueryFeed, v2.FeedList]
+	updateFeed         *connect.Client[v2.Feed, v21.ResponseWithMessage]
+	deleteFeed         *connect.Client[v2.Feed, v21.ResponseWithMessage]
+	getFeedsStreamList *connect.Client[v2.QueryFeed, v2.FeedList]
+	testFeed           *connect.Client[v2.Feed, v2.FeedTest]
 }
 
 // CreateFeed calls mediawatch.feeds.v2.FeedService.CreateFeed.
-func (c *feedServiceClient) CreateFeed(ctx context.Context, req *connect_go.Request[v2.Feed]) (*connect_go.Response[v2.Feed], error) {
+func (c *feedServiceClient) CreateFeed(ctx context.Context, req *connect.Request[v2.Feed]) (*connect.Response[v2.Feed], error) {
 	return c.createFeed.CallUnary(ctx, req)
 }
 
 // GetFeed calls mediawatch.feeds.v2.FeedService.GetFeed.
-func (c *feedServiceClient) GetFeed(ctx context.Context, req *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.Feed], error) {
+func (c *feedServiceClient) GetFeed(ctx context.Context, req *connect.Request[v2.QueryFeed]) (*connect.Response[v2.Feed], error) {
 	return c.getFeed.CallUnary(ctx, req)
 }
 
 // GetFeeds calls mediawatch.feeds.v2.FeedService.GetFeeds.
-func (c *feedServiceClient) GetFeeds(ctx context.Context, req *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error) {
+func (c *feedServiceClient) GetFeeds(ctx context.Context, req *connect.Request[v2.QueryFeed]) (*connect.Response[v2.FeedList], error) {
 	return c.getFeeds.CallUnary(ctx, req)
 }
 
 // UpdateFeed calls mediawatch.feeds.v2.FeedService.UpdateFeed.
-func (c *feedServiceClient) UpdateFeed(ctx context.Context, req *connect_go.Request[v2.Feed]) (*connect_go.Response[v21.ResponseWithMessage], error) {
+func (c *feedServiceClient) UpdateFeed(ctx context.Context, req *connect.Request[v2.Feed]) (*connect.Response[v21.ResponseWithMessage], error) {
 	return c.updateFeed.CallUnary(ctx, req)
 }
 
 // DeleteFeed calls mediawatch.feeds.v2.FeedService.DeleteFeed.
-func (c *feedServiceClient) DeleteFeed(ctx context.Context, req *connect_go.Request[v2.Feed]) (*connect_go.Response[v21.ResponseWithMessage], error) {
+func (c *feedServiceClient) DeleteFeed(ctx context.Context, req *connect.Request[v2.Feed]) (*connect.Response[v21.ResponseWithMessage], error) {
 	return c.deleteFeed.CallUnary(ctx, req)
 }
 
 // GetFeedsStreamList calls mediawatch.feeds.v2.FeedService.GetFeedsStreamList.
-func (c *feedServiceClient) GetFeedsStreamList(ctx context.Context, req *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error) {
+func (c *feedServiceClient) GetFeedsStreamList(ctx context.Context, req *connect.Request[v2.QueryFeed]) (*connect.Response[v2.FeedList], error) {
 	return c.getFeedsStreamList.CallUnary(ctx, req)
 }
 
 // TestFeed calls mediawatch.feeds.v2.FeedService.TestFeed.
-func (c *feedServiceClient) TestFeed(ctx context.Context, req *connect_go.Request[v2.Feed]) (*connect_go.Response[v2.FeedTest], error) {
+func (c *feedServiceClient) TestFeed(ctx context.Context, req *connect.Request[v2.Feed]) (*connect.Response[v2.FeedTest], error) {
 	return c.testFeed.CallUnary(ctx, req)
 }
 
 // FeedServiceHandler is an implementation of the mediawatch.feeds.v2.FeedService service.
 type FeedServiceHandler interface {
 	// create a new feed
-	CreateFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v2.Feed], error)
+	CreateFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v2.Feed], error)
 	// get a single feed
-	GetFeed(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.Feed], error)
+	GetFeed(context.Context, *connect.Request[v2.QueryFeed]) (*connect.Response[v2.Feed], error)
 	// get list of feeds by query
-	GetFeeds(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error)
+	GetFeeds(context.Context, *connect.Request[v2.QueryFeed]) (*connect.Response[v2.FeedList], error)
 	// update a feed
-	UpdateFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v21.ResponseWithMessage], error)
+	UpdateFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v21.ResponseWithMessage], error)
 	// delete a feed
-	DeleteFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v21.ResponseWithMessage], error)
+	DeleteFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v21.ResponseWithMessage], error)
 	// get the stream list
-	GetFeedsStreamList(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error)
+	GetFeedsStreamList(context.Context, *connect.Request[v2.QueryFeed]) (*connect.Response[v2.FeedList], error)
 	// test the feed e2e
-	TestFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v2.FeedTest], error)
+	TestFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v2.FeedTest], error)
 }
 
 // NewFeedServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -161,73 +205,98 @@ type FeedServiceHandler interface {
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewFeedServiceHandler(svc FeedServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	mux := http.NewServeMux()
-	mux.Handle("/mediawatch.feeds.v2.FeedService/CreateFeed", connect_go.NewUnaryHandler(
-		"/mediawatch.feeds.v2.FeedService/CreateFeed",
+func NewFeedServiceHandler(svc FeedServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	feedServiceCreateFeedHandler := connect.NewUnaryHandler(
+		FeedServiceCreateFeedProcedure,
 		svc.CreateFeed,
-		opts...,
-	))
-	mux.Handle("/mediawatch.feeds.v2.FeedService/GetFeed", connect_go.NewUnaryHandler(
-		"/mediawatch.feeds.v2.FeedService/GetFeed",
+		connect.WithSchema(feedServiceCreateFeedMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	feedServiceGetFeedHandler := connect.NewUnaryHandler(
+		FeedServiceGetFeedProcedure,
 		svc.GetFeed,
-		opts...,
-	))
-	mux.Handle("/mediawatch.feeds.v2.FeedService/GetFeeds", connect_go.NewUnaryHandler(
-		"/mediawatch.feeds.v2.FeedService/GetFeeds",
+		connect.WithSchema(feedServiceGetFeedMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	feedServiceGetFeedsHandler := connect.NewUnaryHandler(
+		FeedServiceGetFeedsProcedure,
 		svc.GetFeeds,
-		opts...,
-	))
-	mux.Handle("/mediawatch.feeds.v2.FeedService/UpdateFeed", connect_go.NewUnaryHandler(
-		"/mediawatch.feeds.v2.FeedService/UpdateFeed",
+		connect.WithSchema(feedServiceGetFeedsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	feedServiceUpdateFeedHandler := connect.NewUnaryHandler(
+		FeedServiceUpdateFeedProcedure,
 		svc.UpdateFeed,
-		opts...,
-	))
-	mux.Handle("/mediawatch.feeds.v2.FeedService/DeleteFeed", connect_go.NewUnaryHandler(
-		"/mediawatch.feeds.v2.FeedService/DeleteFeed",
+		connect.WithSchema(feedServiceUpdateFeedMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	feedServiceDeleteFeedHandler := connect.NewUnaryHandler(
+		FeedServiceDeleteFeedProcedure,
 		svc.DeleteFeed,
-		opts...,
-	))
-	mux.Handle("/mediawatch.feeds.v2.FeedService/GetFeedsStreamList", connect_go.NewUnaryHandler(
-		"/mediawatch.feeds.v2.FeedService/GetFeedsStreamList",
+		connect.WithSchema(feedServiceDeleteFeedMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	feedServiceGetFeedsStreamListHandler := connect.NewUnaryHandler(
+		FeedServiceGetFeedsStreamListProcedure,
 		svc.GetFeedsStreamList,
-		opts...,
-	))
-	mux.Handle("/mediawatch.feeds.v2.FeedService/TestFeed", connect_go.NewUnaryHandler(
-		"/mediawatch.feeds.v2.FeedService/TestFeed",
+		connect.WithSchema(feedServiceGetFeedsStreamListMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	feedServiceTestFeedHandler := connect.NewUnaryHandler(
+		FeedServiceTestFeedProcedure,
 		svc.TestFeed,
-		opts...,
-	))
-	return "/mediawatch.feeds.v2.FeedService/", mux
+		connect.WithSchema(feedServiceTestFeedMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/mediawatch.feeds.v2.FeedService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case FeedServiceCreateFeedProcedure:
+			feedServiceCreateFeedHandler.ServeHTTP(w, r)
+		case FeedServiceGetFeedProcedure:
+			feedServiceGetFeedHandler.ServeHTTP(w, r)
+		case FeedServiceGetFeedsProcedure:
+			feedServiceGetFeedsHandler.ServeHTTP(w, r)
+		case FeedServiceUpdateFeedProcedure:
+			feedServiceUpdateFeedHandler.ServeHTTP(w, r)
+		case FeedServiceDeleteFeedProcedure:
+			feedServiceDeleteFeedHandler.ServeHTTP(w, r)
+		case FeedServiceGetFeedsStreamListProcedure:
+			feedServiceGetFeedsStreamListHandler.ServeHTTP(w, r)
+		case FeedServiceTestFeedProcedure:
+			feedServiceTestFeedHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedFeedServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedFeedServiceHandler struct{}
 
-func (UnimplementedFeedServiceHandler) CreateFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v2.Feed], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.CreateFeed is not implemented"))
+func (UnimplementedFeedServiceHandler) CreateFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v2.Feed], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.CreateFeed is not implemented"))
 }
 
-func (UnimplementedFeedServiceHandler) GetFeed(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.Feed], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.GetFeed is not implemented"))
+func (UnimplementedFeedServiceHandler) GetFeed(context.Context, *connect.Request[v2.QueryFeed]) (*connect.Response[v2.Feed], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.GetFeed is not implemented"))
 }
 
-func (UnimplementedFeedServiceHandler) GetFeeds(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.GetFeeds is not implemented"))
+func (UnimplementedFeedServiceHandler) GetFeeds(context.Context, *connect.Request[v2.QueryFeed]) (*connect.Response[v2.FeedList], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.GetFeeds is not implemented"))
 }
 
-func (UnimplementedFeedServiceHandler) UpdateFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v21.ResponseWithMessage], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.UpdateFeed is not implemented"))
+func (UnimplementedFeedServiceHandler) UpdateFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v21.ResponseWithMessage], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.UpdateFeed is not implemented"))
 }
 
-func (UnimplementedFeedServiceHandler) DeleteFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v21.ResponseWithMessage], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.DeleteFeed is not implemented"))
+func (UnimplementedFeedServiceHandler) DeleteFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v21.ResponseWithMessage], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.DeleteFeed is not implemented"))
 }
 
-func (UnimplementedFeedServiceHandler) GetFeedsStreamList(context.Context, *connect_go.Request[v2.QueryFeed]) (*connect_go.Response[v2.FeedList], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.GetFeedsStreamList is not implemented"))
+func (UnimplementedFeedServiceHandler) GetFeedsStreamList(context.Context, *connect.Request[v2.QueryFeed]) (*connect.Response[v2.FeedList], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.GetFeedsStreamList is not implemented"))
 }
 
-func (UnimplementedFeedServiceHandler) TestFeed(context.Context, *connect_go.Request[v2.Feed]) (*connect_go.Response[v2.FeedTest], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.TestFeed is not implemented"))
+func (UnimplementedFeedServiceHandler) TestFeed(context.Context, *connect.Request[v2.Feed]) (*connect.Response[v2.FeedTest], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.feeds.v2.FeedService.TestFeed is not implemented"))
 }

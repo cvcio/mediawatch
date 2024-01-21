@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/bufbuild/connect-go"
+	"connectrpc.com/connect"
 	"github.com/cvcio/mediawatch/models/feed"
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/config"
@@ -198,7 +198,7 @@ func (h *FeedsHandler) TestFeed(ctx context.Context, req *connect.Request[feedsv
 		grpc.WithUnaryInterceptor(interceptors.TimeoutInterceptor(15*time.Second)),
 	)
 	// Create gRPC Scrape Connection
-	scrapeGRPC, err := grpc.Dial(config.NewConfig().Scrape.Host, grpcOptions...)
+	scrapeGRPC, err := grpc.Dial("localhost:50050", grpcOptions...)
 	if err != nil {
 		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to connect to scrape service"))
 		h.log.Errorf("Internal: %s", err.Error())

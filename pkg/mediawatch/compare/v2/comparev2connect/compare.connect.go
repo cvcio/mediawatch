@@ -5,9 +5,9 @@
 package comparev2connect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	connect_go "github.com/bufbuild/connect-go"
 	v2 "github.com/cvcio/mediawatch/pkg/mediawatch/compare/v2"
 	http "net/http"
 	strings "strings"
@@ -18,21 +18,47 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// CompareServiceName is the fully-qualified name of the CompareService service.
 	CompareServiceName = "mediawatch.compare.v2.CompareService"
 )
 
+// These constants are the fully-qualified names of the RPCs defined in this package. They're
+// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+//
+// Note that these are different from the fully-qualified method names used by
+// google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
+// reflection-formatted method names, remove the leading slash and convert the remaining slash to a
+// period.
+const (
+	// CompareServiceSingleProcedure is the fully-qualified name of the CompareService's Single RPC.
+	CompareServiceSingleProcedure = "/mediawatch.compare.v2.CompareService/Single"
+	// CompareServiceOneToManyProcedure is the fully-qualified name of the CompareService's OneToMany
+	// RPC.
+	CompareServiceOneToManyProcedure = "/mediawatch.compare.v2.CompareService/OneToMany"
+	// CompareServiceManyToManyProcedure is the fully-qualified name of the CompareService's ManyToMany
+	// RPC.
+	CompareServiceManyToManyProcedure = "/mediawatch.compare.v2.CompareService/ManyToMany"
+)
+
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	compareServiceServiceDescriptor          = v2.File_mediawatch_compare_v2_compare_proto.Services().ByName("CompareService")
+	compareServiceSingleMethodDescriptor     = compareServiceServiceDescriptor.Methods().ByName("Single")
+	compareServiceOneToManyMethodDescriptor  = compareServiceServiceDescriptor.Methods().ByName("OneToMany")
+	compareServiceManyToManyMethodDescriptor = compareServiceServiceDescriptor.Methods().ByName("ManyToMany")
+)
+
 // CompareServiceClient is a client for the mediawatch.compare.v2.CompareService service.
 type CompareServiceClient interface {
 	// Single compares a single document by id with multiple auto-discovered
-	Single(context.Context, *connect_go.Request[v2.SingleRequest]) (*connect_go.Response[v2.SingleResponse], error)
+	Single(context.Context, *connect.Request[v2.SingleRequest]) (*connect.Response[v2.SingleResponse], error)
 	// OneToMany compares a single document by id with multiple document ids provided
-	OneToMany(context.Context, *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error)
+	OneToMany(context.Context, *connect.Request[v2.OneToManyRequest]) (*connect.Response[v2.MultipleResponse], error)
 	// ManyToMany compares a list of documents ids with multiple document ids provided
-	ManyToMany(context.Context, *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error)
+	ManyToMany(context.Context, *connect.Request[v2.ManyToManyRequest]) (*connect.Response[v2.MultipleResponse], error)
 }
 
 // NewCompareServiceClient constructs a client for the mediawatch.compare.v2.CompareService service.
@@ -42,57 +68,60 @@ type CompareServiceClient interface {
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewCompareServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) CompareServiceClient {
+func NewCompareServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) CompareServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &compareServiceClient{
-		single: connect_go.NewClient[v2.SingleRequest, v2.SingleResponse](
+		single: connect.NewClient[v2.SingleRequest, v2.SingleResponse](
 			httpClient,
-			baseURL+"/mediawatch.compare.v2.CompareService/Single",
-			opts...,
+			baseURL+CompareServiceSingleProcedure,
+			connect.WithSchema(compareServiceSingleMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		oneToMany: connect_go.NewClient[v2.OneToManyRequest, v2.MultipleResponse](
+		oneToMany: connect.NewClient[v2.OneToManyRequest, v2.MultipleResponse](
 			httpClient,
-			baseURL+"/mediawatch.compare.v2.CompareService/OneToMany",
-			opts...,
+			baseURL+CompareServiceOneToManyProcedure,
+			connect.WithSchema(compareServiceOneToManyMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		manyToMany: connect_go.NewClient[v2.ManyToManyRequest, v2.MultipleResponse](
+		manyToMany: connect.NewClient[v2.ManyToManyRequest, v2.MultipleResponse](
 			httpClient,
-			baseURL+"/mediawatch.compare.v2.CompareService/ManyToMany",
-			opts...,
+			baseURL+CompareServiceManyToManyProcedure,
+			connect.WithSchema(compareServiceManyToManyMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
 
 // compareServiceClient implements CompareServiceClient.
 type compareServiceClient struct {
-	single     *connect_go.Client[v2.SingleRequest, v2.SingleResponse]
-	oneToMany  *connect_go.Client[v2.OneToManyRequest, v2.MultipleResponse]
-	manyToMany *connect_go.Client[v2.ManyToManyRequest, v2.MultipleResponse]
+	single     *connect.Client[v2.SingleRequest, v2.SingleResponse]
+	oneToMany  *connect.Client[v2.OneToManyRequest, v2.MultipleResponse]
+	manyToMany *connect.Client[v2.ManyToManyRequest, v2.MultipleResponse]
 }
 
 // Single calls mediawatch.compare.v2.CompareService.Single.
-func (c *compareServiceClient) Single(ctx context.Context, req *connect_go.Request[v2.SingleRequest]) (*connect_go.Response[v2.SingleResponse], error) {
+func (c *compareServiceClient) Single(ctx context.Context, req *connect.Request[v2.SingleRequest]) (*connect.Response[v2.SingleResponse], error) {
 	return c.single.CallUnary(ctx, req)
 }
 
 // OneToMany calls mediawatch.compare.v2.CompareService.OneToMany.
-func (c *compareServiceClient) OneToMany(ctx context.Context, req *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error) {
+func (c *compareServiceClient) OneToMany(ctx context.Context, req *connect.Request[v2.OneToManyRequest]) (*connect.Response[v2.MultipleResponse], error) {
 	return c.oneToMany.CallUnary(ctx, req)
 }
 
 // ManyToMany calls mediawatch.compare.v2.CompareService.ManyToMany.
-func (c *compareServiceClient) ManyToMany(ctx context.Context, req *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error) {
+func (c *compareServiceClient) ManyToMany(ctx context.Context, req *connect.Request[v2.ManyToManyRequest]) (*connect.Response[v2.MultipleResponse], error) {
 	return c.manyToMany.CallUnary(ctx, req)
 }
 
 // CompareServiceHandler is an implementation of the mediawatch.compare.v2.CompareService service.
 type CompareServiceHandler interface {
 	// Single compares a single document by id with multiple auto-discovered
-	Single(context.Context, *connect_go.Request[v2.SingleRequest]) (*connect_go.Response[v2.SingleResponse], error)
+	Single(context.Context, *connect.Request[v2.SingleRequest]) (*connect.Response[v2.SingleResponse], error)
 	// OneToMany compares a single document by id with multiple document ids provided
-	OneToMany(context.Context, *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error)
+	OneToMany(context.Context, *connect.Request[v2.OneToManyRequest]) (*connect.Response[v2.MultipleResponse], error)
 	// ManyToMany compares a list of documents ids with multiple document ids provided
-	ManyToMany(context.Context, *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error)
+	ManyToMany(context.Context, *connect.Request[v2.ManyToManyRequest]) (*connect.Response[v2.MultipleResponse], error)
 }
 
 // NewCompareServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -100,37 +129,50 @@ type CompareServiceHandler interface {
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewCompareServiceHandler(svc CompareServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	mux := http.NewServeMux()
-	mux.Handle("/mediawatch.compare.v2.CompareService/Single", connect_go.NewUnaryHandler(
-		"/mediawatch.compare.v2.CompareService/Single",
+func NewCompareServiceHandler(svc CompareServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	compareServiceSingleHandler := connect.NewUnaryHandler(
+		CompareServiceSingleProcedure,
 		svc.Single,
-		opts...,
-	))
-	mux.Handle("/mediawatch.compare.v2.CompareService/OneToMany", connect_go.NewUnaryHandler(
-		"/mediawatch.compare.v2.CompareService/OneToMany",
+		connect.WithSchema(compareServiceSingleMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	compareServiceOneToManyHandler := connect.NewUnaryHandler(
+		CompareServiceOneToManyProcedure,
 		svc.OneToMany,
-		opts...,
-	))
-	mux.Handle("/mediawatch.compare.v2.CompareService/ManyToMany", connect_go.NewUnaryHandler(
-		"/mediawatch.compare.v2.CompareService/ManyToMany",
+		connect.WithSchema(compareServiceOneToManyMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	compareServiceManyToManyHandler := connect.NewUnaryHandler(
+		CompareServiceManyToManyProcedure,
 		svc.ManyToMany,
-		opts...,
-	))
-	return "/mediawatch.compare.v2.CompareService/", mux
+		connect.WithSchema(compareServiceManyToManyMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/mediawatch.compare.v2.CompareService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case CompareServiceSingleProcedure:
+			compareServiceSingleHandler.ServeHTTP(w, r)
+		case CompareServiceOneToManyProcedure:
+			compareServiceOneToManyHandler.ServeHTTP(w, r)
+		case CompareServiceManyToManyProcedure:
+			compareServiceManyToManyHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedCompareServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedCompareServiceHandler struct{}
 
-func (UnimplementedCompareServiceHandler) Single(context.Context, *connect_go.Request[v2.SingleRequest]) (*connect_go.Response[v2.SingleResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.compare.v2.CompareService.Single is not implemented"))
+func (UnimplementedCompareServiceHandler) Single(context.Context, *connect.Request[v2.SingleRequest]) (*connect.Response[v2.SingleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.compare.v2.CompareService.Single is not implemented"))
 }
 
-func (UnimplementedCompareServiceHandler) OneToMany(context.Context, *connect_go.Request[v2.OneToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.compare.v2.CompareService.OneToMany is not implemented"))
+func (UnimplementedCompareServiceHandler) OneToMany(context.Context, *connect.Request[v2.OneToManyRequest]) (*connect.Response[v2.MultipleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.compare.v2.CompareService.OneToMany is not implemented"))
 }
 
-func (UnimplementedCompareServiceHandler) ManyToMany(context.Context, *connect_go.Request[v2.ManyToManyRequest]) (*connect_go.Response[v2.MultipleResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.compare.v2.CompareService.ManyToMany is not implemented"))
+func (UnimplementedCompareServiceHandler) ManyToMany(context.Context, *connect.Request[v2.ManyToManyRequest]) (*connect.Response[v2.MultipleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.compare.v2.CompareService.ManyToMany is not implemented"))
 }
