@@ -63,7 +63,7 @@ func Parse(URL string) (string, error) {
 	return expandedUrl, nil
 }
 
-type CatchedURL struct {
+type Link struct {
 	DocId         string `json:"docId"`
 	Type          string `json:"type"`
 	Url           string `json:"url"`
