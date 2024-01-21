@@ -47,7 +47,7 @@ func (handler *Articles) List() http.HandlerFunc {
 			return
 		}
 
-		opts := article.NewOptsForm(r.FormValue)
+		opts := article.NewOptsForm(nil)
 		opts.Lang = claims.Lang
 		if opts.Lang == "" {
 			opts.Lang = "EL"
@@ -78,11 +78,6 @@ func (handler *Articles) List() http.HandlerFunc {
 			handler.log.Error(err)
 			render.Render(w, r, web.ErrInternalError)
 		}
-
-		// for _, v := range data.Data {
-		// 	f, _ := feed.ByScreenName(ctx, handler.db, v.ScreenName)
-		// 	v.Feed, _ = &feedsv2.Feed{}
-		// }
 
 		render.JSON(w, r, map[string]interface{}{
 			"data":       data.Data,

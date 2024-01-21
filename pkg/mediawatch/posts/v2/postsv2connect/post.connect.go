@@ -5,9 +5,9 @@
 package postsv2connect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	connect_go "github.com/bufbuild/connect-go"
 	v2 "github.com/cvcio/mediawatch/pkg/mediawatch/posts/v2"
 	http "net/http"
 	strings "strings"
@@ -18,21 +18,54 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// PostServiceName is the fully-qualified name of the PostService service.
 	PostServiceName = "mediawatch.posts.v2.PostService"
 )
 
+// These constants are the fully-qualified names of the RPCs defined in this package. They're
+// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+//
+// Note that these are different from the fully-qualified method names used by
+// google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
+// reflection-formatted method names, remove the leading slash and convert the remaining slash to a
+// period.
+const (
+	// PostServiceGetPostProcedure is the fully-qualified name of the PostService's GetPost RPC.
+	PostServiceGetPostProcedure = "/mediawatch.posts.v2.PostService/GetPost"
+	// PostServiceGetPostsProcedure is the fully-qualified name of the PostService's GetPosts RPC.
+	PostServiceGetPostsProcedure = "/mediawatch.posts.v2.PostService/GetPosts"
+	// PostServiceCreatePostProcedure is the fully-qualified name of the PostService's CreatePost RPC.
+	PostServiceCreatePostProcedure = "/mediawatch.posts.v2.PostService/CreatePost"
+	// PostServiceUpdatePostProcedure is the fully-qualified name of the PostService's UpdatePost RPC.
+	PostServiceUpdatePostProcedure = "/mediawatch.posts.v2.PostService/UpdatePost"
+	// PostServiceDeletePostProcedure is the fully-qualified name of the PostService's DeletePost RPC.
+	PostServiceDeletePostProcedure = "/mediawatch.posts.v2.PostService/DeletePost"
+	// PostServiceStreamPostsProcedure is the fully-qualified name of the PostService's StreamPosts RPC.
+	PostServiceStreamPostsProcedure = "/mediawatch.posts.v2.PostService/StreamPosts"
+)
+
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	postServiceServiceDescriptor           = v2.File_mediawatch_posts_v2_post_proto.Services().ByName("PostService")
+	postServiceGetPostMethodDescriptor     = postServiceServiceDescriptor.Methods().ByName("GetPost")
+	postServiceGetPostsMethodDescriptor    = postServiceServiceDescriptor.Methods().ByName("GetPosts")
+	postServiceCreatePostMethodDescriptor  = postServiceServiceDescriptor.Methods().ByName("CreatePost")
+	postServiceUpdatePostMethodDescriptor  = postServiceServiceDescriptor.Methods().ByName("UpdatePost")
+	postServiceDeletePostMethodDescriptor  = postServiceServiceDescriptor.Methods().ByName("DeletePost")
+	postServiceStreamPostsMethodDescriptor = postServiceServiceDescriptor.Methods().ByName("StreamPosts")
+)
+
 // PostServiceClient is a client for the mediawatch.posts.v2.PostService service.
 type PostServiceClient interface {
-	GetPost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error)
-	GetPosts(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error)
-	CreatePost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error)
-	UpdatePost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error)
-	DeletePost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error)
-	StreamPosts(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.ServerStreamForClient[v2.PostResponse], error)
+	GetPost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
+	GetPosts(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
+	CreatePost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
+	UpdatePost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
+	DeletePost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
+	StreamPosts(context.Context, *connect.Request[v2.PostRequest]) (*connect.ServerStreamForClient[v2.PostResponse], error)
 }
 
 // NewPostServiceClient constructs a client for the mediawatch.posts.v2.PostService service. By
@@ -42,90 +75,96 @@ type PostServiceClient interface {
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewPostServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) PostServiceClient {
+func NewPostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) PostServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &postServiceClient{
-		getPost: connect_go.NewClient[v2.PostRequest, v2.PostResponse](
+		getPost: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
-			baseURL+"/mediawatch.posts.v2.PostService/GetPost",
-			opts...,
+			baseURL+PostServiceGetPostProcedure,
+			connect.WithSchema(postServiceGetPostMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		getPosts: connect_go.NewClient[v2.PostRequest, v2.PostResponse](
+		getPosts: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
-			baseURL+"/mediawatch.posts.v2.PostService/GetPosts",
-			opts...,
+			baseURL+PostServiceGetPostsProcedure,
+			connect.WithSchema(postServiceGetPostsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		createPost: connect_go.NewClient[v2.PostRequest, v2.PostResponse](
+		createPost: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
-			baseURL+"/mediawatch.posts.v2.PostService/CreatePost",
-			opts...,
+			baseURL+PostServiceCreatePostProcedure,
+			connect.WithSchema(postServiceCreatePostMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		updatePost: connect_go.NewClient[v2.PostRequest, v2.PostResponse](
+		updatePost: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
-			baseURL+"/mediawatch.posts.v2.PostService/UpdatePost",
-			opts...,
+			baseURL+PostServiceUpdatePostProcedure,
+			connect.WithSchema(postServiceUpdatePostMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		deletePost: connect_go.NewClient[v2.PostRequest, v2.PostResponse](
+		deletePost: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
-			baseURL+"/mediawatch.posts.v2.PostService/DeletePost",
-			opts...,
+			baseURL+PostServiceDeletePostProcedure,
+			connect.WithSchema(postServiceDeletePostMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		streamPosts: connect_go.NewClient[v2.PostRequest, v2.PostResponse](
+		streamPosts: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
-			baseURL+"/mediawatch.posts.v2.PostService/StreamPosts",
-			opts...,
+			baseURL+PostServiceStreamPostsProcedure,
+			connect.WithSchema(postServiceStreamPostsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
 
 // postServiceClient implements PostServiceClient.
 type postServiceClient struct {
-	getPost     *connect_go.Client[v2.PostRequest, v2.PostResponse]
-	getPosts    *connect_go.Client[v2.PostRequest, v2.PostResponse]
-	createPost  *connect_go.Client[v2.PostRequest, v2.PostResponse]
-	updatePost  *connect_go.Client[v2.PostRequest, v2.PostResponse]
-	deletePost  *connect_go.Client[v2.PostRequest, v2.PostResponse]
-	streamPosts *connect_go.Client[v2.PostRequest, v2.PostResponse]
+	getPost     *connect.Client[v2.PostRequest, v2.PostResponse]
+	getPosts    *connect.Client[v2.PostRequest, v2.PostResponse]
+	createPost  *connect.Client[v2.PostRequest, v2.PostResponse]
+	updatePost  *connect.Client[v2.PostRequest, v2.PostResponse]
+	deletePost  *connect.Client[v2.PostRequest, v2.PostResponse]
+	streamPosts *connect.Client[v2.PostRequest, v2.PostResponse]
 }
 
 // GetPost calls mediawatch.posts.v2.PostService.GetPost.
-func (c *postServiceClient) GetPost(ctx context.Context, req *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error) {
+func (c *postServiceClient) GetPost(ctx context.Context, req *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error) {
 	return c.getPost.CallUnary(ctx, req)
 }
 
 // GetPosts calls mediawatch.posts.v2.PostService.GetPosts.
-func (c *postServiceClient) GetPosts(ctx context.Context, req *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error) {
+func (c *postServiceClient) GetPosts(ctx context.Context, req *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error) {
 	return c.getPosts.CallUnary(ctx, req)
 }
 
 // CreatePost calls mediawatch.posts.v2.PostService.CreatePost.
-func (c *postServiceClient) CreatePost(ctx context.Context, req *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error) {
+func (c *postServiceClient) CreatePost(ctx context.Context, req *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error) {
 	return c.createPost.CallUnary(ctx, req)
 }
 
 // UpdatePost calls mediawatch.posts.v2.PostService.UpdatePost.
-func (c *postServiceClient) UpdatePost(ctx context.Context, req *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error) {
+func (c *postServiceClient) UpdatePost(ctx context.Context, req *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error) {
 	return c.updatePost.CallUnary(ctx, req)
 }
 
 // DeletePost calls mediawatch.posts.v2.PostService.DeletePost.
-func (c *postServiceClient) DeletePost(ctx context.Context, req *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error) {
+func (c *postServiceClient) DeletePost(ctx context.Context, req *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error) {
 	return c.deletePost.CallUnary(ctx, req)
 }
 
 // StreamPosts calls mediawatch.posts.v2.PostService.StreamPosts.
-func (c *postServiceClient) StreamPosts(ctx context.Context, req *connect_go.Request[v2.PostRequest]) (*connect_go.ServerStreamForClient[v2.PostResponse], error) {
+func (c *postServiceClient) StreamPosts(ctx context.Context, req *connect.Request[v2.PostRequest]) (*connect.ServerStreamForClient[v2.PostResponse], error) {
 	return c.streamPosts.CallServerStream(ctx, req)
 }
 
 // PostServiceHandler is an implementation of the mediawatch.posts.v2.PostService service.
 type PostServiceHandler interface {
-	GetPost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error)
-	GetPosts(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error)
-	CreatePost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error)
-	UpdatePost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error)
-	DeletePost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error)
-	StreamPosts(context.Context, *connect_go.Request[v2.PostRequest], *connect_go.ServerStream[v2.PostResponse]) error
+	GetPost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
+	GetPosts(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
+	CreatePost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
+	UpdatePost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
+	DeletePost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
+	StreamPosts(context.Context, *connect.Request[v2.PostRequest], *connect.ServerStream[v2.PostResponse]) error
 }
 
 // NewPostServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -133,64 +172,86 @@ type PostServiceHandler interface {
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewPostServiceHandler(svc PostServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	mux := http.NewServeMux()
-	mux.Handle("/mediawatch.posts.v2.PostService/GetPost", connect_go.NewUnaryHandler(
-		"/mediawatch.posts.v2.PostService/GetPost",
+func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	postServiceGetPostHandler := connect.NewUnaryHandler(
+		PostServiceGetPostProcedure,
 		svc.GetPost,
-		opts...,
-	))
-	mux.Handle("/mediawatch.posts.v2.PostService/GetPosts", connect_go.NewUnaryHandler(
-		"/mediawatch.posts.v2.PostService/GetPosts",
+		connect.WithSchema(postServiceGetPostMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	postServiceGetPostsHandler := connect.NewUnaryHandler(
+		PostServiceGetPostsProcedure,
 		svc.GetPosts,
-		opts...,
-	))
-	mux.Handle("/mediawatch.posts.v2.PostService/CreatePost", connect_go.NewUnaryHandler(
-		"/mediawatch.posts.v2.PostService/CreatePost",
+		connect.WithSchema(postServiceGetPostsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	postServiceCreatePostHandler := connect.NewUnaryHandler(
+		PostServiceCreatePostProcedure,
 		svc.CreatePost,
-		opts...,
-	))
-	mux.Handle("/mediawatch.posts.v2.PostService/UpdatePost", connect_go.NewUnaryHandler(
-		"/mediawatch.posts.v2.PostService/UpdatePost",
+		connect.WithSchema(postServiceCreatePostMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	postServiceUpdatePostHandler := connect.NewUnaryHandler(
+		PostServiceUpdatePostProcedure,
 		svc.UpdatePost,
-		opts...,
-	))
-	mux.Handle("/mediawatch.posts.v2.PostService/DeletePost", connect_go.NewUnaryHandler(
-		"/mediawatch.posts.v2.PostService/DeletePost",
+		connect.WithSchema(postServiceUpdatePostMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	postServiceDeletePostHandler := connect.NewUnaryHandler(
+		PostServiceDeletePostProcedure,
 		svc.DeletePost,
-		opts...,
-	))
-	mux.Handle("/mediawatch.posts.v2.PostService/StreamPosts", connect_go.NewServerStreamHandler(
-		"/mediawatch.posts.v2.PostService/StreamPosts",
+		connect.WithSchema(postServiceDeletePostMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	postServiceStreamPostsHandler := connect.NewServerStreamHandler(
+		PostServiceStreamPostsProcedure,
 		svc.StreamPosts,
-		opts...,
-	))
-	return "/mediawatch.posts.v2.PostService/", mux
+		connect.WithSchema(postServiceStreamPostsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/mediawatch.posts.v2.PostService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case PostServiceGetPostProcedure:
+			postServiceGetPostHandler.ServeHTTP(w, r)
+		case PostServiceGetPostsProcedure:
+			postServiceGetPostsHandler.ServeHTTP(w, r)
+		case PostServiceCreatePostProcedure:
+			postServiceCreatePostHandler.ServeHTTP(w, r)
+		case PostServiceUpdatePostProcedure:
+			postServiceUpdatePostHandler.ServeHTTP(w, r)
+		case PostServiceDeletePostProcedure:
+			postServiceDeletePostHandler.ServeHTTP(w, r)
+		case PostServiceStreamPostsProcedure:
+			postServiceStreamPostsHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedPostServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedPostServiceHandler struct{}
 
-func (UnimplementedPostServiceHandler) GetPost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.GetPost is not implemented"))
+func (UnimplementedPostServiceHandler) GetPost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.GetPost is not implemented"))
 }
 
-func (UnimplementedPostServiceHandler) GetPosts(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.GetPosts is not implemented"))
+func (UnimplementedPostServiceHandler) GetPosts(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.GetPosts is not implemented"))
 }
 
-func (UnimplementedPostServiceHandler) CreatePost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.CreatePost is not implemented"))
+func (UnimplementedPostServiceHandler) CreatePost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.CreatePost is not implemented"))
 }
 
-func (UnimplementedPostServiceHandler) UpdatePost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.UpdatePost is not implemented"))
+func (UnimplementedPostServiceHandler) UpdatePost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.UpdatePost is not implemented"))
 }
 
-func (UnimplementedPostServiceHandler) DeletePost(context.Context, *connect_go.Request[v2.PostRequest]) (*connect_go.Response[v2.PostResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.DeletePost is not implemented"))
+func (UnimplementedPostServiceHandler) DeletePost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.DeletePost is not implemented"))
 }
 
-func (UnimplementedPostServiceHandler) StreamPosts(context.Context, *connect_go.Request[v2.PostRequest], *connect_go.ServerStream[v2.PostResponse]) error {
-	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.StreamPosts is not implemented"))
+func (UnimplementedPostServiceHandler) StreamPosts(context.Context, *connect.Request[v2.PostRequest], *connect.ServerStream[v2.PostResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.posts.v2.PostService.StreamPosts is not implemented"))
 }
