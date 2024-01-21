@@ -139,7 +139,7 @@ db-stop: ## stop dbs
 up: db-start ## start docker services
 
 .PHONY: down
-up: db-stop ## stop docker services
+down: db-stop ## stop docker services
 
 .PHONY: clean-es
 clean-es: ## clean elasticsearch
