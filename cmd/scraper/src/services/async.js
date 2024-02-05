@@ -103,11 +103,11 @@ const Scrape = async (req, passages) => {
 		article.date = request.crawled_at;
 	}
 
-	if (article.body === '' || article.title === '') {
+	if (article.text === '' || article.title === '') {
 		throw new Error(`Unable to scrape URL (empty response) (${feed.hostname}) ${request.url}`);
 	}
 
-	article.body = trimRight(article.body, passages);
+	article.text = trimRight(article.text, passages);
 
 	return {
 		status: 'success',
@@ -116,7 +116,7 @@ const Scrape = async (req, passages) => {
 		data: {
 			content: {
 				title: article.title,
-				body: normalizeString(article.body),
+				body: normalizeString(article.text),
 				authors:
 					typeof article.author === 'string'
 					&& article.author.length > 2
