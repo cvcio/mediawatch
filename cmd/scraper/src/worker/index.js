@@ -1,3 +1,4 @@
+const { CompressionTypes } = require('kafkajs');
 const logger = require('../logger');
 
 class Worker {
@@ -26,13 +27,13 @@ class Worker {
 				this.consumer.pause([{ topic }]);
 				setTimeout(() => {
 					this.consumer.resume([{ topic }]);
-				}, 10);
+				}, 2);
 			}
 		});
 	}
 
 	async produce (topic, messages) {
-		await this.producer.send({ topic, messages });
+		await this.producer.send({ topic, messages, compression: CompressionTypes.GZIP, });
 	}
 }
 

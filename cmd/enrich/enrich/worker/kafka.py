@@ -57,14 +57,12 @@ class Worker:
 
     async def process(self, msg, method):
         try:
-            nlp = await method(
-                enrich_pb2.EnrichRequest(
-                    body=msg.value["content"]["body"],
-                    lang=msg.value["lang"].lower(),
-                ),
-                None,
-            )
             article = msg.value
+            req = enrich_pb2.EnrichRequest(
+                body=article["content"]["body"], lang=article["lang"].lower()
+            )
+            logging.debug("Processing message: %s", req)
+            nlp = await method(req, None)
             article["nlp"] = MessageToDict(nlp.data.nlp)
             await self.producer.send(self.config.KAFKA_PRODUCER_TOPIC, article)
         except (NotFound, Internal) as e:

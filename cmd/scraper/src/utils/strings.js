@@ -21,7 +21,18 @@ const normalizeString = (str) => {
 	text = text.replace(/[\r\n]+/g, '\n\n');
 	text = text.replace(/ +/g, ' ');
 
-	return text;
+	// text = text.replace(/\b([a-zA-Z=]*[0-9]){24,}[a-zA-Z=]*\b/g, '');
+	// // text = text.replace(/<(?:.|\s)*?>/g, '');
+	// text = text.replace(/<a.*href="(.*?)".*>(.*?)<\/a>/gi, ' $2 (Link->$1) ');
+	// text = text.replace(/<br>/gi, '\n');
+	// text = text.replace(/<p.*>/gi, '\n');
+	// text = text.replace(/[\r\n]+/g, '\n\n');
+	// text = text.replace(/<(?:.|\n)*?>/gm, '');
+	// text = text.replace(/<[^>]+>/g, '');
+	// text = text.replace(/<\/?[^>]+>/gi, '');
+	// text = text.replace(/ +/g, ' ');
+
+	return text.trim();
 };
 
 const getParameterByName = (name, url) => {

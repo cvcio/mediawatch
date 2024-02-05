@@ -8,8 +8,8 @@
     "scripts": {
         "serve": "nodemon --watch .env --watch src --exec babel-node src/index.js",
         "test": "babel-node tests/test.js",
-        "lint": "eslint src",
-        "lint:fix": "eslint src --fix",
+        "lint": "eslint src tests",
+        "lint:fix": "eslint src tests --fix",
         "start:development": "npm run build && nodemon dist/index.js",
         "start:production": "node /app/dist/index.js",
         "build": "cross-env BABEL_ENV=production babel src --out-dir dist --copy-files"
@@ -17,8 +17,8 @@
     "dependencies": {
         "@grpc/grpc-js": "^1.9.14",
         "@grpc/proto-loader": "^0.7.10",
-        "ascraper": "https://github.com/cvcio/ascraper",
-        "axios": "^0.26.1",
+        "ascraper": "github:cvcio/ascraper#0.9.8",
+        "axios": "^1.6.7",
         "dotenv": "^16.0.0",
         "grpc-health-check": "^2.0.0",
         "kafkajs": "^2.2.4",
@@ -32,6 +32,7 @@
         "@babel/node": "^7.22.19",
         "@babel/plugin-proposal-class-properties": "^7.18.6",
         "@babel/plugin-proposal-optional-chaining": "^7.21.0",
+        "@babel/plugin-transform-async-to-generator": "^7.23.3",
         "@babel/plugin-transform-runtime": "^7.23.7",
         "@babel/preset-env": "^7.23.8",
         "cross-env": "^7.0.3",

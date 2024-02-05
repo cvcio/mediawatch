@@ -2,12 +2,12 @@ require('dotenv').config();
 
 const os = require('os');
 const grpc = require('@grpc/grpc-js');
-const protoLoader = require('@grpc/proto-loader');
+// const protoLoader = require('@grpc/proto-loader');
 const { HealthImplementation } = require('grpc-health-check');
 
 // const health = require('grpc-health-check');
 const { MongoClient } = require('mongodb');
-const { Kafka } = require('kafkajs');
+const { Kafka, logLevel } = require('kafkajs');
 const moment = require('moment');
 
 const { Worker } = require('./worker');
@@ -19,14 +19,17 @@ let server;
 const statusMap = { '': 'SERVING', service: 'SERVING' };
 
 // Connect to Kafka
-const kafka = new Kafka({ clientId: `${os.hostname}`, brokers: process.env.KAFKA_BROKERS.split(','), logger });
+const kafka = new Kafka({
+	clientId: `${os.hostname}`,
+	brokers: process.env.KAFKA_BROKERS.split(','),
+	logLevel: logLevel.ERROR,
+});
 const consumer = kafka.consumer({ groupId: 'mw-scraper' });
 const producer = kafka.producer();
 const worker = new Worker(consumer, producer);
 
 const shutdown = async (err) => {
 	if (err) {
-		logger.error(err);
 		logger.error(`[SVC-SCRAPER] gRPC server error: ${err.message}`);
 	}
 
@@ -61,23 +64,23 @@ const main = async () => {
 	server = new grpc.Server();
 
 	// Load Scraper protobuf
-	const packageDefinition = protoLoader
-		.loadSync(`${process.env.PROTO_PATH}/scrape.proto`, {
-			keepCase: true,
-			longs: String,
-			enums: String,
-			defaults: true,
-			oneofs: true
-		});
+	// const packageDefinition = protoLoader
+	// 	.loadSync(`${process.env.PROTO_PATH}/scrape.proto`, {
+	// 		keepCase: true,
+	// 		longs: String,
+	// 		enums: String,
+	// 		defaults: true,
+	// 		oneofs: true
+	// 	});
 
-	const scrapeProto = grpc.loadPackageDefinition(packageDefinition);
-	const service = new services.ScrapeService(passages);
+	// const scrapeProto = grpc.loadPackageDefinition(packageDefinition);
+	// const service = new services.ScrapeService(passages);
 
 	const healthImpl = new HealthImplementation(statusMap);
 	healthImpl.addToServer(server);
 
 	// Add Services (Endpoints)
-	server.addService(scrapeProto.mediawatch.scrape.v2.ScrapeService.service, service);
+	// server.addService(scrapeProto.mediawatch.scrape.v2.ScrapeService.service, service);
 	server.bindAsync(process.env.SERVER_ADDRESS, grpc.ServerCredentials.createInsecure(), (err) => {
 		if (err !== null) {
 			shutdown(err);
@@ -89,24 +92,26 @@ const main = async () => {
 
 	await worker.initialize();
 
-	worker.consume('scrape', (message) => {
+	worker.consume('scrape', async (message) => {
 		const producedAt = moment.unix(message.timestamp / 1000);
 		const start = moment();
 		const request = JSON.parse(message.value.toString());
-		service.Scrape({ request }, async (err, response) => {
-			if (err || !response) {
-				logger.error(`[SVC-SCRAPER] Error scraping: ${err.details}`);
-				return;
-			}
+		try {
+			const response = await services.Scrape({ request }, passages);
+			const article = mergeArticle(request, response.data);
 
 			const after = moment.duration(moment().diff(producedAt)).asMinutes();
 			const took = moment.duration(moment().diff(start)).asSeconds();
 
-			const article = mergeArticle(request, response.data);
-			logger.debug(`[SVC-SCRAPER] Article scraped after ${after}m, took ${took}s (url: ${request.url})`);
-			logger.debug(`[SVC-SCRAPER] Scraped article published at: ${article.content.published_at}, title: ${response.data.content.title}`);
+			logger.info(`[SVC-SCRAPER] Article scraped after ${after}m, took ${took}s (id: ${article.doc_id})`);
+			// logger.debug(`[SVC-SCRAPER] Scraped article published at: ${article.content.published_at}, title: ${article.content.title} (id: ${article.doc_id})`);
+			logger.debug(`[SVC-SCRAPER] Scraped article published at: ${article.content.published_at}, body: ${article.content.body} (id: ${article.doc_id})`);
+			console.log('article', article);
 			await worker.produce('enrich', [{ value: JSON.stringify(article) }]);
-		});
+		} catch (err) {
+			console.error(err);
+			logger.error(`[SVC-SCRAPER] Error scraping: ${err}`);
+		}
 	});
 };
 
