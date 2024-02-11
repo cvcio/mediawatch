@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
@@ -160,6 +161,17 @@ type Config struct {
 
 func NewConfig() *Config {
 	return new(Config)
+}
+
+func NewConfigFromEnv() *Config {
+	cfg := NewConfig()
+
+	err := envconfig.Process("", cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	return cfg
 }
 
 func (c *Config) GetMongoURL() string {
