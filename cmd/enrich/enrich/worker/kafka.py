@@ -16,16 +16,27 @@ class Worker:
     def __init__(self, config: AppConfig, loop: AbstractEventLoop):
         self.config: AppConfig = config
         self.consuming: bool = False
+
+        # TODO: Investigate the following error:
+        # Commit cannot be completed since the group has already rebalanced and assigned the partitions to another member.
+        # This means that the time between subsequent calls to poll() was longer than the configured max_poll_interval_ms,
+        # which typically implies that the poll loop is spending too much time message processing.
+        # You can address this either by increasing the rebalance timeout with max_poll_interval_ms,
+        # or by reducing the maximum size of batches returned in poll() with max_poll_records.
         self.consumer: AIOKafkaConsumer = AIOKafkaConsumer(
             self.config.KAFKA_CONSUMER_TOPIC,
-            client_id=socket.getfqdn(),
-            rebalance_timeout_ms=1000 * 60 * 2,
             bootstrap_servers=self.config.KAFKA_BOOTSTRAP_SERVERS,
+            client_id=socket.getfqdn(),
             group_id=self.config.KAFKA_CONSUMER_GROUP_ID,
+            fetch_max_bytes=1024 * 1024 * 2,
             enable_auto_commit=self.config.KAFKA_ENABLE_AUTO_COMMIT,
             value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+            max_poll_interval_ms=45000,
+            max_poll_records=4,
+            session_timeout_ms=30000,
             loop=loop,
         )
+
         self.producer: AIOKafkaProducer = AIOKafkaProducer(
             client_id=socket.getfqdn(),
             bootstrap_servers=self.config.KAFKA_BOOTSTRAP_SERVERS,
@@ -34,22 +45,21 @@ class Worker:
             ),
             loop=loop,
         )
-
     async def connect(self):
-        await self.init_consumer()
         await self.init_producer()
-
-    async def init_consumer(self):
-        await self.consumer.start()
 
     async def init_producer(self):
         await self.producer.start()
 
     async def run_consumer(self, callback, *args):
+        await self.consumer.start()
         self.consuming = True
         try:
             async for msg in self.consumer:
-                await callback(msg, *args)
+                try:
+                    await callback(msg, *args)
+                except Exception as e:
+                    logging.error("Error processing message (run_consumer): %s", e)
         except KeyboardInterrupt:
             logging.info("Stopping Kafka Consumer")
         finally:
@@ -66,7 +76,9 @@ class Worker:
             article["nlp"] = MessageToDict(nlp.data.nlp)
             await self.producer.send(self.config.KAFKA_PRODUCER_TOPIC, article)
         except (NotFound, Internal) as e:
-            logging.error("Error processing message: %s", e)
+            logging.error("Error processing message (process): %s", e)
+        except (KeyError, ValueError):
+            logging.error("Malformed message: %s", msg.value)
 
     async def stop(self):
         if self.consuming:

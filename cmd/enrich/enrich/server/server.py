@@ -84,12 +84,6 @@ class GRPCServer:
 
         # register signals
         self._server.add_insecure_port(url)
-        # loop = asyncio.get_event_loop()
-        # for s in ('SIGINT', 'SIGTERM'):
-        #     loop.add_signal_handler(
-        #         getattr(signal, s),
-        #         lambda: asyncio.ensure_future(self.stop())
-        #     )
 
         # start the server
         await self._server.start()

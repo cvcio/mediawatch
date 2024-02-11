@@ -12,15 +12,12 @@ import nltk
 import uvloop
 
 from dotenv import load_dotenv
-from config.config import AppConfig
 
 from ai.model import AIModel
-
+from config.config import AppConfig
+from mediawatch.enrich.v2.enrich_pb2_grpc import add_EnrichServiceServicer_to_server
 from server.server import GRPCServer
 from services.enrich import EnrichService
-
-from mediawatch.enrich.v2.enrich_pb2_grpc import add_EnrichServiceServicer_to_server
-
 from worker.kafka import Worker
 
 
