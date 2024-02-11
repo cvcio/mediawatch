@@ -74,6 +74,20 @@ func (h *FeedsHandler) GetFeed(ctx context.Context, req *connect.Request[feedsv2
 		return nil, errorMessage
 	}
 
+	// set default values
+	if data.Stream == nil {
+		data.Stream = &feedsv2.FeedStream{}
+	}
+	if data.Localization == nil {
+		data.Localization = &feedsv2.FeedLocalization{}
+	}
+	if data.Meta == nil {
+		data.Meta = &feedsv2.FeedMeta{}
+	}
+	if data.Test == nil {
+		data.Test = &feedsv2.FeedTest{}
+	}
+
 	data.Stream.State = commonv2.State_STATE_UNSPECIFIED
 	state, err := h.rdb.Get("feed:status:" + data.Id)
 	if err != nil {
