@@ -39,4 +39,4 @@ const getProxyUrl = () => {
 	return `${proxy.protocol}://${proxy.host}:${proxy.port}`;
 };
 
-export { getProxy, getProxyUrl };
+module.exports = { getProxy, getProxyUrl };

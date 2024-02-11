@@ -15,4 +15,4 @@ const errorCode = (status) => {
 	return 2;
 };
 
-export { errorCode };
+module.exports = { errorCode };

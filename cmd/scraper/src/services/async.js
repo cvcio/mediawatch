@@ -1,11 +1,10 @@
 const moment = require('moment');
-const { extract } = require('ascraper'); // require('/home/andefined/js/misc/npm/ascraper/lib'); //
+const { extract } = require('ascraper'); // require('../../../../../../../../../../home/andefined/js/misc/npm/ascraper/lib'); // require('ascraper'); //
 
 const logger = require('../logger');
 const { parsers } = require('../parsers');
 
 const { toUpperCase, normalizeString, trimRight } = require('../utils/strings');
-// const { errorCode } = require('../utils/errors');
 const { getProxyUrl } = require('../utils/proxy');
 
 moment.suppressDeprecationWarnings = true;
@@ -19,18 +18,17 @@ const Scrape = async (req, passages) => {
 		? JSON.parse(request.feed)
 		: request.feed;
 
-	logger.debug(`[SVC-SCRAPER] Scrape - (${feed.hostname}) ${decodeURIComponent(request.url).toString()}`);
-
 	const proxy = feed.stream.requires_proxy ? getProxyUrl() : null;
+	logger.info(`[SVC-SCRAPER] Scrape - (${feed.hostname}) ${request.doc_id} - Proxy: ${proxy}`);
 
 	// Check if feed has a custom parser
-	if (feed.userName && parsers[feed.userName.toLowerCase()] !== undefined) {
-		const parser = parsers[feed.userName.toLowerCase()];
+	if (feed.hostname && parsers[feed.hostname.toLowerCase().replace('.', '_')] !== undefined) {
+		const parser = parsers[feed.hostname.toLowerCase().replace('.', '_')];
 		const url = parser.url(request.url);
 
 		if (!url) {
-			logger.error(`[SVC-SCRAPER] Unable to scrape URL (url error) (${feed.hostname}) ${request.url}`);
-			throw new Error(`Unable to scrape URL (url error) (${feed.hostname}) ${request.url}`);
+			logger.error(`[SVC-SCRAPER] Unable to scrape URL (url error) (${feed.hostname}) ${request.doc_id}`);
+			throw new Error(`Unable to scrape URL (url error) (${feed.hostname}) ${request.doc_id}`);
 		}
 
 		const res = await parser.fetchAPI(url);
@@ -44,7 +42,7 @@ const Scrape = async (req, passages) => {
 		}
 
 		if (article.text === '' || article.title === '') {
-			throw new Error(`Unable to scrape URL (empty response) (${feed.hostname}) ${request.url}`);
+			throw new Error(`Unable to scrape URL (empty response) (${feed.hostname}) ${request.doc_id}`);
 		}
 
 		return {
@@ -81,8 +79,8 @@ const Scrape = async (req, passages) => {
 
 	const url = decodeURIComponent(request.url).toString();
 	if (!url) {
-		logger.error(`[SVC-SCRAPER] Unable to scrape URL (url error) (${feed.hostname}) ${request.url}`);
-		throw new Error(`Unable to scrape URL (url error) (${feed.hostname}) ${request.url}`);
+		logger.error(`[SVC-SCRAPER] Unable to scrape URL (url error) (${feed.hostname}) ${request.doc_id}`);
+		throw new Error(`Unable to scrape URL (url error) (${feed.hostname}) ${request.doc_id}`);
 	}
 
 	let res = null;
@@ -91,10 +89,10 @@ const Scrape = async (req, passages) => {
 	} catch (e) {
 		if (!feed.stream.requires_proxy && e.code === 403 && !req.retry) {
 			feed.stream.requires_proxy = true;
-			logger.warn(`[SVC-SCRAPER] Proxy required for (${feed.hostname}) ${request.url}`);
+			logger.warn(`[SVC-SCRAPER] Proxy required for (${feed.hostname}) ${request.doc_id}`);
 			return Scrape({ request, feed, retry: true }, passages);
 		}
-		logger.error(`[SVC-SCRAPER] Unable to scrape URL (extract error) (${feed.hostname}) ${e.code} ${e.message}`);
+		logger.error(`[SVC-SCRAPER] Unable to scrape URL (extract error) (${feed.hostname}) ${request.doc_id} ${e.code} ${e.message}`);
 		throw e;
 	}
 
@@ -104,10 +102,11 @@ const Scrape = async (req, passages) => {
 	}
 
 	if (article.text === '' || article.title === '') {
-		throw new Error(`Unable to scrape URL (empty response) (${feed.hostname}) ${request.url}`);
+		throw new Error(`Unable to scrape URL (empty response) (${feed.hostname}) ${request.doc_id}`);
 	}
 
 	article.text = trimRight(article.text, passages);
+	article.text = normalizeString(article.text);
 
 	return {
 		status: 'success',
@@ -116,7 +115,7 @@ const Scrape = async (req, passages) => {
 		data: {
 			content: {
 				title: article.title,
-				body: normalizeString(article.text),
+				body: article.text,
 				authors:
 					typeof article.author === 'string'
 					&& article.author.length > 2

@@ -1,12 +1,16 @@
-const moment = require('moment');
-const { extract } = require('ascraper'); // require('/home/andefined/js/misc/npm/ascraper/lib'); //
-const logger = require('../logger');
-const { parsers } = require('../parsers');
-const { toUpperCase, normalizeString, trimRight } = require('../utils/strings');
-const { errorCode } = require('../utils/errors');
-const { getProxyUrl } = require('../utils/proxy');
+// const moment = require('moment');
+// const { extract } = require('ascraper'); // require('/home/andefined/js/misc/npm/ascraper/lib'); //
+// const { getProxyUrl } = require('../utils/proxy');
+// const { parsers } = require('../parsers');
+// const { toUpperCase, normalizeString, trimRight } = require('../utils/strings');
 
-moment.suppressDeprecationWarnings = true;
+const { ScrapeResponse, Data, Content } = require('@buf/cvcio_mediawatch.grpc_node/mediawatch/scrape/v2/scrape_pb');
+
+const Scrape = require('./async');
+const { errorCode } = require('../utils/errors');
+const logger = require('../logger');
+
+// moment.suppressDeprecationWarnings = true;
 
 class ScrapeService {
 	constructor (passages) {
@@ -14,6 +18,47 @@ class ScrapeService {
 		logger.info(`[SVC-SCRAPER] (${this.passages.length}) passages loaded`);
 	}
 
+	async scrape (req, callback) {
+		const request = {
+			feed: req.request.getFeed(),
+			url: req.request.getUrl(),
+			lang: req.request.getLang(),
+		};
+
+		if (!req) {
+			return callback({ code: errorCode(400), details: 'Invalid request' }, null);
+		}
+		try {
+			const res = await Scrape({ request }, this.passages);
+
+			const response = new ScrapeResponse();
+			response.setStatus(res.status);
+			response.setCode(res.code);
+			response.setMessage(res.message);
+
+			const content = new Content();
+			content.setTitle(res.data.content.title);
+			content.setBody(res.data.content.body);
+			content.setAuthorsList(res.data.content.authors);
+			content.setPublishedAt(res.data.content.published_at);
+			content.setTagsList(res.data.content.tags);
+			content.setDescription(res.data.content.description);
+			content.setImage(res.data.content.image);
+
+			const data = new Data();
+			data.setContent(content);
+			response.setData(data);
+
+			return callback(null, response);
+		} catch (err) {
+			return callback({
+				code: errorCode(err.code || 500),
+				details: err.message || 'Unknown error'
+			});
+		}
+	}
+
+	/*
 	Scrape (req, callback) {
 		const { request } = req;
 		const feed =			typeof request.feed === 'string'
@@ -384,6 +429,7 @@ class ScrapeService {
 				null);
 			});
 	}
+	*/
 }
 
 module.exports = ScrapeService;

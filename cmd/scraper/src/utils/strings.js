@@ -48,9 +48,17 @@ const trimRight = (str, passages) => {
 	let text = str;
 	for (let i = 0; i < passages.length; i++) {
 		const t = passages[i];
+		if (!['trim', 'trim-right'].includes(t.type)) {
+			continue;
+		}
+
+		if (t.text.length < 5) {
+			continue;
+		}
+
 		if (text.match(new RegExp(t.text))) {
-			// eslint-disable-next-line
-			text = text.split(new RegExp(t.text))[0];
+			const group = text.split(new RegExp(t.text));
+			text = group.length > 1 ? group[0].trim() : text;
 		}
 	}
 	return text;
@@ -74,7 +82,7 @@ const mergeArticle = (article, data) => {
 	return article;
 };
 
-export {
+module.exports = {
 	trimRight,
 	toUpperCase,
 	normalizeString,
