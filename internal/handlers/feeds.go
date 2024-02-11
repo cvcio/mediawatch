@@ -188,6 +188,7 @@ func (h *FeedsHandler) GetFeedsStreamList(ctx context.Context, req *connect.Requ
 // TestFeed tests a feed.
 func (h *FeedsHandler) TestFeed(ctx context.Context, req *connect.Request[feedsv2.Feed]) (*connect.Response[feedsv2.FeedTest], error) {
 	h.log.Debugf("TestFeed Request Message: %+v", req.Msg)
+	cfg := config.NewConfigFromEnv()
 
 	// Create the gRPC service clients
 	// Parse Server Options
@@ -195,10 +196,10 @@ func (h *FeedsHandler) TestFeed(ctx context.Context, req *connect.Request[feedsv
 	grpcOptions = append(
 		grpcOptions,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(interceptors.TimeoutInterceptor(15*time.Second)),
+		grpc.WithUnaryInterceptor(interceptors.TimeoutInterceptor(60*time.Second)),
 	)
 	// Create gRPC Scrape Connection
-	scrapeGRPC, err := grpc.Dial("localhost:50050", grpcOptions...)
+	scrapeGRPC, err := grpc.Dial(cfg.Scrape.Host, grpcOptions...)
 	if err != nil {
 		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to connect to scrape service"))
 		h.log.Errorf("Internal: %s", err.Error())
@@ -214,13 +215,13 @@ func (h *FeedsHandler) TestFeed(ctx context.Context, req *connect.Request[feedsv
 	feedString, _ := json.Marshal(req.Msg)
 
 	// create the scrape request
-	scrapeReq := scrapev2.SimpleScrapeRequest{
+	scrapeReq := scrapev2.ScrapeRequest{
 		Feed: string(feedString),
 		Url:  req.Msg.Test.Url,
 		Lang: req.Msg.Localization.Lang,
 	}
 	// scrape the article
-	scrapeResp, err := scrape.SimpleScrape(context.Background(), &scrapeReq)
+	scrapeResp, err := scrape.Scrape(context.Background(), &scrapeReq)
 	if err != nil {
 		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to scrape url: %s. Error: %s", req.Msg.Test.Url, err.Error()))
 		h.log.Errorf("Internal: %s", err.Error())
