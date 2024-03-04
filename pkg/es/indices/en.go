@@ -1,50 +1,15 @@
-package indeces
+package indices
 
-var ArticlesNL = `
+var ArticlesEN = `
 {
     "settings": {
         "index": {
-            "number_of_shards": 2,
-            "number_of_replicas": 2
-        },
-        "analysis": {
-            "filter": {
-                "dutch_stop": {
-                    "type": "stop",
-                    "stopwords": "_dutch_"
-                },
-                "dutch_stemmer": {
-                    "type": "stemmer",
-                    "language": "dutch"
-                },
-                "dutch_override": {
-                    "type": "stemmer_override",
-                    "rules": [
-                        "fiets=>fiets",
-                        "bromfiets=>bromfiets",
-                        "ei=>eier",
-                        "kind=>kinder"
-                    ]
-                }
-            },
-            "analyzer": {
-                "dutch_analyzer": {
-                    "tokenizer": "standard",
-                    "char_filter": [
-                        "html_strip"
-                    ],
-                    "filter": [
-                        "lowercase",
-                        "dutch_stop",
-                        "dutch_override",
-                        "dutch_stemmer"
-                    ]
-                }
-            }
+            "number_of_shards": 1,
+            "number_of_replicas": 0
         }
     },
     "alias": {
-        "mediawatch_nl-{now/M{yyyy.MM}}": {}
+        "mediawatch_en-{now/M{yyyy.MM}}": {}
     },
     "mappings": {
         "properties": {
@@ -54,8 +19,7 @@ var ArticlesNL = `
                         "type": "keyword"
                     },
                     "body": {
-                        "type": "text",
-                        "analyzer": "dutch_analyzer"
+                        "type": "text"
                     },
                     "categories": {
                         "type": "keyword"
@@ -65,8 +29,7 @@ var ArticlesNL = `
                         "ignore_malformed": true
                     },
                     "excerpt": {
-                        "type": "text",
-                        "analyzer": "dutch_analyzer"
+                        "type": "text"
                     },
                     "image": {
                         "type": "keyword"
@@ -82,8 +45,7 @@ var ArticlesNL = `
                         "type": "keyword"
                     },
                     "title": {
-                        "type": "text",
-                        "analyzer": "dutch_analyzer"
+                        "type": "text"
                     }
                 }
             },
@@ -100,8 +62,7 @@ var ArticlesNL = `
             "nlp": {
                 "properties": {
                     "claims": {
-                        "type": "text",
-                        "analyzer": "dutch_analyzer"
+                        "type": "text"
                     },
                     "entities": {
                         "properties": {
@@ -114,23 +75,19 @@ var ArticlesNL = `
                         }
                     },
                     "keywords": {
-                        "type": "keyword",
-                        "analyzer": "dutch_analyzer"
+                        "type": "keyword"
                     },
                     "quotes": {
-                        "type": "text",
-                        "analyzer": "dutch_analyzer"
+                        "type": "text"
                     },
                     "sentences": {
-                        "type": "text",
-                        "analyzer": "dutch_analyzer"
+                        "type": "text"
                     },
                     "stopWords": {
                         "type": "keyword"
                     },
                     "summary": {
-                        "type": "text",
-                        "analyzer": "dutch_analyzer"
+                        "type": "text"
                     },
                     "tokens": {
                         "type": "keyword"

@@ -1,50 +1,41 @@
-package indeces
+package indices
 
-var ArticlesFR = `
+var ArticlesDE = `
 {
     "settings": {
         "index": {
-            "number_of_shards": 2,
-            "number_of_replicas": 2
+            "number_of_shards": 1,
+            "number_of_replicas": 0
         },
         "analysis": {
             "filter": {
-                "french_elision": {
-                    "type": "elision",
-                    "articles_case": true,
-                    "articles": [
-                        "l", "m", "t", "qu", "n", "s",
-                        "j", "d", "c", "jusqu", "quoiqu",
-                        "lorsqu", "puisqu"
-                    ]
-                },
-                "french_stop": {
+                "german_stop": {
                     "type": "stop",
-                    "stopwords": "_french_"
+                    "stopwords": "_german_"
                 },
-                "french_stemmer": {
+                "german_stemmer": {
                     "type": "stemmer",
-                    "language": "light_french"
+                    "language": "light_german"
                 }
             },
             "analyzer": {
-                "french_analyzer": {
+                "german_analyzer": {
                     "tokenizer": "standard",
                     "char_filter": [
                         "html_strip"
                     ],
                     "filter": [
-                        "french_elision",
                         "lowercase",
-                        "french_stop",
-                        "french_stemmer"
+                        "german_stop",
+                        "german_normalization",
+                        "german_stemmer"
                     ]
                 }
             }
         }
     },
     "alias": {
-        "mediawatch_fr-{now/M{yyyy.MM}}": {}
+        "mediawatch_de-{now/M{yyyy.MM}}": {}
     },
     "mappings": {
         "properties": {
@@ -55,7 +46,7 @@ var ArticlesFR = `
                     },
                     "body": {
                         "type": "text",
-                        "analyzer": "french_analyzer"
+                        "analyzer": "german_analyzer"
                     },
                     "categories": {
                         "type": "keyword"
@@ -66,7 +57,7 @@ var ArticlesFR = `
                     },
                     "excerpt": {
                         "type": "text",
-                        "analyzer": "french_analyzer"
+                        "analyzer": "german_analyzer"
                     },
                     "image": {
                         "type": "keyword"
@@ -83,7 +74,7 @@ var ArticlesFR = `
                     },
                     "title": {
                         "type": "text",
-                        "analyzer": "french_analyzer"
+                        "analyzer": "german_analyzer"
                     }
                 }
             },
@@ -101,7 +92,7 @@ var ArticlesFR = `
                 "properties": {
                     "claims": {
                         "type": "text",
-                        "analyzer": "french_analyzer"
+                        "analyzer": "german_analyzer"
                     },
                     "entities": {
                         "properties": {
@@ -115,22 +106,22 @@ var ArticlesFR = `
                     },
                     "keywords": {
                         "type": "keyword",
-                        "analyzer": "french_analyzer"
+                        "analyzer": "german_analyzer"
                     },
                     "quotes": {
                         "type": "text",
-                        "analyzer": "french_analyzer"
+                        "analyzer": "german_analyzer"
                     },
                     "sentences": {
                         "type": "text",
-                        "analyzer": "french_analyzer"
+                        "analyzer": "german_analyzer"
                     },
                     "stopWords": {
                         "type": "keyword"
                     },
                     "summary": {
                         "type": "text",
-                        "analyzer": "french_analyzer"
+                        "analyzer": "german_analyzer"
                     },
                     "tokens": {
                         "type": "keyword"

@@ -73,7 +73,7 @@ func (ticker *Ticker) Fetch() {
 		if v.Stream.StreamType == commonv2.StreamType_STREAM_TYPE_RSS {
 			parser := gofeed.NewParser()
 			if v.Stream.RequiresProxy {
-				parser.Client = proxy.CreateProxy(ticker.cfg.GetProxyList(), ticker.cfg.Proxy.UserName, ticker.cfg.Proxy.Password)
+				parser.Client = proxy.CreateProxy(ticker.cfg.GetProxyURL())
 			} else {
 				parser.Client = proxy.CreateClient()
 			}
@@ -105,7 +105,7 @@ func (ticker *Ticker) Fetch() {
 
 			c := targets.Targets[strings.TrimPrefix(v.Hostname, "www.")]
 			data, err := targets.ParseList(
-				proxy.CreateProxy(ticker.cfg.GetProxyList(), ticker.cfg.Proxy.UserName, ticker.cfg.Proxy.Password),
+				proxy.CreateProxy(ticker.cfg.GetProxyURL()),
 				c.(targets.Target),
 			)
 			if err != nil {

@@ -1,46 +1,42 @@
-package indeces
-
-var ArticlesEL = `
 {
-
     "settings": {
         "index": {
-            "number_of_shards": 2,
-            "number_of_replicas": 2
+            "number_of_shards": 1,
+            "number_of_replicas": 0
         },
         "analysis": {
             "filter": {
-                "greek_stop": {
+                "turkish_stop": {
                     "type": "stop",
-                    "stopwords": "_greek_"
+                    "stopwords": "_turkish_"
                 },
-                "greek_lowercase": {
-                    "type": "lowercase",
-                    "language": "greek"
+                "turkish_keywords": {
+                    "type": "keyword_marker"
                 },
-                "greek_stemmer": {
+                "turkish_stemmer": {
                     "type": "stemmer",
-                    "language": "greek"
+                    "language": "turkish"
                 }
             },
             "analyzer": {
-                "greek_analyzer": {
+                "turkish_analyzer": {
                     "tokenizer": "standard",
                     "char_filter": [
                         "html_strip"
                     ],
                     "filter": [
-                        "greek_lowercase",
-                        "greek_stop",
-                        "greek_stemmer",
-                        "asciifolding"
+                        "apostrophe",
+                        "lowercase",
+                        "turkish_stop",
+                        "turkish_keywords",
+                        "turkish_stemmer"
                     ]
                 }
             }
         }
     },
     "alias": {
-        "mediawatch_el-{now/M{yyyy.MM}}": {}
+        "mediawatch_tr-{now/M{yyyy.MM}}": {}
     },
     "mappings": {
         "properties": {
@@ -51,7 +47,7 @@ var ArticlesEL = `
                     },
                     "body": {
                         "type": "text",
-                        "analyzer": "greek_analyzer"
+                        "analyzer": "turkish_analyzer"
                     },
                     "categories": {
                         "type": "keyword"
@@ -62,7 +58,7 @@ var ArticlesEL = `
                     },
                     "excerpt": {
                         "type": "text",
-                        "analyzer": "greek_analyzer"
+                        "analyzer": "turkish_analyzer"
                     },
                     "image": {
                         "type": "keyword"
@@ -79,7 +75,7 @@ var ArticlesEL = `
                     },
                     "title": {
                         "type": "text",
-                        "analyzer": "greek_analyzer"
+                        "analyzer": "turkish_analyzer"
                     }
                 }
             },
@@ -97,7 +93,7 @@ var ArticlesEL = `
                 "properties": {
                     "claims": {
                         "type": "text",
-                        "analyzer": "greek_analyzer"
+                        "analyzer": "turkish_analyzer"
                     },
                     "entities": {
                         "properties": {
@@ -110,23 +106,23 @@ var ArticlesEL = `
                         }
                     },
                     "keywords": {
-                        "type": "text",
-                        "analyzer": "greek_analyzer"
+                        "type": "keyword",
+                        "analyzer": "turkish_analyzer"
                     },
                     "quotes": {
                         "type": "text",
-                        "analyzer": "greek_analyzer"
+                        "analyzer": "turkish_analyzer"
                     },
                     "sentences": {
                         "type": "text",
-                        "analyzer": "greek_analyzer"
+                        "analyzer": "turkish_analyzer"
                     },
                     "stopWords": {
                         "type": "keyword"
                     },
                     "summary": {
                         "type": "text",
-                        "analyzer": "greek_analyzer"
+                        "analyzer": "turkish_analyzer"
                     },
                     "tokens": {
                         "type": "keyword"
@@ -151,4 +147,3 @@ var ArticlesEL = `
         }
     }
 }
-`

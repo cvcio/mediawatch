@@ -1,15 +1,40 @@
-package indeces
+package indices
 
-var ArticlesEN = `
+var ArticlesHU = `
 {
     "settings": {
         "index": {
-            "number_of_shards": 2,
-            "number_of_replicas": 2
+            "number_of_shards": 1,
+            "number_of_replicas": 0
+        },
+        "analysis": {
+            "filter": {
+                "hungarian_stop": {
+                    "type": "stop",
+                    "stopwords": "_hungarian_"
+                },
+                "hungarian_stemmer": {
+                    "type": "stemmer",
+                    "language": "hungarian"
+                }
+            },
+            "analyzer": {
+                "hungarian_analyzer": {
+                    "tokenizer": "standard",
+                    "char_filter": [
+                        "html_strip"
+                    ],
+                    "filter": [
+                        "lowercase",
+                        "hungarian_stop",
+                        "hungarian_stemmer"
+                    ]
+                }
+            }
         }
     },
     "alias": {
-        "mediawatch_en-{now/M{yyyy.MM}}": {}
+        "mediawatch_hu-{now/M{yyyy.MM}}": {}
     },
     "mappings": {
         "properties": {
@@ -19,7 +44,8 @@ var ArticlesEN = `
                         "type": "keyword"
                     },
                     "body": {
-                        "type": "text"
+                        "type": "text",
+                        "analyzer": "hungarian_analyzer"
                     },
                     "categories": {
                         "type": "keyword"
@@ -29,7 +55,8 @@ var ArticlesEN = `
                         "ignore_malformed": true
                     },
                     "excerpt": {
-                        "type": "text"
+                        "type": "text",
+                        "analyzer": "hungarian_analyzer"
                     },
                     "image": {
                         "type": "keyword"
@@ -45,7 +72,8 @@ var ArticlesEN = `
                         "type": "keyword"
                     },
                     "title": {
-                        "type": "text"
+                        "type": "text",
+                        "analyzer": "hungarian_analyzer"
                     }
                 }
             },
@@ -62,7 +90,8 @@ var ArticlesEN = `
             "nlp": {
                 "properties": {
                     "claims": {
-                        "type": "text"
+                        "type": "text",
+                        "analyzer": "hungarian_analyzer"
                     },
                     "entities": {
                         "properties": {
@@ -75,19 +104,23 @@ var ArticlesEN = `
                         }
                     },
                     "keywords": {
-                        "type": "keyword"
+                        "type": "keyword",
+                        "analyzer": "hungarian_analyzer"
                     },
                     "quotes": {
-                        "type": "text"
+                        "type": "text",
+                        "analyzer": "hungarian_analyzer"
                     },
                     "sentences": {
-                        "type": "text"
+                        "type": "text",
+                        "analyzer": "hungarian_analyzer"
                     },
                     "stopWords": {
                         "type": "keyword"
                     },
                     "summary": {
-                        "type": "text"
+                        "type": "text",
+                        "analyzer": "hungarian_analyzer"
                     },
                     "tokens": {
                         "type": "keyword"

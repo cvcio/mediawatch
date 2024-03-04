@@ -18,6 +18,8 @@ const Scrape = async (req, passages) => {
 		? JSON.parse(request.feed)
 		: request.feed;
 
+	request.doc_id = request.doc_id || request.url;
+
 	const proxy = feed.stream.requires_proxy ? getProxyUrl() : null;
 	logger.info(`[SVC-SCRAPER] Scrape - (${feed.hostname}) ${request.doc_id} - Proxy: ${proxy}`);
 

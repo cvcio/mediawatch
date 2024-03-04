@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cvcio/mediawatch/pkg/es/indeces"
+	"github.com/cvcio/mediawatch/pkg/es/indices"
 	"github.com/elastic/go-elasticsearch/v8"
 )
 
@@ -25,6 +25,7 @@ func NewElasticsearch(host, user, pass string) (*Elastic, error) {
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},
+			DiscoverNodesOnStart: true,
 		},
 	)
 
@@ -92,34 +93,34 @@ func (es *Elastic) CreateElasticIndexWithLanguages(prefix string, languages []st
 func getIndex(language string) string {
 	switch strings.ToLower(language) {
 	case "bg":
-		return indeces.ArticlesBG
+		return indices.ArticlesBG
 	case "de":
-		return indeces.ArticlesDE
+		return indices.ArticlesDE
 	case "el":
-		return indeces.ArticlesEL
+		return indices.ArticlesEL
 	case "en":
-		return indeces.ArticlesEN
+		return indices.ArticlesEN
 	case "fi":
-		return indeces.ArticlesFI
+		return indices.ArticlesFI
 	case "fr":
-		return indeces.ArticlesFR
+		return indices.ArticlesFR
 	case "hu":
-		return indeces.ArticlesHU
+		return indices.ArticlesHU
 	case "it":
-		return indeces.ArticlesIT
+		return indices.ArticlesIT
 	case "nl":
-		return indeces.ArticlesNL
+		return indices.ArticlesNL
 	case "no":
-		return indeces.ArticlesNO
+		return indices.ArticlesNO
 	case "pt":
-		return indeces.ArticlesPT
+		return indices.ArticlesPT
 	case "ro":
-		return indeces.ArticlesRO
+		return indices.ArticlesRO
 	case "ru":
-		return indeces.ArticlesRU
+		return indices.ArticlesRU
 	case "tr":
-		return indeces.ArticlesTR
+		return indices.ArticlesTR
 	default:
-		return indeces.ArticlesEN
+		return indices.ArticlesEN
 	}
 }

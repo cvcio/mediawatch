@@ -1,41 +1,40 @@
-package indeces
+package indices
 
-var ArticlesTR = `
+var ArticlesRU = `
 {
     "settings": {
         "index": {
-            "number_of_shards": 2,
-            "number_of_replicas": 2
+            "number_of_shards": 1,
+            "number_of_replicas": 0
         },
         "analysis": {
             "filter": {
-                "turkish_stop": {
+                "russian_stop": {
                     "type": "stop",
-                    "stopwords": "_turkish_"
+                    "stopwords": "_russian_"
                 },
-                "turkish_stemmer": {
+                "russian_stemmer": {
                     "type": "stemmer",
-                    "language": "turkish"
+                    "language": "russian"
                 }
             },
             "analyzer": {
-                "turkish_analyzer": {
+                "russian_analyzer": {
                     "tokenizer": "standard",
                     "char_filter": [
                         "html_strip"
                     ],
                     "filter": [
-                        "apostrophe",
                         "lowercase",
-                        "turkish_stop",
-                        "turkish_stemmer"
+                        "russian_stop",
+                        "russian_stemmer"
                     ]
                 }
             }
         }
     },
     "alias": {
-        "mediawatch_tr-{now/M{yyyy.MM}}": {}
+        "mediawatch_ru-{now/M{yyyy.MM}}": {}
     },
     "mappings": {
         "properties": {
@@ -46,7 +45,7 @@ var ArticlesTR = `
                     },
                     "body": {
                         "type": "text",
-                        "analyzer": "turkish_analyzer"
+                        "analyzer": "russian_analyzer"
                     },
                     "categories": {
                         "type": "keyword"
@@ -57,7 +56,7 @@ var ArticlesTR = `
                     },
                     "excerpt": {
                         "type": "text",
-                        "analyzer": "turkish_analyzer"
+                        "analyzer": "russian_analyzer"
                     },
                     "image": {
                         "type": "keyword"
@@ -74,7 +73,7 @@ var ArticlesTR = `
                     },
                     "title": {
                         "type": "text",
-                        "analyzer": "turkish_analyzer"
+                        "analyzer": "russian_analyzer"
                     }
                 }
             },
@@ -92,7 +91,7 @@ var ArticlesTR = `
                 "properties": {
                     "claims": {
                         "type": "text",
-                        "analyzer": "turkish_analyzer"
+                        "analyzer": "russian_analyzer"
                     },
                     "entities": {
                         "properties": {
@@ -106,22 +105,22 @@ var ArticlesTR = `
                     },
                     "keywords": {
                         "type": "keyword",
-                        "analyzer": "turkish_analyzer"
+                        "analyzer": "russian_analyzer"
                     },
                     "quotes": {
                         "type": "text",
-                        "analyzer": "turkish_analyzer"
+                        "analyzer": "russian_analyzer"
                     },
                     "sentences": {
                         "type": "text",
-                        "analyzer": "turkish_analyzer"
+                        "analyzer": "russian_analyzer"
                     },
                     "stopWords": {
                         "type": "keyword"
                     },
                     "summary": {
                         "type": "text",
-                        "analyzer": "turkish_analyzer"
+                        "analyzer": "russian_analyzer"
                     },
                     "tokens": {
                         "type": "keyword"

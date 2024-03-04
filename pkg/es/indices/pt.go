@@ -1,51 +1,40 @@
-package indeces
+package indices
 
-var ArticlesIT = `
+var ArticlesPT = `
 {
     "settings": {
         "index": {
-            "number_of_shards": 2,
-            "number_of_replicas": 2
+            "number_of_shards": 1,
+            "number_of_replicas": 0
         },
         "analysis": {
             "filter": {
-                "italian_elision": {
-                    "type": "elision",
-                    "articles": [
-                        "c", "l", "all", "dall", "dell",
-                        "nell", "sull", "coll", "pell",
-                        "gl", "agl", "dagl", "degl", "negl",
-                        "sugl", "un", "m", "t", "s", "v", "d"
-                    ],
-                    "articles_case": true
-                },
-                "italian_stop": {
+                "portuguese_stop": {
                     "type": "stop",
-                    "stopwords": "_italian_"
+                    "stopwords": "_portuguese_"
                 },
-                "italian_stemmer": {
+                "portuguese_stemmer": {
                     "type": "stemmer",
-                    "language": "light_italian"
+                    "language": "light_portuguese"
                 }
             },
             "analyzer": {
-                "italian_analyzer": {
+                "portuguese_analyzer": {
                     "tokenizer": "standard",
                     "char_filter": [
                         "html_strip"
                     ],
                     "filter": [
-                        "italian_elision",
                         "lowercase",
-                        "italian_stop",
-                        "italian_stemmer"
+                        "portuguese_stop",
+                        "portuguese_stemmer"
                     ]
                 }
             }
         }
     },
     "alias": {
-        "mediawatch_it-{now/M{yyyy.MM}}": {}
+        "mediawatch_pt-{now/M{yyyy.MM}}": {}
     },
     "mappings": {
         "properties": {
@@ -56,7 +45,7 @@ var ArticlesIT = `
                     },
                     "body": {
                         "type": "text",
-                        "analyzer": "italian_analyzer"
+                        "analyzer": "portuguese_analyzer"
                     },
                     "categories": {
                         "type": "keyword"
@@ -67,7 +56,7 @@ var ArticlesIT = `
                     },
                     "excerpt": {
                         "type": "text",
-                        "analyzer": "italian_analyzer"
+                        "analyzer": "portuguese_analyzer"
                     },
                     "image": {
                         "type": "keyword"
@@ -84,7 +73,7 @@ var ArticlesIT = `
                     },
                     "title": {
                         "type": "text",
-                        "analyzer": "italian_analyzer"
+                        "analyzer": "portuguese_analyzer"
                     }
                 }
             },
@@ -102,7 +91,7 @@ var ArticlesIT = `
                 "properties": {
                     "claims": {
                         "type": "text",
-                        "analyzer": "italian_analyzer"
+                        "analyzer": "portuguese_analyzer"
                     },
                     "entities": {
                         "properties": {
@@ -116,22 +105,22 @@ var ArticlesIT = `
                     },
                     "keywords": {
                         "type": "keyword",
-                        "analyzer": "italian_analyzer"
+                        "analyzer": "portuguese_analyzer"
                     },
                     "quotes": {
                         "type": "text",
-                        "analyzer": "italian_analyzer"
+                        "analyzer": "portuguese_analyzer"
                     },
                     "sentences": {
                         "type": "text",
-                        "analyzer": "italian_analyzer"
+                        "analyzer": "portuguese_analyzer"
                     },
                     "stopWords": {
                         "type": "keyword"
                     },
                     "summary": {
                         "type": "text",
-                        "analyzer": "italian_analyzer"
+                        "analyzer": "portuguese_analyzer"
                     },
                     "tokens": {
                         "type": "keyword"

@@ -138,15 +138,13 @@ type Config struct {
 		Key     string `envconfig:"STRIPE_KEY" default:""`
 	}
 	Proxy struct {
-		Enabled   bool   `envconfig:"PROXY_ENABLED" default:"false"`
+		Enabled   bool   `envconfig:"PROXY_ENABLED" default:"true"`
 		Host      string `envconfig:"PROXY_HOST" default:""`
 		Port      string `envconfig:"PROXY_PORT" default:""`
 		UserName  string `envconfig:"PROXY_USERNAME" default:""`
 		Password  string `envconfig:"PROXY_PASSWORD" default:""`
 		ProxyList string `envconfig:"PROXY_LIST" default:""`
-
-		// Path    string `envconfig:"PROXY_PATH" default:"http://localhost:9060"` // HTTP
-		// Path string `envconfig:"PROXY_PATH" default:"socks5://localhost:9050"` // SOCKS
+		Scheme    string `envconfig:"PROXY_SCHEME" default:"https"`
 	}
 	Streamer struct {
 		Init     bool          `envconfig:"STREAMER_INIT" default:"false"`
@@ -174,16 +172,22 @@ func NewConfigFromEnv() *Config {
 	return cfg
 }
 
+func (c *Config) GetKafkaBrokers() []string {
+	return strings.Split(c.Kafka.Broker, ",")
+}
+
 func (c *Config) GetMongoURL() string {
 	return fmt.Sprintf("%s/%s", c.Mongo.URL, c.Mongo.Path)
 }
+
 func (c *Config) GetElasticsearchURL() string {
-	return fmt.Sprintf("%s", c.Elasticsearch.Host)
+	return c.Elasticsearch.Host
 }
 
 func (c *Config) GetRedisURL() string {
 	return fmt.Sprintf("%s:%s", c.Redis.Host, c.Redis.Port)
 }
+
 func (c *Config) GetApiURL() string {
 	return fmt.Sprintf("%s:%s", c.Api.Host, c.Api.Port)
 }
@@ -197,7 +201,11 @@ func (c *Config) GetPrometheusURL() string {
 }
 
 func (c *Config) GetProxyURL() string {
-	return fmt.Sprintf("%s:%s", c.Proxy.Host, c.Proxy.Port)
+	if c.Proxy.UserName == "" && c.Proxy.Password == "" {
+		return fmt.Sprintf("%s://%s:%s", c.Proxy.Scheme, c.Proxy.Host, c.Proxy.Port)
+	}
+
+	return fmt.Sprintf("%s://%s:%s@%s:%s", c.Proxy.Scheme, c.Proxy.UserName, c.Proxy.Password, c.Proxy.Host, c.Proxy.Port)
 }
 
 func (c *Config) GetProxyList() []string {

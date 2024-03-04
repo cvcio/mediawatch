@@ -1,40 +1,50 @@
-package indeces
+package indices
 
-var ArticlesRO = `
+var ArticlesNL = `
 {
     "settings": {
         "index": {
-            "number_of_shards": 2,
-            "number_of_replicas": 2
+            "number_of_shards": 1,
+            "number_of_replicas": 0
         },
         "analysis": {
             "filter": {
-                "romanian_stop": {
+                "dutch_stop": {
                     "type": "stop",
-                    "stopwords": "_romanian_"
+                    "stopwords": "_dutch_"
                 },
-                "romanian_stemmer": {
+                "dutch_stemmer": {
                     "type": "stemmer",
-                    "language": "romanian"
+                    "language": "dutch"
+                },
+                "dutch_override": {
+                    "type": "stemmer_override",
+                    "rules": [
+                        "fiets=>fiets",
+                        "bromfiets=>bromfiets",
+                        "ei=>eier",
+                        "kind=>kinder"
+                    ]
                 }
             },
             "analyzer": {
-                "romanian_analyzer": {
+                "dutch_analyzer": {
                     "tokenizer": "standard",
                     "char_filter": [
                         "html_strip"
                     ],
                     "filter": [
                         "lowercase",
-                        "romanian_stop",
-                        "romanian_stemmer"
+                        "dutch_stop",
+                        "dutch_override",
+                        "dutch_stemmer"
                     ]
                 }
             }
         }
     },
     "alias": {
-        "mediawatch_ro-{now/M{yyyy.MM}}": {}
+        "mediawatch_nl-{now/M{yyyy.MM}}": {}
     },
     "mappings": {
         "properties": {
@@ -45,7 +55,7 @@ var ArticlesRO = `
                     },
                     "body": {
                         "type": "text",
-                        "analyzer": "romanian_analyzer"
+                        "analyzer": "dutch_analyzer"
                     },
                     "categories": {
                         "type": "keyword"
@@ -56,7 +66,7 @@ var ArticlesRO = `
                     },
                     "excerpt": {
                         "type": "text",
-                        "analyzer": "romanian_analyzer"
+                        "analyzer": "dutch_analyzer"
                     },
                     "image": {
                         "type": "keyword"
@@ -73,7 +83,7 @@ var ArticlesRO = `
                     },
                     "title": {
                         "type": "text",
-                        "analyzer": "romanian_analyzer"
+                        "analyzer": "dutch_analyzer"
                     }
                 }
             },
@@ -91,7 +101,7 @@ var ArticlesRO = `
                 "properties": {
                     "claims": {
                         "type": "text",
-                        "analyzer": "romanian_analyzer"
+                        "analyzer": "dutch_analyzer"
                     },
                     "entities": {
                         "properties": {
@@ -105,22 +115,22 @@ var ArticlesRO = `
                     },
                     "keywords": {
                         "type": "keyword",
-                        "analyzer": "romanian_analyzer"
+                        "analyzer": "dutch_analyzer"
                     },
                     "quotes": {
                         "type": "text",
-                        "analyzer": "romanian_analyzer"
+                        "analyzer": "dutch_analyzer"
                     },
                     "sentences": {
                         "type": "text",
-                        "analyzer": "romanian_analyzer"
+                        "analyzer": "dutch_analyzer"
                     },
                     "stopWords": {
                         "type": "keyword"
                     },
                     "summary": {
                         "type": "text",
-                        "analyzer": "romanian_analyzer"
+                        "analyzer": "dutch_analyzer"
                     },
                     "tokens": {
                         "type": "keyword"

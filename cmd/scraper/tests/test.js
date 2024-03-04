@@ -20,6 +20,7 @@ const test_feed_scrapability_async = async f => {
 		const data = await Scrape(req, []);
 		return { hostname: f.hostname, status: 'ok', message: data };
 	} catch (e) {
+		console.error(e);
 		return {
 			hostname: f.hostname,
 			status: 'error',
@@ -43,9 +44,7 @@ const test = async () => {
 	// eslint-disable-next-line no-restricted-syntax
 	for (const feed of feeds.data.data) {
 		if (feed.test && feed.test.url !== '' && results.length < 2000) {
-			if (feed.hostname === 'amna.gr') {
-				feed.test.url = 'https://www.amna.gr/feeds/getarticle.php?id=794841&infolevel=ADVANCED';
-			// if (feed.hostname === 'epirusonline.gr') {
+			if (feed.hostname === 'efsyn.gr') {
 				// feed.stream.requires_proxy = true;
 				results.push(test_feed_scrapability_async(feed));
 			}

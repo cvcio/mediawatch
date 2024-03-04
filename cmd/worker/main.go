@@ -299,7 +299,7 @@ func main() {
 	// create a reader/writer kafka connection
 	kafkaGoClient := kafka.NewKafkaClient(
 		true, true,
-		[]string{cfg.Kafka.Broker},
+		cfg.GetKafkaBrokers(),
 		cfg.Kafka.ConsumerTopic,
 		cfg.Kafka.ConsumerGroup,
 		cfg.Kafka.ProducerTopic,
