@@ -57,7 +57,7 @@ func main() {
 
 	// Adjust logging format
 	log.SetFormatter(&logrus.JSONFormatter{})
-	if cfg.Log.Dev {
+	if cfg.Env == "development" {
 		log.SetFormatter(&logrus.TextFormatter{})
 	}
 

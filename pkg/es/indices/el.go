@@ -1,40 +1,46 @@
-package indeces
+package indices
 
-var ArticlesPT = `
+var ArticlesEL = `
 {
+
     "settings": {
         "index": {
-            "number_of_shards": 2,
-            "number_of_replicas": 2
+            "number_of_shards": 1,
+            "number_of_replicas": 0
         },
         "analysis": {
             "filter": {
-                "portuguese_stop": {
+                "greek_stop": {
                     "type": "stop",
-                    "stopwords": "_portuguese_"
+                    "stopwords": "_greek_"
                 },
-                "portuguese_stemmer": {
+                "greek_lowercase": {
+                    "type": "lowercase",
+                    "language": "greek"
+                },
+                "greek_stemmer": {
                     "type": "stemmer",
-                    "language": "light_portuguese"
+                    "language": "greek"
                 }
             },
             "analyzer": {
-                "portuguese_analyzer": {
+                "greek_analyzer": {
                     "tokenizer": "standard",
                     "char_filter": [
                         "html_strip"
                     ],
                     "filter": [
-                        "lowercase",
-                        "portuguese_stop",
-                        "portuguese_stemmer"
+                        "greek_lowercase",
+                        "greek_stop",
+                        "greek_stemmer",
+                        "asciifolding"
                     ]
                 }
             }
         }
     },
     "alias": {
-        "mediawatch_pt-{now/M{yyyy.MM}}": {}
+        "mediawatch_el-{now/M{yyyy.MM}}": {}
     },
     "mappings": {
         "properties": {
@@ -45,7 +51,7 @@ var ArticlesPT = `
                     },
                     "body": {
                         "type": "text",
-                        "analyzer": "portuguese_analyzer"
+                        "analyzer": "greek_analyzer"
                     },
                     "categories": {
                         "type": "keyword"
@@ -56,7 +62,7 @@ var ArticlesPT = `
                     },
                     "excerpt": {
                         "type": "text",
-                        "analyzer": "portuguese_analyzer"
+                        "analyzer": "greek_analyzer"
                     },
                     "image": {
                         "type": "keyword"
@@ -73,7 +79,7 @@ var ArticlesPT = `
                     },
                     "title": {
                         "type": "text",
-                        "analyzer": "portuguese_analyzer"
+                        "analyzer": "greek_analyzer"
                     }
                 }
             },
@@ -91,7 +97,7 @@ var ArticlesPT = `
                 "properties": {
                     "claims": {
                         "type": "text",
-                        "analyzer": "portuguese_analyzer"
+                        "analyzer": "greek_analyzer"
                     },
                     "entities": {
                         "properties": {
@@ -104,23 +110,23 @@ var ArticlesPT = `
                         }
                     },
                     "keywords": {
-                        "type": "keyword",
-                        "analyzer": "portuguese_analyzer"
+                        "type": "text",
+                        "analyzer": "greek_analyzer"
                     },
                     "quotes": {
                         "type": "text",
-                        "analyzer": "portuguese_analyzer"
+                        "analyzer": "greek_analyzer"
                     },
                     "sentences": {
                         "type": "text",
-                        "analyzer": "portuguese_analyzer"
+                        "analyzer": "greek_analyzer"
                     },
                     "stopWords": {
                         "type": "keyword"
                     },
                     "summary": {
                         "type": "text",
-                        "analyzer": "portuguese_analyzer"
+                        "analyzer": "greek_analyzer"
                     },
                     "tokens": {
                         "type": "keyword"

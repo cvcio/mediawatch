@@ -6,3 +6,5 @@ plugins:
     out: cmd/enrich/enrich
   - plugin: buf.build/protocolbuffers/python
     out: cmd/enrich/enrich
+  - plugin: buf.build/community/nipunn1313-mypy:v3.4.0
+    out: cmd/enrich/enrich

@@ -1,9 +1,8 @@
 """String utils for NLP"""
+from __future__ import annotations
 
 import re
 import string
-
-from typing import Union
 
 from unicodedata import normalize, category
 from nltk.tokenize import RegexpTokenizer
@@ -85,7 +84,7 @@ def prepare_text(text, stopwords):
 def tokenize_to_max_length(
     text,
     max_length: int = 512,
-    tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast] = None,
+    tokenizer: (PreTrainedTokenizer | PreTrainedTokenizerFast) = None,
 ):
     """Tokenize text to max length
 
@@ -102,15 +101,15 @@ def tokenize_to_max_length(
         chunks = [tokens[i : i + max_length] for i in range(0, len(tokens), max_length)]
         chunks = [" ".join(list(chunk)) for chunk in chunks]
         return chunks
-    else:
-        output = tokenizer.encode(text, add_special_tokens=False)
-        encoded_chunks = [
-            output[i : i + max_length] for i in range(0, len(output), max_length)
-        ]
-        decoded_chunks = [
-            tokenizer.decode(c, skip_special_tokens=True) for c in encoded_chunks
-        ]
-        return decoded_chunks
+
+    output = tokenizer.encode(text, add_special_tokens=False)
+    encoded_chunks = [
+        output[i : i + max_length] for i in range(0, len(output), max_length)
+    ]
+    decoded_chunks = [
+        tokenizer.decode(c, skip_special_tokens=True) for c in encoded_chunks
+    ]
+    return decoded_chunks
 
 
 def unique_entities(items):

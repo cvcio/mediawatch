@@ -21,7 +21,7 @@ func Test_El_Amna_proxy_off(t *testing.T) {
 	hostname := "amna.gr"
 	client := targets.Targets[hostname]
 
-	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyList(), cfg.Proxy.UserName, cfg.Proxy.Password), client.(targets.Target))
+	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyURL()), client.(targets.Target))
 
 	if err != nil {
 		t.Fatalf("Couldn't Get document for %s, err: %s", hostname, err)
@@ -43,7 +43,7 @@ func Test_El_Amna(t *testing.T) {
 	hostname := "amna.gr"
 	client := targets.Targets[hostname]
 
-	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyList(), cfg.Proxy.UserName, cfg.Proxy.Password), client.(targets.Target))
+	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyURL()), client.(targets.Target))
 
 	if err != nil {
 		t.Fatalf("Couldn't Get document for %s, err: %s", hostname, err)
@@ -87,7 +87,7 @@ func Test_El_News247(t *testing.T) {
 	hostname := "news247.gr"
 	client := targets.Targets[hostname]
 
-	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyList(), cfg.Proxy.UserName, cfg.Proxy.Password), client.(targets.Target))
+	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyURL()), client.(targets.Target))
 	if err != nil {
 		t.Fatalf("Couldn't Get document for %s, err: %s", hostname, err)
 	}
@@ -131,7 +131,7 @@ func Test_El_ProNews(t *testing.T) {
 	hostname := "pronews.gr"
 	client := targets.Targets[hostname]
 
-	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyList(), cfg.Proxy.UserName, cfg.Proxy.Password), client.(targets.Target))
+	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyURL()), client.(targets.Target))
 
 	if err != nil {
 		t.Fatalf("Couldn't Get document for %s, err: %s", hostname, err)
@@ -176,7 +176,7 @@ func Test_El_Liberal(t *testing.T) {
 	hostname := "liberal.gr"
 	client := targets.Targets[hostname]
 
-	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyList(), cfg.Proxy.UserName, cfg.Proxy.Password), client.(targets.Target))
+	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyURL()), client.(targets.Target))
 
 	if err != nil {
 		t.Fatalf("Couldn't Get document for %s, err: %s", hostname, err)
@@ -221,7 +221,7 @@ func Test_El_Lifo(t *testing.T) {
 	hostname := "lifo.gr"
 	client := targets.Targets[hostname]
 
-	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyList(), cfg.Proxy.UserName, cfg.Proxy.Password), client.(targets.Target))
+	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyURL()), client.(targets.Target))
 
 	if err != nil {
 		t.Fatalf("Couldn't Get document for %s, err: %s", hostname, err)
@@ -267,7 +267,7 @@ func Test_El_Efsyn(t *testing.T) {
 	hostname := "efsyn.gr"
 	client := targets.Targets[hostname]
 
-	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyList(), cfg.Proxy.UserName, cfg.Proxy.Password), client.(targets.Target))
+	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyURL()), client.(targets.Target))
 
 	if err != nil {
 		t.Fatalf("Couldn't Get document for %s, err: %s", hostname, err)
@@ -312,7 +312,7 @@ func Test_El_MoneyReview(t *testing.T) {
 	hostname := "moneyreview.gr"
 	client := targets.Targets[hostname]
 
-	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyList(), cfg.Proxy.UserName, cfg.Proxy.Password), client.(targets.Target))
+	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyURL()), client.(targets.Target))
 
 	if err != nil {
 		t.Fatalf("Couldn't Get document for %s, err: %s", hostname, err)
@@ -357,7 +357,7 @@ func Test_El_Stoxos(t *testing.T) {
 	hostname := "stoxos.gr"
 	client := targets.Targets[hostname]
 
-	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyList(), cfg.Proxy.UserName, cfg.Proxy.Password), client.(targets.Target))
+	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyURL()), client.(targets.Target))
 
 	if err != nil {
 		t.Fatalf("Couldn't Get document for %s, err: %s", hostname, err)
@@ -402,7 +402,7 @@ func Test_El_Tvxs(t *testing.T) {
 	hostname := "tvxs.gr"
 	client := targets.Targets[hostname]
 
-	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyList(), cfg.Proxy.UserName, cfg.Proxy.Password), client.(targets.Target))
+	res, err := targets.ParseList(proxy.CreateProxy(cfg.GetProxyURL()), client.(targets.Target))
 
 	if err != nil {
 		t.Fatalf("Couldn't Get document for %s, err: %s", hostname, err)

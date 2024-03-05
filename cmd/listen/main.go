@@ -92,7 +92,7 @@ func main() {
 	// create a reader/writer kafka connection
 	kafkaGoClient := kafka.NewKafkaClient(
 		false, true,
-		[]string{cfg.Kafka.Broker},
+		cfg.GetKafkaBrokers(),
 		"",
 		"",
 		cfg.Kafka.WorkerTopic,
@@ -168,7 +168,7 @@ func main() {
 	}
 
 	// Create a channel to send catched urls from tweets
-	tweetChan := make(chan link.CatchedURL, 1)
+	tweetChan := make(chan link.Link, 1)
 
 	// ========================================
 	// Make a channel to listen for errors coming from the listener. Use a
@@ -262,7 +262,7 @@ func main() {
 }
 
 // handler handles incoming tweets
-func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.CatchedURL, ruleTag string) {
+func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.Link, ruleTag string) {
 	log.Debugf("Heartbeat Data: %+v", t.Data)
 	if t.Error != nil {
 		log.Errorf("Stream error: %s", t.Error.Message)
@@ -292,7 +292,7 @@ func handler(log *zap.SugaredLogger, t twitter.StreamData, tweetChan chan link.C
 		createdAt, _ := t.Data.CreatedAtTime()
 		userName := getUserNameFromTweet(t.Data.AuthorID, t.Includes.Users)
 		if userName != "" {
-			messsage := link.CatchedURL{
+			messsage := link.Link{
 				DocId:         uuid.New().String(),
 				Type:          "twitter",
 				Url:           l,

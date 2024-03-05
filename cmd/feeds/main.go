@@ -28,7 +28,7 @@ import (
 // ListenGroup struct.
 type ListenGroup struct {
 	ctx         context.Context
-	log         *zap.SugaredLogger
+	log         *zap.Logger
 	kafkaClient *kafka.KafkaClient
 	errChan     chan error
 }
@@ -38,7 +38,7 @@ func (worker *ListenGroup) Close() {
 	worker.kafkaClient.Close()
 }
 
-// Procuce writes a new message to the kafka topic.
+// Produce writes a new message to the kafka topic.
 func (worker *ListenGroup) Produce(msg kaf.Message) {
 	err := worker.kafkaClient.Producer.WriteMessages(worker.ctx, msg)
 	if err != nil {
@@ -48,7 +48,7 @@ func (worker *ListenGroup) Produce(msg kaf.Message) {
 
 // NewListenGroup implements a new ListenGroup struct.
 func NewListenGroup(
-	log *zap.SugaredLogger,
+	log *zap.Logger,
 	kafkaClient *kafka.KafkaClient,
 	errChan chan error,
 ) *ListenGroup {
@@ -61,9 +61,6 @@ func NewListenGroup(
 }
 
 func main() {
-	// ============================================================
-	// Read Config
-	// ============================================================
 	cfg := config.NewConfig()
 
 	// Read config from env variables
@@ -75,16 +72,20 @@ func main() {
 	// ============================================================
 	// Set Logger
 	// ============================================================
-	sugar := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
-	defer sugar.Sync()
-	log := sugar.Sugar()
+	log := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
+	// Sync the logger on exit
+	defer func() {
+		// ignore the error as Sync() is always returning nil
+		// sync: error syncing '/dev/stdout': Invalid argument
+		_ = log.Sync()
+	}()
 
 	// ============================================================
 	// Mongo
 	// ============================================================
 	dbConn, err := db.NewMongoDB(cfg.Mongo.URL, cfg.Mongo.Path, cfg.Mongo.DialTimeout)
 	if err != nil {
-		log.Fatalf("Register DB: %v", err)
+		log.Fatal("Mongo connection error", zap.Error(err))
 	}
 	defer dbConn.Close()
 
@@ -93,7 +94,7 @@ func main() {
 	// ============================================================
 	rdb, err := redis.NewRedisClient(context.Background(), cfg.GetRedisURL(), "")
 	if err != nil {
-		log.Fatalf("Error connecting to Redis: %s", err.Error())
+		log.Fatal("Redis connection error", zap.Error(err))
 	}
 	defer rdb.Close()
 
@@ -106,7 +107,7 @@ func main() {
 	// create a reader/writer kafka connection
 	kafkaGoClient := kafka.NewKafkaClient(
 		false, true,
-		[]string{cfg.Kafka.Broker},
+		cfg.GetKafkaBrokers(),
 		"",
 		"",
 		cfg.Kafka.WorkerTopic,
@@ -135,13 +136,14 @@ func main() {
 		// feed.StreamType(int(commonv2.StreamType_STREAM_TYPE_RSS)),
 	)
 	if err != nil {
-		log.Fatalf("error getting feeds list: %v", err)
+		log.Fatal("Error getting feeds list, can't continue", zap.Error(err))
 	}
 
 	feeds = filter(feeds)
-	log.Debugf("Loaded feeds: %d", len(feeds))
+	log.Debug("Loaded feeds", zap.Int("count", len(feeds)))
+
 	if len(feeds) == 0 {
-		log.Infof("No feeds to listen, exiting.")
+		log.Info("No feeds to listen, exiting.")
 		os.Exit(0)
 	}
 
@@ -162,7 +164,7 @@ func main() {
 	// ============================================================
 	// Make a channel to listen for errors coming from the listener. Use a
 	// buffered channel so the goroutine can exit if we don't collect this error.
-	errSingals := make(chan error, 1)
+	errSignals := make(chan error, 1)
 
 	// api will be our http.Server
 	promHandler := http.Server{
@@ -176,7 +178,7 @@ func main() {
 	// Start the service listening for requests.
 	log.Info("Ready to start")
 	go func() {
-		errSingals <- promHandler.ListenAndServe()
+		errSignals <- promHandler.ListenAndServe()
 	}()
 
 	// ============================================================
@@ -193,28 +195,27 @@ func main() {
 		select {
 		case err := <-kafkaChan:
 			// Ignore the Error
-			log.Errorf("Error from kafka: %v", err)
+			log.Error("Error from kafka", zap.Error(err))
 
-		case err := <-errSingals:
-			// Got Error from stream
-			log.Errorf("Error while streaming tweets: %s", err.Error())
+		case err := <-errSignals:
+			log.Error("Prometheus Error", zap.Error(err))
 			os.Exit(1)
 
 		case s := <-osSignals:
-			log.Debugf("Listen shutdown signal: %s", s)
+			log.Debug("Feeds shutdown signal", zap.String("signal", s.String()))
 
 			// Asking prometheus to shutdown and load shed.
 			if err := promHandler.Shutdown(context.Background()); err != nil {
-				log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
+				log.Error("Graceful shutdown did not complete", zap.Error(err))
 				if err := promHandler.Close(); err != nil {
-					log.Fatalf("Could not stop http server: %v", err)
+					log.Fatal("Could not stop http server", zap.Error(err))
 				}
 			}
 		}
 	}
 }
 
-func tick(cfg *config.Config, log *zap.SugaredLogger, worker *ListenGroup, rdb *redis.RedisClient, done chan bool, targets [][]*feedsv2.Feed, init bool, interval time.Duration) {
+func tick(cfg *config.Config, log *zap.Logger, worker *ListenGroup, rdb *redis.RedisClient, done chan bool, targets [][]*feedsv2.Feed, init bool, interval time.Duration) {
 	// delay := interval / time.Duration(math.Ceil(float64(len(targets))/100))
 	// delay := time.Second * time.Duration(len(targets))
 	for _, v := range targets {

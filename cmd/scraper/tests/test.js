@@ -1,54 +1,69 @@
-const { ScrapeService } = require('../src/services');
-const feeds = require('../data/v2_feeds.json');
+require('dotenv').config({ path: '.env' });
+
 const moment = require('moment');
-const ONE = false;
+const axios = require('axios');
+const logger = require('../src/logger');
+const { Scrape } = require('../src/services');
 
-const service = new ScrapeService(null);
-let data = feeds.data.data;
-for (var i = 0; i < data.length; i++) {
-	// console.log(data[i]);
-    if (ONE && i > 0) break;
-    // let f = data[i];
-    // if (f.testURL !== '' && f.user_name === 'efsyntakton') { // && f.screen_name === 'documentonews'
-    //     let req = {
-    //         request: {
-    //             feed: f,
-    //             url: f.testURL,
-	// 			screen_name: f.user_name,
-	// 			lang: 'el',
-	// 			crawled_at: moment().format('YYYY-MM-DDTHH:mm:ss')
-    //         }
-    //     };
-    //     console.log(req);
-    //     service.Scrape(req, (err, data) => {
-    //         if (err) {
-	// 			console.dir(err);
-    //             console.error(f.screen_name, err.message);
-    //             return;
-    //         }
-    //         console.log(f.screen_name, data.data.content.title);
-    //     });
-    // }
-    let f = data[i];
-    // if (f.test && f.test.url !== '' && f.stream && f.stream.requires_proxy) {
-    if (f.test && f.test.url !== '' && f.user_name === 'EFSYNTAKTON') {
-        let req = {
-            request: {
-                feed: JSON.stringify(f),
-                url: f.test.url,
-				screen_name: f.user_name,
-				lang: 'el',
-				crawled_at: moment().format('YYYY-MM-DDTHH:mm:ss')
-            }
-        };
-		// console.log(req);
-        // service.Scrape(req, (err, data) => {
-		// 	console.log(data)
-		// });
+const test_feed_scrapability_async = async f => {
+	const req = {
+		request: {
+			doc_id: 'test',
+			feed: JSON.stringify(f),
+			url: f.test.url,
+			screen_name: f.user_name,
+			lang: 'el',
+			crawled_at: moment().format('YYYY-MM-DDTHH:mm:ss')
+		}
+	};
+	try {
+		const data = await Scrape(req, []);
+		return { hostname: f.hostname, status: 'ok', message: data };
+	} catch (e) {
+		console.error(e);
+		return {
+			hostname: f.hostname,
+			status: 'error',
+			message: e.message,
+			code: e.code
+		};
+	}
+};
 
-		console.log(req)
-        service.RetryWithProxy(req.request, f, (err, data) => {
-			console.log(data)
-		});
-    }
-}
+const test = async () => {
+	const options = {
+		method: 'POST',
+		url: 'http://localhost:8000/mediawatch.feeds.v2.FeedService/GetFeeds',
+		headers: { 'Content-Type': 'application/json' },
+		data: { limit: 3000 }
+	};
+
+	const results = [];
+	const feeds = await axios.request(options);
+
+	// eslint-disable-next-line no-restricted-syntax
+	for (const feed of feeds.data.data) {
+		if (feed.test && feed.test.url !== '' && results.length < 2000) {
+			if (feed.hostname === 'efsyn.gr') {
+				// feed.stream.requires_proxy = true;
+				results.push(test_feed_scrapability_async(feed));
+			}
+		}
+	}
+
+	const done = await Promise.all(results);
+	// eslint-disable-next-line no-restricted-syntax
+	for (const result of done) {
+		if (result.status === 'error') {
+			logger.info(`${result.code} - ${result.hostname} - ${result.message}`);
+		} else {
+			logger.info(`200 - ${result.hostname}`);
+			console.log(result.message);
+		}
+	}
+};
+
+test().catch(e => {
+	console.error(e);
+	process.exit(1);
+});

@@ -1,5 +1,5 @@
-const amna_news = require('./amna_news');
+const amna_gr = require('./amna_gr');
 
-const parsers = { amna_news };
+const parsers = { amna_gr };
 
 module.exports = { parsers };

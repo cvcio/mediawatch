@@ -1,40 +1,40 @@
-package indeces
+package indices
 
-var ArticlesNO = `
+var ArticlesFI = `
 {
     "settings": {
         "index": {
-            "number_of_shards": 2,
-            "number_of_replicas": 2
+            "number_of_shards": 1,
+            "number_of_replicas": 0
         },
         "analysis": {
             "filter": {
-                "norwegian_stop": {
+                "finnish_stop": {
                     "type": "stop",
-                    "stopwords": "_norwegian_"
+                    "stopwords": "_finnish_"
                 },
-                "norwegian_stemmer": {
+                "finnish_stemmer": {
                     "type": "stemmer",
-                    "language": "norwegian"
+                    "language": "finnish"
                 }
             },
             "analyzer": {
-                "norwegian_analyzer": {
+                "finnish_analyzer": {
                     "tokenizer": "standard",
                     "char_filter": [
                         "html_strip"
                     ],
                     "filter": [
                         "lowercase",
-                        "norwegian_stop",
-                        "norwegian_stemmer"
+                        "finnish_stop",
+                        "finnish_stemmer"
                     ]
                 }
             }
         }
     },
     "alias": {
-        "mediawatch_no-{now/M{yyyy.MM}}": {}
+        "mediawatch_fi-{now/M{yyyy.MM}}": {}
     },
     "mappings": {
         "properties": {
@@ -45,7 +45,7 @@ var ArticlesNO = `
                     },
                     "body": {
                         "type": "text",
-                        "analyzer": "norwegian_analyzer"
+                        "analyzer": "finnish_analyzer"
                     },
                     "categories": {
                         "type": "keyword"
@@ -56,7 +56,7 @@ var ArticlesNO = `
                     },
                     "excerpt": {
                         "type": "text",
-                        "analyzer": "norwegian_analyzer"
+                        "analyzer": "finnish_analyzer"
                     },
                     "image": {
                         "type": "keyword"
@@ -73,7 +73,7 @@ var ArticlesNO = `
                     },
                     "title": {
                         "type": "text",
-                        "analyzer": "norwegian_analyzer"
+                        "analyzer": "finnish_analyzer"
                     }
                 }
             },
@@ -91,7 +91,7 @@ var ArticlesNO = `
                 "properties": {
                     "claims": {
                         "type": "text",
-                        "analyzer": "norwegian_analyzer"
+                        "analyzer": "finnish_analyzer"
                     },
                     "entities": {
                         "properties": {
@@ -105,22 +105,22 @@ var ArticlesNO = `
                     },
                     "keywords": {
                         "type": "keyword",
-                        "analyzer": "norwegian_analyzer"
+                        "analyzer": "finnish_analyzer"
                     },
                     "quotes": {
                         "type": "text",
-                        "analyzer": "norwegian_analyzer"
+                        "analyzer": "finnish_analyzer"
                     },
                     "sentences": {
                         "type": "text",
-                        "analyzer": "norwegian_analyzer"
+                        "analyzer": "finnish_analyzer"
                     },
                     "stopWords": {
                         "type": "keyword"
                     },
                     "summary": {
                         "type": "text",
-                        "analyzer": "norwegian_analyzer"
+                        "analyzer": "finnish_analyzer"
                     },
                     "tokens": {
                         "type": "keyword"

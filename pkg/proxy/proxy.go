@@ -8,27 +8,42 @@ import (
 	"time"
 )
 
-// CreateProxy returns an http.Client with a proxy
-func CreateProxy(proxylist []string, user, pass string) *http.Client {
-	client := &http.Client{Timeout: 30 * time.Second}
+// CreateProxyFromList returns an http.Client with a proxy
+func CreateProxyFromList(proxylist []string, user, pass string) *http.Client {
 	proxyUrl := &url.URL{Scheme: "http", Host: proxylist[rand.Intn(len(proxylist))]}
 	if user != "" && pass != "" {
 		proxyUrl.User = url.UserPassword(user, pass)
 	}
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		Proxy:           http.ProxyURL(proxyUrl),
+	return &http.Client{
+		Timeout: 60 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			Proxy:           http.ProxyURL(proxyUrl),
+		},
 	}
-	client.Transport = transport
-	return client
+}
+
+// CreateProxy returns an http.Client with a proxy
+func CreateProxy(u string) *http.Client {
+	proxyUrl, err := url.Parse(u)
+	if err != nil {
+		return nil
+	}
+	return &http.Client{
+		Timeout: 60 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			Proxy:           http.ProxyURL(proxyUrl),
+		},
+	}
 }
 
 // CreateClient returns an http.Client
 func CreateClient() *http.Client {
-	client := &http.Client{Timeout: 30 * time.Second}
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	return &http.Client{
+		Timeout: 60 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
 	}
-	client.Transport = transport
-	return client
 }

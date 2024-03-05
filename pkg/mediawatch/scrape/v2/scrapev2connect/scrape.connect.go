@@ -5,9 +5,9 @@
 package scrapev2connect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	connect_go "github.com/bufbuild/connect-go"
 	v2 "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
 	http "net/http"
 	strings "strings"
@@ -18,21 +18,47 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// ScrapeServiceName is the fully-qualified name of the ScrapeService service.
 	ScrapeServiceName = "mediawatch.scrape.v2.ScrapeService"
 )
 
+// These constants are the fully-qualified names of the RPCs defined in this package. They're
+// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+//
+// Note that these are different from the fully-qualified method names used by
+// google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
+// reflection-formatted method names, remove the leading slash and convert the remaining slash to a
+// period.
+const (
+	// ScrapeServiceScrapeProcedure is the fully-qualified name of the ScrapeService's Scrape RPC.
+	ScrapeServiceScrapeProcedure = "/mediawatch.scrape.v2.ScrapeService/Scrape"
+	// ScrapeServiceSimpleScrapeProcedure is the fully-qualified name of the ScrapeService's
+	// SimpleScrape RPC.
+	ScrapeServiceSimpleScrapeProcedure = "/mediawatch.scrape.v2.ScrapeService/SimpleScrape"
+	// ScrapeServiceReloadPassagesProcedure is the fully-qualified name of the ScrapeService's
+	// ReloadPassages RPC.
+	ScrapeServiceReloadPassagesProcedure = "/mediawatch.scrape.v2.ScrapeService/ReloadPassages"
+)
+
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	scrapeServiceServiceDescriptor              = v2.File_mediawatch_scrape_v2_scrape_proto.Services().ByName("ScrapeService")
+	scrapeServiceScrapeMethodDescriptor         = scrapeServiceServiceDescriptor.Methods().ByName("Scrape")
+	scrapeServiceSimpleScrapeMethodDescriptor   = scrapeServiceServiceDescriptor.Methods().ByName("SimpleScrape")
+	scrapeServiceReloadPassagesMethodDescriptor = scrapeServiceServiceDescriptor.Methods().ByName("ReloadPassages")
+)
+
 // ScrapeServiceClient is a client for the mediawatch.scrape.v2.ScrapeService service.
 type ScrapeServiceClient interface {
 	// Endpoint Scrape
-	Scrape(context.Context, *connect_go.Request[v2.ScrapeRequest]) (*connect_go.Response[v2.ScrapeResponse], error)
+	Scrape(context.Context, *connect.Request[v2.ScrapeRequest]) (*connect.Response[v2.ScrapeResponse], error)
 	// Endpoint SimpleScrape
-	SimpleScrape(context.Context, *connect_go.Request[v2.SimpleScrapeRequest]) (*connect_go.Response[v2.ScrapeResponse], error)
+	SimpleScrape(context.Context, *connect.Request[v2.SimpleScrapeRequest]) (*connect.Response[v2.ScrapeResponse], error)
 	// Endpoint ReloadPassages
-	ReloadPassages(context.Context, *connect_go.Request[v2.Empty]) (*connect_go.Response[v2.ReloadPassagesResponse], error)
+	ReloadPassages(context.Context, *connect.Request[v2.Empty]) (*connect.Response[v2.ReloadPassagesResponse], error)
 }
 
 // NewScrapeServiceClient constructs a client for the mediawatch.scrape.v2.ScrapeService service. By
@@ -42,57 +68,60 @@ type ScrapeServiceClient interface {
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewScrapeServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) ScrapeServiceClient {
+func NewScrapeServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ScrapeServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &scrapeServiceClient{
-		scrape: connect_go.NewClient[v2.ScrapeRequest, v2.ScrapeResponse](
+		scrape: connect.NewClient[v2.ScrapeRequest, v2.ScrapeResponse](
 			httpClient,
-			baseURL+"/mediawatch.scrape.v2.ScrapeService/Scrape",
-			opts...,
+			baseURL+ScrapeServiceScrapeProcedure,
+			connect.WithSchema(scrapeServiceScrapeMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		simpleScrape: connect_go.NewClient[v2.SimpleScrapeRequest, v2.ScrapeResponse](
+		simpleScrape: connect.NewClient[v2.SimpleScrapeRequest, v2.ScrapeResponse](
 			httpClient,
-			baseURL+"/mediawatch.scrape.v2.ScrapeService/SimpleScrape",
-			opts...,
+			baseURL+ScrapeServiceSimpleScrapeProcedure,
+			connect.WithSchema(scrapeServiceSimpleScrapeMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		reloadPassages: connect_go.NewClient[v2.Empty, v2.ReloadPassagesResponse](
+		reloadPassages: connect.NewClient[v2.Empty, v2.ReloadPassagesResponse](
 			httpClient,
-			baseURL+"/mediawatch.scrape.v2.ScrapeService/ReloadPassages",
-			opts...,
+			baseURL+ScrapeServiceReloadPassagesProcedure,
+			connect.WithSchema(scrapeServiceReloadPassagesMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
 
 // scrapeServiceClient implements ScrapeServiceClient.
 type scrapeServiceClient struct {
-	scrape         *connect_go.Client[v2.ScrapeRequest, v2.ScrapeResponse]
-	simpleScrape   *connect_go.Client[v2.SimpleScrapeRequest, v2.ScrapeResponse]
-	reloadPassages *connect_go.Client[v2.Empty, v2.ReloadPassagesResponse]
+	scrape         *connect.Client[v2.ScrapeRequest, v2.ScrapeResponse]
+	simpleScrape   *connect.Client[v2.SimpleScrapeRequest, v2.ScrapeResponse]
+	reloadPassages *connect.Client[v2.Empty, v2.ReloadPassagesResponse]
 }
 
 // Scrape calls mediawatch.scrape.v2.ScrapeService.Scrape.
-func (c *scrapeServiceClient) Scrape(ctx context.Context, req *connect_go.Request[v2.ScrapeRequest]) (*connect_go.Response[v2.ScrapeResponse], error) {
+func (c *scrapeServiceClient) Scrape(ctx context.Context, req *connect.Request[v2.ScrapeRequest]) (*connect.Response[v2.ScrapeResponse], error) {
 	return c.scrape.CallUnary(ctx, req)
 }
 
 // SimpleScrape calls mediawatch.scrape.v2.ScrapeService.SimpleScrape.
-func (c *scrapeServiceClient) SimpleScrape(ctx context.Context, req *connect_go.Request[v2.SimpleScrapeRequest]) (*connect_go.Response[v2.ScrapeResponse], error) {
+func (c *scrapeServiceClient) SimpleScrape(ctx context.Context, req *connect.Request[v2.SimpleScrapeRequest]) (*connect.Response[v2.ScrapeResponse], error) {
 	return c.simpleScrape.CallUnary(ctx, req)
 }
 
 // ReloadPassages calls mediawatch.scrape.v2.ScrapeService.ReloadPassages.
-func (c *scrapeServiceClient) ReloadPassages(ctx context.Context, req *connect_go.Request[v2.Empty]) (*connect_go.Response[v2.ReloadPassagesResponse], error) {
+func (c *scrapeServiceClient) ReloadPassages(ctx context.Context, req *connect.Request[v2.Empty]) (*connect.Response[v2.ReloadPassagesResponse], error) {
 	return c.reloadPassages.CallUnary(ctx, req)
 }
 
 // ScrapeServiceHandler is an implementation of the mediawatch.scrape.v2.ScrapeService service.
 type ScrapeServiceHandler interface {
 	// Endpoint Scrape
-	Scrape(context.Context, *connect_go.Request[v2.ScrapeRequest]) (*connect_go.Response[v2.ScrapeResponse], error)
+	Scrape(context.Context, *connect.Request[v2.ScrapeRequest]) (*connect.Response[v2.ScrapeResponse], error)
 	// Endpoint SimpleScrape
-	SimpleScrape(context.Context, *connect_go.Request[v2.SimpleScrapeRequest]) (*connect_go.Response[v2.ScrapeResponse], error)
+	SimpleScrape(context.Context, *connect.Request[v2.SimpleScrapeRequest]) (*connect.Response[v2.ScrapeResponse], error)
 	// Endpoint ReloadPassages
-	ReloadPassages(context.Context, *connect_go.Request[v2.Empty]) (*connect_go.Response[v2.ReloadPassagesResponse], error)
+	ReloadPassages(context.Context, *connect.Request[v2.Empty]) (*connect.Response[v2.ReloadPassagesResponse], error)
 }
 
 // NewScrapeServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -100,37 +129,50 @@ type ScrapeServiceHandler interface {
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewScrapeServiceHandler(svc ScrapeServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	mux := http.NewServeMux()
-	mux.Handle("/mediawatch.scrape.v2.ScrapeService/Scrape", connect_go.NewUnaryHandler(
-		"/mediawatch.scrape.v2.ScrapeService/Scrape",
+func NewScrapeServiceHandler(svc ScrapeServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	scrapeServiceScrapeHandler := connect.NewUnaryHandler(
+		ScrapeServiceScrapeProcedure,
 		svc.Scrape,
-		opts...,
-	))
-	mux.Handle("/mediawatch.scrape.v2.ScrapeService/SimpleScrape", connect_go.NewUnaryHandler(
-		"/mediawatch.scrape.v2.ScrapeService/SimpleScrape",
+		connect.WithSchema(scrapeServiceScrapeMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	scrapeServiceSimpleScrapeHandler := connect.NewUnaryHandler(
+		ScrapeServiceSimpleScrapeProcedure,
 		svc.SimpleScrape,
-		opts...,
-	))
-	mux.Handle("/mediawatch.scrape.v2.ScrapeService/ReloadPassages", connect_go.NewUnaryHandler(
-		"/mediawatch.scrape.v2.ScrapeService/ReloadPassages",
+		connect.WithSchema(scrapeServiceSimpleScrapeMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	scrapeServiceReloadPassagesHandler := connect.NewUnaryHandler(
+		ScrapeServiceReloadPassagesProcedure,
 		svc.ReloadPassages,
-		opts...,
-	))
-	return "/mediawatch.scrape.v2.ScrapeService/", mux
+		connect.WithSchema(scrapeServiceReloadPassagesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/mediawatch.scrape.v2.ScrapeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case ScrapeServiceScrapeProcedure:
+			scrapeServiceScrapeHandler.ServeHTTP(w, r)
+		case ScrapeServiceSimpleScrapeProcedure:
+			scrapeServiceSimpleScrapeHandler.ServeHTTP(w, r)
+		case ScrapeServiceReloadPassagesProcedure:
+			scrapeServiceReloadPassagesHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedScrapeServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedScrapeServiceHandler struct{}
 
-func (UnimplementedScrapeServiceHandler) Scrape(context.Context, *connect_go.Request[v2.ScrapeRequest]) (*connect_go.Response[v2.ScrapeResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.scrape.v2.ScrapeService.Scrape is not implemented"))
+func (UnimplementedScrapeServiceHandler) Scrape(context.Context, *connect.Request[v2.ScrapeRequest]) (*connect.Response[v2.ScrapeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.scrape.v2.ScrapeService.Scrape is not implemented"))
 }
 
-func (UnimplementedScrapeServiceHandler) SimpleScrape(context.Context, *connect_go.Request[v2.SimpleScrapeRequest]) (*connect_go.Response[v2.ScrapeResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.scrape.v2.ScrapeService.SimpleScrape is not implemented"))
+func (UnimplementedScrapeServiceHandler) SimpleScrape(context.Context, *connect.Request[v2.SimpleScrapeRequest]) (*connect.Response[v2.ScrapeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.scrape.v2.ScrapeService.SimpleScrape is not implemented"))
 }
 
-func (UnimplementedScrapeServiceHandler) ReloadPassages(context.Context, *connect_go.Request[v2.Empty]) (*connect_go.Response[v2.ReloadPassagesResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.scrape.v2.ScrapeService.ReloadPassages is not implemented"))
+func (UnimplementedScrapeServiceHandler) ReloadPassages(context.Context, *connect.Request[v2.Empty]) (*connect.Response[v2.ReloadPassagesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.scrape.v2.ScrapeService.ReloadPassages is not implemented"))
 }

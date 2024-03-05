@@ -3,17 +3,30 @@ syntax = "proto3";
 package mediawatch.common.v2;
 
 // Status Enumeration
+//
+// Status enumeration is shared accross multiple messages.
+//
+// Status of an object can be PENDING for an object that is not yet operational, 
+// ACTIVE for operational objects, SUSPENDED for objects that are temporarily 
+// not operational, CLOSED for objects that are no longer operational, 
+// DELETED for objects that are removed from the system, and OFFLINE for 
+// objects that are unreachable online.
+//
+// An object can be a feed, an organization, an account, or any other object in the system.
 enum Status {
     STATUS_UNSPECIFIED = 0;
     STATUS_PENDING = 1;
     STATUS_ACTIVE = 2;
     STATUS_SUSPENDED = 3;
-    STATUS_CLOSED = 4;
+    STATUS_CLOSED = 4; 
     STATUS_DELETED = 5;
     STATUS_OFFLINE = 6;
 };
 
 // State Enumeration
+//
+// State of the media outlet can be OK for a feed that is operational (reachable online), 
+// and NOT_OK for feeds that are not operational (unreachable online).
 enum State {
     STATE_UNSPECIFIED = 0;
     STATE_OK = 1;
@@ -21,6 +34,12 @@ enum State {
 };
 
 // StreamType Enumeration
+//
+// Stream type of the feed can be TWITTER for a Twitter feed, RSS for an RSS feed, 
+// OTHER for a custom feed (parsed by the system using a custom parser), and UNSPECIFIED as a default.
+//
+// As of June 2023, Twitter has stopped providing the public API access to the Twitter feeds, 
+// and as such is no longer supported.
 enum StreamType {
     STREAM_TYPE_UNSPECIFIED = 0;
     STREAM_TYPE_OTHER = 1;
@@ -29,26 +48,47 @@ enum StreamType {
 };
 
 // Locality Enumeration
+//
+// Locality of the media outlet can be LOCAL for a local media outlet, NATIONAL for a 
+// media outlet covering national news, INTERNATIONAL for a media outlet covering international news, 
+// MIXED for a media outlet covering both national and international news, UNSPECIFIED for 
+// a default value, OTHER for any other value that does not fit in any of the previous categories.
 enum Locality {
     LOCALITY_UNSPECIFIED = 0;
     LOCALITY_OTHER = 1;
     LOCALITY_LOCAL = 2;
     LOCALITY_NATIONAL = 3;
     LOCALITY_INTERNATIONAL = 4;
-    LOCALITY_MIXED = 5;
 };
 
 // BusinessType Enumeration
+//
+// Business type of the media outlet can be STATE for state controlled media outlets, 
+// ORGANIZATION for news organizations that employ journalists, BLOG for personal blogs, 
+// PORTAL for news aggregators and portals, OTHER for any other value that does not 
+// fit in any of the previous categories, and UNSPECIFIED as a default.
 enum BusinessType {
     BUSINESS_TYPE_UNSPECIFIED = 0;
     BUSINESS_TYPE_OTHER = 1;
-    BUSINESS_TYPE_AGENCY = 2;
+    BUSINESS_TYPE_STATE = 2;
     BUSINESS_TYPE_ORGANIZATION = 3;
     BUSINESS_TYPE_BLOG = 4;
     BUSINESS_TYPE_PORTAL = 5;
 };
 
 // ContentType Enumeration
+//
+// Content type of the media outlet describes the type of content the media outlet publishes in majority.
+// Currently supported content types are NEWS for news media, MARKET_BUSINESS for business and market news,
+// DEFENCE_ARMY_POLICE for defense, army and police news, ENTERTAINMENT for entertainment news, HEALTH_BEAUTY
+// for health and beauty news, SPORTS for sports news, RELIGION for religion news, OPINION for opinion news,
+// AGRICULTURE for agriculture news, SCIENCE for science news, EDUCATION for education news, JUSTICE for justice news,
+// MEDIA for media news, LIFESTYLE for lifestyle news, AUTO for automotive news, MUSIC for music news, TECH for technology news,
+// TRAVEL for travel news, ENERGY for energy news, ENVIRONMENT for environment news, and OTHER for any other value that does not
+// fit in any of the previous categories. For a default value use UNSPECIFIED.
+//
+// In the future we should consider adding more content types, and possibly a way to add custom content types, or additionally we should refactor
+// this enumeration to be a string based enumeration, and allow for any value to be added.
 enum ContentType {
     CONTENT_TYPE_UNSPECIFIED = 0;
     CONTENT_TYPE_OTHER = 1;
@@ -75,6 +115,15 @@ enum ContentType {
 };
 
 // PoliticalOrientation Enumeration
+//
+// IMPORTANT: Political orientation of the media outlet should be examined carefully, and peer reviewed
+// before assigning a value to it. Use this enumeration with caution.
+//
+// Political orientation of the media outlet can be LEFT for left wing media, 
+// CENTER_LEFT for center left media, CENTER for center media, CENTER_RIGHT for 
+// center right media, RIGHT for right wing media, and FAR_RIGHT for far right media.
+// For any other value that does not fit in any of the previous categories use OTHER,
+// and for a default value use UNSPECIFIED.
 enum PoliticalOrientation {
     POLITICAL_ORIENTATION_UNSPECIFIED = 0;
     POLITICAL_ORIENTATION_OTHER = 1;
@@ -87,14 +136,18 @@ enum PoliticalOrientation {
 };
 
 // Tier Enumeration
+//
+// Tier of the media outlet can be TRADITIONAL for a printed media outlet, DIGITAL for outlets 
+// that only have online presence, AGENCY for news agencies, BROADCASTING for broadcasting 
+// media (tv, radio), OTHER for any other format that does not fit in any of the previous categories, 
+// and UNSPECIFIED as a default.
 enum Tier {
     TIER_UNSPECIFIED = 0;
     TIER_OTHER = 1;
     TIER_TRADITIONAL = 2;
     TIER_DIGITAL = 3;
-    TIER_BROADCASTING_TV = 4;
-    TIER_BROADCASTING_RADIO = 5;
-    TIER_MIXED = 6;
+    TIER_AGENCY = 4;
+    TIER_BROADCASTING = 5;
 };
 
 // Pagination

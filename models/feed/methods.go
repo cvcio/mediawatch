@@ -323,6 +323,7 @@ func Update(ctx context.Context, mg *db.MongoDB, feed *feedsv2.Feed) error {
 	}
 
 	delete(fields, "id")
+	delete(fields, "created_at")
 
 	update := bson.M{"$set": fields}
 	filter := bson.M{"_id": oid}

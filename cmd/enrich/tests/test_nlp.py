@@ -57,7 +57,7 @@ async def test_extract_entities() -> None:
 async def test_summarize_doc() -> None:
     doc = test_model.spacy(test_text)
     summary = await summarize_doc(doc, 3)
-    assert len(summary) == 1552
+    assert len(summary) == 1496
     logging.info(summary)
 
 

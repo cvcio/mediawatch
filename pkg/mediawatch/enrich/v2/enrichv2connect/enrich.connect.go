@@ -5,9 +5,9 @@
 package enrichv2connect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	connect_go "github.com/bufbuild/connect-go"
 	v2 "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
 	http "net/http"
 	strings "strings"
@@ -18,23 +18,62 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect_go.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// EnrichServiceName is the fully-qualified name of the EnrichService service.
 	EnrichServiceName = "mediawatch.enrich.v2.EnrichService"
 )
 
+// These constants are the fully-qualified names of the RPCs defined in this package. They're
+// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+//
+// Note that these are different from the fully-qualified method names used by
+// google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
+// reflection-formatted method names, remove the leading slash and convert the remaining slash to a
+// period.
+const (
+	// EnrichServiceNLPProcedure is the fully-qualified name of the EnrichService's NLP RPC.
+	EnrichServiceNLPProcedure = "/mediawatch.enrich.v2.EnrichService/NLP"
+	// EnrichServiceStopWordsProcedure is the fully-qualified name of the EnrichService's StopWords RPC.
+	EnrichServiceStopWordsProcedure = "/mediawatch.enrich.v2.EnrichService/StopWords"
+	// EnrichServiceKeywordsProcedure is the fully-qualified name of the EnrichService's Keywords RPC.
+	EnrichServiceKeywordsProcedure = "/mediawatch.enrich.v2.EnrichService/Keywords"
+	// EnrichServiceEntitiesProcedure is the fully-qualified name of the EnrichService's Entities RPC.
+	EnrichServiceEntitiesProcedure = "/mediawatch.enrich.v2.EnrichService/Entities"
+	// EnrichServiceSummaryProcedure is the fully-qualified name of the EnrichService's Summary RPC.
+	EnrichServiceSummaryProcedure = "/mediawatch.enrich.v2.EnrichService/Summary"
+	// EnrichServiceTopicsProcedure is the fully-qualified name of the EnrichService's Topics RPC.
+	EnrichServiceTopicsProcedure = "/mediawatch.enrich.v2.EnrichService/Topics"
+	// EnrichServiceQuotesProcedure is the fully-qualified name of the EnrichService's Quotes RPC.
+	EnrichServiceQuotesProcedure = "/mediawatch.enrich.v2.EnrichService/Quotes"
+	// EnrichServiceClaimsProcedure is the fully-qualified name of the EnrichService's Claims RPC.
+	EnrichServiceClaimsProcedure = "/mediawatch.enrich.v2.EnrichService/Claims"
+)
+
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	enrichServiceServiceDescriptor         = v2.File_mediawatch_enrich_v2_enrich_proto.Services().ByName("EnrichService")
+	enrichServiceNLPMethodDescriptor       = enrichServiceServiceDescriptor.Methods().ByName("NLP")
+	enrichServiceStopWordsMethodDescriptor = enrichServiceServiceDescriptor.Methods().ByName("StopWords")
+	enrichServiceKeywordsMethodDescriptor  = enrichServiceServiceDescriptor.Methods().ByName("Keywords")
+	enrichServiceEntitiesMethodDescriptor  = enrichServiceServiceDescriptor.Methods().ByName("Entities")
+	enrichServiceSummaryMethodDescriptor   = enrichServiceServiceDescriptor.Methods().ByName("Summary")
+	enrichServiceTopicsMethodDescriptor    = enrichServiceServiceDescriptor.Methods().ByName("Topics")
+	enrichServiceQuotesMethodDescriptor    = enrichServiceServiceDescriptor.Methods().ByName("Quotes")
+	enrichServiceClaimsMethodDescriptor    = enrichServiceServiceDescriptor.Methods().ByName("Claims")
+)
+
 // EnrichServiceClient is a client for the mediawatch.enrich.v2.EnrichService service.
 type EnrichServiceClient interface {
-	NLP(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	StopWords(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Keywords(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Entities(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Summary(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Topics(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Quotes(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Claims(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
+	NLP(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	StopWords(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Keywords(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Entities(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Summary(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Topics(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Quotes(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Claims(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
 }
 
 // NewEnrichServiceClient constructs a client for the mediawatch.enrich.v2.EnrichService service. By
@@ -44,114 +83,122 @@ type EnrichServiceClient interface {
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewEnrichServiceClient(httpClient connect_go.HTTPClient, baseURL string, opts ...connect_go.ClientOption) EnrichServiceClient {
+func NewEnrichServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) EnrichServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &enrichServiceClient{
-		nLP: connect_go.NewClient[v2.EnrichRequest, v2.EnrichResponse](
+		nLP: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
-			baseURL+"/mediawatch.enrich.v2.EnrichService/NLP",
-			opts...,
+			baseURL+EnrichServiceNLPProcedure,
+			connect.WithSchema(enrichServiceNLPMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		stopWords: connect_go.NewClient[v2.EnrichRequest, v2.EnrichResponse](
+		stopWords: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
-			baseURL+"/mediawatch.enrich.v2.EnrichService/StopWords",
-			opts...,
+			baseURL+EnrichServiceStopWordsProcedure,
+			connect.WithSchema(enrichServiceStopWordsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		keywords: connect_go.NewClient[v2.EnrichRequest, v2.EnrichResponse](
+		keywords: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
-			baseURL+"/mediawatch.enrich.v2.EnrichService/Keywords",
-			opts...,
+			baseURL+EnrichServiceKeywordsProcedure,
+			connect.WithSchema(enrichServiceKeywordsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		entities: connect_go.NewClient[v2.EnrichRequest, v2.EnrichResponse](
+		entities: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
-			baseURL+"/mediawatch.enrich.v2.EnrichService/Entities",
-			opts...,
+			baseURL+EnrichServiceEntitiesProcedure,
+			connect.WithSchema(enrichServiceEntitiesMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		summary: connect_go.NewClient[v2.EnrichRequest, v2.EnrichResponse](
+		summary: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
-			baseURL+"/mediawatch.enrich.v2.EnrichService/Summary",
-			opts...,
+			baseURL+EnrichServiceSummaryProcedure,
+			connect.WithSchema(enrichServiceSummaryMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		topics: connect_go.NewClient[v2.EnrichRequest, v2.EnrichResponse](
+		topics: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
-			baseURL+"/mediawatch.enrich.v2.EnrichService/Topics",
-			opts...,
+			baseURL+EnrichServiceTopicsProcedure,
+			connect.WithSchema(enrichServiceTopicsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		quotes: connect_go.NewClient[v2.EnrichRequest, v2.EnrichResponse](
+		quotes: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
-			baseURL+"/mediawatch.enrich.v2.EnrichService/Quotes",
-			opts...,
+			baseURL+EnrichServiceQuotesProcedure,
+			connect.WithSchema(enrichServiceQuotesMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
-		claims: connect_go.NewClient[v2.EnrichRequest, v2.EnrichResponse](
+		claims: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
-			baseURL+"/mediawatch.enrich.v2.EnrichService/Claims",
-			opts...,
+			baseURL+EnrichServiceClaimsProcedure,
+			connect.WithSchema(enrichServiceClaimsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
 
 // enrichServiceClient implements EnrichServiceClient.
 type enrichServiceClient struct {
-	nLP       *connect_go.Client[v2.EnrichRequest, v2.EnrichResponse]
-	stopWords *connect_go.Client[v2.EnrichRequest, v2.EnrichResponse]
-	keywords  *connect_go.Client[v2.EnrichRequest, v2.EnrichResponse]
-	entities  *connect_go.Client[v2.EnrichRequest, v2.EnrichResponse]
-	summary   *connect_go.Client[v2.EnrichRequest, v2.EnrichResponse]
-	topics    *connect_go.Client[v2.EnrichRequest, v2.EnrichResponse]
-	quotes    *connect_go.Client[v2.EnrichRequest, v2.EnrichResponse]
-	claims    *connect_go.Client[v2.EnrichRequest, v2.EnrichResponse]
+	nLP       *connect.Client[v2.EnrichRequest, v2.EnrichResponse]
+	stopWords *connect.Client[v2.EnrichRequest, v2.EnrichResponse]
+	keywords  *connect.Client[v2.EnrichRequest, v2.EnrichResponse]
+	entities  *connect.Client[v2.EnrichRequest, v2.EnrichResponse]
+	summary   *connect.Client[v2.EnrichRequest, v2.EnrichResponse]
+	topics    *connect.Client[v2.EnrichRequest, v2.EnrichResponse]
+	quotes    *connect.Client[v2.EnrichRequest, v2.EnrichResponse]
+	claims    *connect.Client[v2.EnrichRequest, v2.EnrichResponse]
 }
 
 // NLP calls mediawatch.enrich.v2.EnrichService.NLP.
-func (c *enrichServiceClient) NLP(ctx context.Context, req *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
+func (c *enrichServiceClient) NLP(ctx context.Context, req *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
 	return c.nLP.CallUnary(ctx, req)
 }
 
 // StopWords calls mediawatch.enrich.v2.EnrichService.StopWords.
-func (c *enrichServiceClient) StopWords(ctx context.Context, req *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
+func (c *enrichServiceClient) StopWords(ctx context.Context, req *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
 	return c.stopWords.CallUnary(ctx, req)
 }
 
 // Keywords calls mediawatch.enrich.v2.EnrichService.Keywords.
-func (c *enrichServiceClient) Keywords(ctx context.Context, req *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
+func (c *enrichServiceClient) Keywords(ctx context.Context, req *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
 	return c.keywords.CallUnary(ctx, req)
 }
 
 // Entities calls mediawatch.enrich.v2.EnrichService.Entities.
-func (c *enrichServiceClient) Entities(ctx context.Context, req *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
+func (c *enrichServiceClient) Entities(ctx context.Context, req *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
 	return c.entities.CallUnary(ctx, req)
 }
 
 // Summary calls mediawatch.enrich.v2.EnrichService.Summary.
-func (c *enrichServiceClient) Summary(ctx context.Context, req *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
+func (c *enrichServiceClient) Summary(ctx context.Context, req *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
 	return c.summary.CallUnary(ctx, req)
 }
 
 // Topics calls mediawatch.enrich.v2.EnrichService.Topics.
-func (c *enrichServiceClient) Topics(ctx context.Context, req *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
+func (c *enrichServiceClient) Topics(ctx context.Context, req *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
 	return c.topics.CallUnary(ctx, req)
 }
 
 // Quotes calls mediawatch.enrich.v2.EnrichService.Quotes.
-func (c *enrichServiceClient) Quotes(ctx context.Context, req *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
+func (c *enrichServiceClient) Quotes(ctx context.Context, req *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
 	return c.quotes.CallUnary(ctx, req)
 }
 
 // Claims calls mediawatch.enrich.v2.EnrichService.Claims.
-func (c *enrichServiceClient) Claims(ctx context.Context, req *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
+func (c *enrichServiceClient) Claims(ctx context.Context, req *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
 	return c.claims.CallUnary(ctx, req)
 }
 
 // EnrichServiceHandler is an implementation of the mediawatch.enrich.v2.EnrichService service.
 type EnrichServiceHandler interface {
-	NLP(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	StopWords(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Keywords(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Entities(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Summary(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Topics(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Quotes(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
-	Claims(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error)
+	NLP(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	StopWords(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Keywords(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Entities(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Summary(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Topics(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Quotes(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
+	Claims(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
 }
 
 // NewEnrichServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -159,82 +206,110 @@ type EnrichServiceHandler interface {
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewEnrichServiceHandler(svc EnrichServiceHandler, opts ...connect_go.HandlerOption) (string, http.Handler) {
-	mux := http.NewServeMux()
-	mux.Handle("/mediawatch.enrich.v2.EnrichService/NLP", connect_go.NewUnaryHandler(
-		"/mediawatch.enrich.v2.EnrichService/NLP",
+func NewEnrichServiceHandler(svc EnrichServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	enrichServiceNLPHandler := connect.NewUnaryHandler(
+		EnrichServiceNLPProcedure,
 		svc.NLP,
-		opts...,
-	))
-	mux.Handle("/mediawatch.enrich.v2.EnrichService/StopWords", connect_go.NewUnaryHandler(
-		"/mediawatch.enrich.v2.EnrichService/StopWords",
+		connect.WithSchema(enrichServiceNLPMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	enrichServiceStopWordsHandler := connect.NewUnaryHandler(
+		EnrichServiceStopWordsProcedure,
 		svc.StopWords,
-		opts...,
-	))
-	mux.Handle("/mediawatch.enrich.v2.EnrichService/Keywords", connect_go.NewUnaryHandler(
-		"/mediawatch.enrich.v2.EnrichService/Keywords",
+		connect.WithSchema(enrichServiceStopWordsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	enrichServiceKeywordsHandler := connect.NewUnaryHandler(
+		EnrichServiceKeywordsProcedure,
 		svc.Keywords,
-		opts...,
-	))
-	mux.Handle("/mediawatch.enrich.v2.EnrichService/Entities", connect_go.NewUnaryHandler(
-		"/mediawatch.enrich.v2.EnrichService/Entities",
+		connect.WithSchema(enrichServiceKeywordsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	enrichServiceEntitiesHandler := connect.NewUnaryHandler(
+		EnrichServiceEntitiesProcedure,
 		svc.Entities,
-		opts...,
-	))
-	mux.Handle("/mediawatch.enrich.v2.EnrichService/Summary", connect_go.NewUnaryHandler(
-		"/mediawatch.enrich.v2.EnrichService/Summary",
+		connect.WithSchema(enrichServiceEntitiesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	enrichServiceSummaryHandler := connect.NewUnaryHandler(
+		EnrichServiceSummaryProcedure,
 		svc.Summary,
-		opts...,
-	))
-	mux.Handle("/mediawatch.enrich.v2.EnrichService/Topics", connect_go.NewUnaryHandler(
-		"/mediawatch.enrich.v2.EnrichService/Topics",
+		connect.WithSchema(enrichServiceSummaryMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	enrichServiceTopicsHandler := connect.NewUnaryHandler(
+		EnrichServiceTopicsProcedure,
 		svc.Topics,
-		opts...,
-	))
-	mux.Handle("/mediawatch.enrich.v2.EnrichService/Quotes", connect_go.NewUnaryHandler(
-		"/mediawatch.enrich.v2.EnrichService/Quotes",
+		connect.WithSchema(enrichServiceTopicsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	enrichServiceQuotesHandler := connect.NewUnaryHandler(
+		EnrichServiceQuotesProcedure,
 		svc.Quotes,
-		opts...,
-	))
-	mux.Handle("/mediawatch.enrich.v2.EnrichService/Claims", connect_go.NewUnaryHandler(
-		"/mediawatch.enrich.v2.EnrichService/Claims",
+		connect.WithSchema(enrichServiceQuotesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	enrichServiceClaimsHandler := connect.NewUnaryHandler(
+		EnrichServiceClaimsProcedure,
 		svc.Claims,
-		opts...,
-	))
-	return "/mediawatch.enrich.v2.EnrichService/", mux
+		connect.WithSchema(enrichServiceClaimsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/mediawatch.enrich.v2.EnrichService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case EnrichServiceNLPProcedure:
+			enrichServiceNLPHandler.ServeHTTP(w, r)
+		case EnrichServiceStopWordsProcedure:
+			enrichServiceStopWordsHandler.ServeHTTP(w, r)
+		case EnrichServiceKeywordsProcedure:
+			enrichServiceKeywordsHandler.ServeHTTP(w, r)
+		case EnrichServiceEntitiesProcedure:
+			enrichServiceEntitiesHandler.ServeHTTP(w, r)
+		case EnrichServiceSummaryProcedure:
+			enrichServiceSummaryHandler.ServeHTTP(w, r)
+		case EnrichServiceTopicsProcedure:
+			enrichServiceTopicsHandler.ServeHTTP(w, r)
+		case EnrichServiceQuotesProcedure:
+			enrichServiceQuotesHandler.ServeHTTP(w, r)
+		case EnrichServiceClaimsProcedure:
+			enrichServiceClaimsHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedEnrichServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedEnrichServiceHandler struct{}
 
-func (UnimplementedEnrichServiceHandler) NLP(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.NLP is not implemented"))
+func (UnimplementedEnrichServiceHandler) NLP(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.NLP is not implemented"))
 }
 
-func (UnimplementedEnrichServiceHandler) StopWords(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.StopWords is not implemented"))
+func (UnimplementedEnrichServiceHandler) StopWords(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.StopWords is not implemented"))
 }
 
-func (UnimplementedEnrichServiceHandler) Keywords(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Keywords is not implemented"))
+func (UnimplementedEnrichServiceHandler) Keywords(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Keywords is not implemented"))
 }
 
-func (UnimplementedEnrichServiceHandler) Entities(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Entities is not implemented"))
+func (UnimplementedEnrichServiceHandler) Entities(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Entities is not implemented"))
 }
 
-func (UnimplementedEnrichServiceHandler) Summary(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Summary is not implemented"))
+func (UnimplementedEnrichServiceHandler) Summary(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Summary is not implemented"))
 }
 
-func (UnimplementedEnrichServiceHandler) Topics(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Topics is not implemented"))
+func (UnimplementedEnrichServiceHandler) Topics(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Topics is not implemented"))
 }
 
-func (UnimplementedEnrichServiceHandler) Quotes(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Quotes is not implemented"))
+func (UnimplementedEnrichServiceHandler) Quotes(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Quotes is not implemented"))
 }
 
-func (UnimplementedEnrichServiceHandler) Claims(context.Context, *connect_go.Request[v2.EnrichRequest]) (*connect_go.Response[v2.EnrichResponse], error) {
-	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Claims is not implemented"))
+func (UnimplementedEnrichServiceHandler) Claims(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mediawatch.enrich.v2.EnrichService.Claims is not implemented"))
 }

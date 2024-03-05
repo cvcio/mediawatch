@@ -5,6 +5,7 @@
 
 const { URL } = require('url');
 const axios = require('axios');
+const UserAgent = require('user-agents');
 const { getParameterByName } = require('../utils/strings');
 
 const url = (u) => {
@@ -32,10 +33,11 @@ const parseJSON = (body) => {
 
 const fetchAPI = async (link) => {
 	const url = new URL(link);
+	const userAgent = new UserAgent();
 	try {
 		axios.defaults.headers.get['Content-Type'] = 'application/json;charset=utf-8;text/html;text/plain';
 		axios.defaults.headers.get['Access-Control-Allow-Origin'] = '*';
-		axios.defaults.headers.get['User-Agent'] = 'MediaWatch Bot/2.0 (mediawatch.io)';
+		axios.defaults.headers.get['User-Agent'] = userAgent.toString(); // 'MediaWatch Bot/2.0 (mediawatch.io)';
 
 		const html = await axios({
 			method: 'get',

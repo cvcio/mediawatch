@@ -1,24 +1,25 @@
-FROM node:16-alpine AS base
+FROM node:20-alpine AS base
 
-# Install certificates and git
 RUN apk add --update --no-cache libc6-compat ca-certificates git
-# Define working directory and copy source
 WORKDIR /app
 
 COPY proto /app/proto
-
 COPY cmd/scraper/package.json cmd/scraper/yarn.lock ./
 
 FROM base AS dependencies
+
 WORKDIR /app
 
-RUN npm install --omit=dev
-RUN cp -R node_modules /tmp/node_modules
+RUN corepack enable && yarn set version stable
+RUN git config --global url."https://".insteadOf ssh://
+RUN yarn config set npmScopes.buf.npmRegistryServer https://buf.build/gen/npm/v1/
 
-# Install dependencies and build
-RUN npm install
 COPY cmd/scraper/ /app
-RUN npm run build
+
+RUN yarn install
+RUN yarn build
+
+RUN cp -R node_modules /tmp/node_modules
 
 FROM dependencies as release
 ENV NODE_ENV=production
@@ -34,4 +35,4 @@ COPY cmd/scraper/.env.production .env
 EXPOSE 50050
 
 # Start the app
-CMD ["npm", "run", "start:production"]
+CMD ["yarn", "start:production"]
