@@ -8,6 +8,7 @@ import (
 
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/db"
+	passagesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/passages/v2"
 	scrape_pb "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2"
 	"github.com/cvcio/mediawatch/pkg/web"
 	"github.com/go-chi/render"
@@ -40,14 +41,14 @@ func (u *Passages) Create() http.HandlerFunc {
 			return
 		}
 
-		var newPassage passage.Passage
+		var newPassage *passagesv2.Passage
 		if err := web.Unmarshal(r.Body, &newPassage); err != nil {
 			u.log.Debug(err)
 			render.Render(w, r, web.ErrInvalidRequest(err))
 			return
 		}
 
-		created, err := passage.Create(ctx, u.DB, &newPassage, time.Now())
+		created, err := passage.Create(ctx, u.DB, newPassage, time.Now()) // Remove the address-of operator (&) from newPassage
 		if err != nil {
 			u.log.Debug(err)
 			render.Render(w, r, web.ErrInvalidRequest(err))

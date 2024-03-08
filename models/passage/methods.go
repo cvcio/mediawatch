@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cvcio/mediawatch/pkg/db"
+	passagesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/passages/v2"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -15,30 +16,28 @@ import (
 
 const passagesCollection = "passages"
 
-// Create inserts a new feed into the database.
-func Create(ctx context.Context, dbConn *db.MongoDB, cf *Passage, now time.Time) (*Passage, error) {
-	ctx, span := trace.StartSpan(ctx, "model.feed.Create")
+// Create inserts a new passage into the database.
+func Create(ctx context.Context, dbConn *db.MongoDB, passage *passagesv2.Passage, now time.Time) (*passagesv2.Passage, error) {
+
+	ctx, span := trace.StartSpan(ctx, "model.passage.Create")
 	defer span.End()
 
-	filter := bson.M{"type": cf.Type, "text": cf.Text}
+	filter := bson.M{"type": passage.Type, "text": passage.Text}
 
-	var p *Passage
+	var p *passagesv2.Passage
+
 	f := func(collection *mongo.Collection) error {
 		return collection.FindOne(ctx, filter).Decode(&p)
 	}
-	if err := dbConn.Execute(ctx, passagesCollection, f); err == nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("%s db.passages.find(%s)", "Passage already exists", cf.Text))
-	}
-
-	cf.ID = primitive.NewObjectID()
+	passage.Id = primitive.NewObjectID().Hex()
 
 	f = func(collection *mongo.Collection) error {
-		_, err := collection.InsertOne(ctx, &cf)
+		_, err := collection.InsertOne(ctx, &passage)
 		return err
 	}
 	if err := dbConn.Execute(ctx, passagesCollection, f); err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("db.passages.insert(%s)", db.Query(&cf)))
+		return nil, errors.Wrap(err, fmt.Sprintf("db.passages.insert(%s)", db.Query(&passage)))
 	}
 
-	return cf, nil
+	return passage, nil
 }
