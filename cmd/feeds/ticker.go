@@ -208,6 +208,7 @@ func (ticker *Ticker) Produce(urls []link.Link) {
 		}
 		go ticker.worker.Produce(kafka.Message{
 			Value: []byte(message),
+			Key:   []byte(v.Hostname),
 			Topic: "worker",
 		})
 

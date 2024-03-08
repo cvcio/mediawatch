@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package mediawatch.passages.v2;
+
+enum PassageType {
+  TRIM_LEFT = 0;
+  TRIM_RIGHT = 1;
+  SPLIT = 2;
+}
+
+message Passage {
+  string id = 1;
+  string text = 2;
+  string language = 3;
+  PassageType type = 4;
+}
