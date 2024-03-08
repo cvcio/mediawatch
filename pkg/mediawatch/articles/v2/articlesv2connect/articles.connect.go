@@ -18,7 +18,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
+const _ = connect.IsAtLeastVersion0_1_0
 
 const (
 	// ArticlesServiceName is the fully-qualified name of the ArticlesService service.
@@ -47,15 +47,6 @@ const (
 	ArticlesServiceStreamRelatedArticlesProcedure = "/mediawatch.articles.v2.ArticlesService/StreamRelatedArticles"
 )
 
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	articlesServiceServiceDescriptor                     = v2.File_mediawatch_articles_v2_articles_proto.Services().ByName("ArticlesService")
-	articlesServiceGetArticleMethodDescriptor            = articlesServiceServiceDescriptor.Methods().ByName("GetArticle")
-	articlesServiceGetArticlesMethodDescriptor           = articlesServiceServiceDescriptor.Methods().ByName("GetArticles")
-	articlesServiceStreamArticlesMethodDescriptor        = articlesServiceServiceDescriptor.Methods().ByName("StreamArticles")
-	articlesServiceStreamRelatedArticlesMethodDescriptor = articlesServiceServiceDescriptor.Methods().ByName("StreamRelatedArticles")
-)
-
 // ArticlesServiceClient is a client for the mediawatch.articles.v2.ArticlesService service.
 type ArticlesServiceClient interface {
 	// GetArticle
@@ -81,26 +72,22 @@ func NewArticlesServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 		getArticle: connect.NewClient[v2.QueryArticle, v2.Article](
 			httpClient,
 			baseURL+ArticlesServiceGetArticleProcedure,
-			connect.WithSchema(articlesServiceGetArticleMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		getArticles: connect.NewClient[v2.QueryArticle, v2.ArticleList](
 			httpClient,
 			baseURL+ArticlesServiceGetArticlesProcedure,
-			connect.WithSchema(articlesServiceGetArticlesMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		streamArticles: connect.NewClient[v2.QueryArticle, v2.ArticleList](
 			httpClient,
 			baseURL+ArticlesServiceStreamArticlesProcedure,
-			connect.WithSchema(articlesServiceStreamArticlesMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		streamRelatedArticles: connect.NewClient[v2.QueryArticle, v2.ArticleList](
 			httpClient,
 			baseURL+ArticlesServiceStreamRelatedArticlesProcedure,
-			connect.WithSchema(articlesServiceStreamRelatedArticlesMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 	}
 }
@@ -155,26 +142,22 @@ func NewArticlesServiceHandler(svc ArticlesServiceHandler, opts ...connect.Handl
 	articlesServiceGetArticleHandler := connect.NewUnaryHandler(
 		ArticlesServiceGetArticleProcedure,
 		svc.GetArticle,
-		connect.WithSchema(articlesServiceGetArticleMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	articlesServiceGetArticlesHandler := connect.NewUnaryHandler(
 		ArticlesServiceGetArticlesProcedure,
 		svc.GetArticles,
-		connect.WithSchema(articlesServiceGetArticlesMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	articlesServiceStreamArticlesHandler := connect.NewServerStreamHandler(
 		ArticlesServiceStreamArticlesProcedure,
 		svc.StreamArticles,
-		connect.WithSchema(articlesServiceStreamArticlesMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	articlesServiceStreamRelatedArticlesHandler := connect.NewServerStreamHandler(
 		ArticlesServiceStreamRelatedArticlesProcedure,
 		svc.StreamRelatedArticles,
-		connect.WithSchema(articlesServiceStreamRelatedArticlesMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	return "/mediawatch.articles.v2.ArticlesService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {

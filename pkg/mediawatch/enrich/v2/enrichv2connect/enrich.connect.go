@@ -18,7 +18,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
+const _ = connect.IsAtLeastVersion0_1_0
 
 const (
 	// EnrichServiceName is the fully-qualified name of the EnrichService service.
@@ -51,19 +51,6 @@ const (
 	EnrichServiceClaimsProcedure = "/mediawatch.enrich.v2.EnrichService/Claims"
 )
 
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	enrichServiceServiceDescriptor         = v2.File_mediawatch_enrich_v2_enrich_proto.Services().ByName("EnrichService")
-	enrichServiceNLPMethodDescriptor       = enrichServiceServiceDescriptor.Methods().ByName("NLP")
-	enrichServiceStopWordsMethodDescriptor = enrichServiceServiceDescriptor.Methods().ByName("StopWords")
-	enrichServiceKeywordsMethodDescriptor  = enrichServiceServiceDescriptor.Methods().ByName("Keywords")
-	enrichServiceEntitiesMethodDescriptor  = enrichServiceServiceDescriptor.Methods().ByName("Entities")
-	enrichServiceSummaryMethodDescriptor   = enrichServiceServiceDescriptor.Methods().ByName("Summary")
-	enrichServiceTopicsMethodDescriptor    = enrichServiceServiceDescriptor.Methods().ByName("Topics")
-	enrichServiceQuotesMethodDescriptor    = enrichServiceServiceDescriptor.Methods().ByName("Quotes")
-	enrichServiceClaimsMethodDescriptor    = enrichServiceServiceDescriptor.Methods().ByName("Claims")
-)
-
 // EnrichServiceClient is a client for the mediawatch.enrich.v2.EnrichService service.
 type EnrichServiceClient interface {
 	NLP(context.Context, *connect.Request[v2.EnrichRequest]) (*connect.Response[v2.EnrichResponse], error)
@@ -89,50 +76,42 @@ func NewEnrichServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 		nLP: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
 			baseURL+EnrichServiceNLPProcedure,
-			connect.WithSchema(enrichServiceNLPMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		stopWords: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
 			baseURL+EnrichServiceStopWordsProcedure,
-			connect.WithSchema(enrichServiceStopWordsMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		keywords: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
 			baseURL+EnrichServiceKeywordsProcedure,
-			connect.WithSchema(enrichServiceKeywordsMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		entities: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
 			baseURL+EnrichServiceEntitiesProcedure,
-			connect.WithSchema(enrichServiceEntitiesMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		summary: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
 			baseURL+EnrichServiceSummaryProcedure,
-			connect.WithSchema(enrichServiceSummaryMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		topics: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
 			baseURL+EnrichServiceTopicsProcedure,
-			connect.WithSchema(enrichServiceTopicsMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		quotes: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
 			baseURL+EnrichServiceQuotesProcedure,
-			connect.WithSchema(enrichServiceQuotesMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		claims: connect.NewClient[v2.EnrichRequest, v2.EnrichResponse](
 			httpClient,
 			baseURL+EnrichServiceClaimsProcedure,
-			connect.WithSchema(enrichServiceClaimsMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 	}
 }
@@ -210,50 +189,42 @@ func NewEnrichServiceHandler(svc EnrichServiceHandler, opts ...connect.HandlerOp
 	enrichServiceNLPHandler := connect.NewUnaryHandler(
 		EnrichServiceNLPProcedure,
 		svc.NLP,
-		connect.WithSchema(enrichServiceNLPMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	enrichServiceStopWordsHandler := connect.NewUnaryHandler(
 		EnrichServiceStopWordsProcedure,
 		svc.StopWords,
-		connect.WithSchema(enrichServiceStopWordsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	enrichServiceKeywordsHandler := connect.NewUnaryHandler(
 		EnrichServiceKeywordsProcedure,
 		svc.Keywords,
-		connect.WithSchema(enrichServiceKeywordsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	enrichServiceEntitiesHandler := connect.NewUnaryHandler(
 		EnrichServiceEntitiesProcedure,
 		svc.Entities,
-		connect.WithSchema(enrichServiceEntitiesMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	enrichServiceSummaryHandler := connect.NewUnaryHandler(
 		EnrichServiceSummaryProcedure,
 		svc.Summary,
-		connect.WithSchema(enrichServiceSummaryMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	enrichServiceTopicsHandler := connect.NewUnaryHandler(
 		EnrichServiceTopicsProcedure,
 		svc.Topics,
-		connect.WithSchema(enrichServiceTopicsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	enrichServiceQuotesHandler := connect.NewUnaryHandler(
 		EnrichServiceQuotesProcedure,
 		svc.Quotes,
-		connect.WithSchema(enrichServiceQuotesMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	enrichServiceClaimsHandler := connect.NewUnaryHandler(
 		EnrichServiceClaimsProcedure,
 		svc.Claims,
-		connect.WithSchema(enrichServiceClaimsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	return "/mediawatch.enrich.v2.EnrichService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
