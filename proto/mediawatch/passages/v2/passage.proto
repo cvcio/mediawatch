@@ -14,3 +14,19 @@ message Passage {
   string language = 3;
   PassageType type = 4;
 }
+
+message PassageList {
+    repeated Passage data = 1;
+}
+
+message QueryPassage {
+    string id = 1;
+    string language = 3;
+}
+
+service PassageService {
+    // create a new passage
+    rpc CreatePassage (Passage) returns (Passage) {};
+    // get list of passages by query
+    rpc GetPassages (QueryPassage) returns (PassageList) {};    
+}
