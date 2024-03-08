@@ -6,7 +6,6 @@ import (
 )
 
 // Passage to Trim
-// Passage to Trim
 type Passage struct {
 	ID       primitive.ObjectID     `bson:"_id" json:"id"`
 	Text     string                 `json:"text" bson:"text"`
