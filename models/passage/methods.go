@@ -8,11 +8,43 @@ import (
 	"github.com/cvcio/mediawatch/pkg/db"
 	passagesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/passages/v2"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
 const passagesCollection = "passages"
+
+// EnsureIndex in mongodb.
+func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
+	index := []mongo.IndexModel{
+		{
+			Keys: bson.M{
+				"type": 1,
+				"text": 1,
+			},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{
+				{Key: "language", Value: bsonx.String("text")},
+			},
+			Options: options.Index().SetDefaultLanguage("en").SetLanguageOverride("el"),
+		},
+	}
+	opts := options.CreateIndexes().SetMaxTime(10 * time.Second)
+
+	f := func(collection *mongo.Collection) error {
+		_, err := collection.Indexes().CreateMany(ctx, index, opts) //EnsureIndex(index)
+		return err
+	}
+	if err := dbConn.Execute(ctx, passagesCollection, f); err != nil {
+		return errors.Wrap(err, "db.passages.ensureIndex()")
+	}
+	return nil
+}
 
 // Create inserts a new passage into the database.
 func Create(ctx context.Context, dbConn *db.MongoDB, passage *passagesv2.Passage, now time.Time) (*passagesv2.Passage, error) {
