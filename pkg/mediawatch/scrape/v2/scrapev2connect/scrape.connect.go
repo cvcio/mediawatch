@@ -18,7 +18,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
+const _ = connect.IsAtLeastVersion0_1_0
 
 const (
 	// ScrapeServiceName is the fully-qualified name of the ScrapeService service.
@@ -41,14 +41,6 @@ const (
 	// ScrapeServiceReloadPassagesProcedure is the fully-qualified name of the ScrapeService's
 	// ReloadPassages RPC.
 	ScrapeServiceReloadPassagesProcedure = "/mediawatch.scrape.v2.ScrapeService/ReloadPassages"
-)
-
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	scrapeServiceServiceDescriptor              = v2.File_mediawatch_scrape_v2_scrape_proto.Services().ByName("ScrapeService")
-	scrapeServiceScrapeMethodDescriptor         = scrapeServiceServiceDescriptor.Methods().ByName("Scrape")
-	scrapeServiceSimpleScrapeMethodDescriptor   = scrapeServiceServiceDescriptor.Methods().ByName("SimpleScrape")
-	scrapeServiceReloadPassagesMethodDescriptor = scrapeServiceServiceDescriptor.Methods().ByName("ReloadPassages")
 )
 
 // ScrapeServiceClient is a client for the mediawatch.scrape.v2.ScrapeService service.
@@ -74,20 +66,17 @@ func NewScrapeServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 		scrape: connect.NewClient[v2.ScrapeRequest, v2.ScrapeResponse](
 			httpClient,
 			baseURL+ScrapeServiceScrapeProcedure,
-			connect.WithSchema(scrapeServiceScrapeMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		simpleScrape: connect.NewClient[v2.SimpleScrapeRequest, v2.ScrapeResponse](
 			httpClient,
 			baseURL+ScrapeServiceSimpleScrapeProcedure,
-			connect.WithSchema(scrapeServiceSimpleScrapeMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		reloadPassages: connect.NewClient[v2.Empty, v2.ReloadPassagesResponse](
 			httpClient,
 			baseURL+ScrapeServiceReloadPassagesProcedure,
-			connect.WithSchema(scrapeServiceReloadPassagesMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 	}
 }
@@ -133,20 +122,17 @@ func NewScrapeServiceHandler(svc ScrapeServiceHandler, opts ...connect.HandlerOp
 	scrapeServiceScrapeHandler := connect.NewUnaryHandler(
 		ScrapeServiceScrapeProcedure,
 		svc.Scrape,
-		connect.WithSchema(scrapeServiceScrapeMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	scrapeServiceSimpleScrapeHandler := connect.NewUnaryHandler(
 		ScrapeServiceSimpleScrapeProcedure,
 		svc.SimpleScrape,
-		connect.WithSchema(scrapeServiceSimpleScrapeMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	scrapeServiceReloadPassagesHandler := connect.NewUnaryHandler(
 		ScrapeServiceReloadPassagesProcedure,
 		svc.ReloadPassages,
-		connect.WithSchema(scrapeServiceReloadPassagesMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	return "/mediawatch.scrape.v2.ScrapeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
