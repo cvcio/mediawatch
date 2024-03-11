@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/cvcio/mediawatch/pkg/db"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	passagesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/passages/v2"
+
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -76,4 +78,63 @@ func Create(ctx context.Context, dbConn *db.MongoDB, passage *passagesv2.Passage
 	}
 
 	return passage, nil
+}
+
+// List returns a list of passages by passage query.
+func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (*passagesv2.PassageList, error) {
+	filter := bson.M{}
+
+	opts := DefaultOpts()
+	for _, o := range optionsList {
+		o(&opts)
+	}
+
+	if opts.Lang != "" {
+		filter["language"] = opts.Lang
+	}
+
+	findOptions := options.Find()
+	findOptions.SetLimit(int64(opts.Limit))
+	findOptions.SetSkip(int64(opts.Offset))
+
+	data := make([]*passagesv2.Passage, 0)
+	pagination := &commonv2.Pagination{}
+
+	p, err := db.GetPagination(ctx, mg, filter, opts.Limit, passagesCollection)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := p["total"]; ok {
+		pagination.Total = p["total"].(int64)
+	}
+	if _, ok := p["pages"]; ok {
+		pagination.Pages = p["pages"].(int64)
+	}
+
+	f := func(collection *mongo.Collection) error {
+		c, err := collection.Find(ctx, filter, findOptions)
+		if err != nil {
+			return err
+		}
+		defer c.Close(ctx)
+		for c.Next(ctx) {
+			var p passagesv2.Passage
+			err := c.Decode(&p)
+			if err != nil {
+				return err
+			}
+			data = append(data, &p)
+		}
+		return nil
+	}
+
+	if err := mg.Execute(ctx, passagesCollection, f); err != nil {
+		return nil, errors.Wrap(err, "db.passages.find()")
+	}
+
+	return &passagesv2.PassageList{
+		Data:       data,
+		Pagination: pagination,
+	}, nil
 }

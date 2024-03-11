@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package mediawatch.passages.v2;
 
+import "mediawatch/common/v2/common.proto";
+
 enum PassageType {
   TRIM_LEFT = 0;
   TRIM_RIGHT = 1;
@@ -17,6 +19,7 @@ message Passage {
 
 message PassageList {
     repeated Passage data = 1;
+    mediawatch.common.v2.Pagination pagination = 2;
 }
 
 message QueryPassage {
