@@ -18,7 +18,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// PassageServiceName is the fully-qualified name of the PassageService service.
@@ -39,6 +39,13 @@ const (
 	// PassageServiceGetPassagesProcedure is the fully-qualified name of the PassageService's
 	// GetPassages RPC.
 	PassageServiceGetPassagesProcedure = "/mediawatch.passages.v2.PassageService/GetPassages"
+)
+
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	passageServiceServiceDescriptor             = v2.File_mediawatch_passages_v2_passage_proto.Services().ByName("PassageService")
+	passageServiceCreatePassageMethodDescriptor = passageServiceServiceDescriptor.Methods().ByName("CreatePassage")
+	passageServiceGetPassagesMethodDescriptor   = passageServiceServiceDescriptor.Methods().ByName("GetPassages")
 )
 
 // PassageServiceClient is a client for the mediawatch.passages.v2.PassageService service.
@@ -62,12 +69,14 @@ func NewPassageServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 		createPassage: connect.NewClient[v2.Passage, v2.Passage](
 			httpClient,
 			baseURL+PassageServiceCreatePassageProcedure,
-			opts...,
+			connect.WithSchema(passageServiceCreatePassageMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getPassages: connect.NewClient[v2.QueryPassage, v2.PassageList](
 			httpClient,
 			baseURL+PassageServiceGetPassagesProcedure,
-			opts...,
+			connect.WithSchema(passageServiceGetPassagesMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
@@ -105,12 +114,14 @@ func NewPassageServiceHandler(svc PassageServiceHandler, opts ...connect.Handler
 	passageServiceCreatePassageHandler := connect.NewUnaryHandler(
 		PassageServiceCreatePassageProcedure,
 		svc.CreatePassage,
-		opts...,
+		connect.WithSchema(passageServiceCreatePassageMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	passageServiceGetPassagesHandler := connect.NewUnaryHandler(
 		PassageServiceGetPassagesProcedure,
 		svc.GetPassages,
-		opts...,
+		connect.WithSchema(passageServiceGetPassagesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	return "/mediawatch.passages.v2.PassageService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {

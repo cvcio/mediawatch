@@ -19,7 +19,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// FeedServiceName is the fully-qualified name of the FeedService service.
@@ -49,6 +49,18 @@ const (
 	FeedServiceGetFeedsStreamListProcedure = "/mediawatch.feeds.v2.FeedService/GetFeedsStreamList"
 	// FeedServiceTestFeedProcedure is the fully-qualified name of the FeedService's TestFeed RPC.
 	FeedServiceTestFeedProcedure = "/mediawatch.feeds.v2.FeedService/TestFeed"
+)
+
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	feedServiceServiceDescriptor                  = v2.File_mediawatch_feeds_v2_feed_proto.Services().ByName("FeedService")
+	feedServiceCreateFeedMethodDescriptor         = feedServiceServiceDescriptor.Methods().ByName("CreateFeed")
+	feedServiceGetFeedMethodDescriptor            = feedServiceServiceDescriptor.Methods().ByName("GetFeed")
+	feedServiceGetFeedsMethodDescriptor           = feedServiceServiceDescriptor.Methods().ByName("GetFeeds")
+	feedServiceUpdateFeedMethodDescriptor         = feedServiceServiceDescriptor.Methods().ByName("UpdateFeed")
+	feedServiceDeleteFeedMethodDescriptor         = feedServiceServiceDescriptor.Methods().ByName("DeleteFeed")
+	feedServiceGetFeedsStreamListMethodDescriptor = feedServiceServiceDescriptor.Methods().ByName("GetFeedsStreamList")
+	feedServiceTestFeedMethodDescriptor           = feedServiceServiceDescriptor.Methods().ByName("TestFeed")
 )
 
 // FeedServiceClient is a client for the mediawatch.feeds.v2.FeedService service.
@@ -82,37 +94,44 @@ func NewFeedServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 		createFeed: connect.NewClient[v2.Feed, v2.Feed](
 			httpClient,
 			baseURL+FeedServiceCreateFeedProcedure,
-			opts...,
+			connect.WithSchema(feedServiceCreateFeedMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getFeed: connect.NewClient[v2.QueryFeed, v2.Feed](
 			httpClient,
 			baseURL+FeedServiceGetFeedProcedure,
-			opts...,
+			connect.WithSchema(feedServiceGetFeedMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getFeeds: connect.NewClient[v2.QueryFeed, v2.FeedList](
 			httpClient,
 			baseURL+FeedServiceGetFeedsProcedure,
-			opts...,
+			connect.WithSchema(feedServiceGetFeedsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		updateFeed: connect.NewClient[v2.Feed, v21.ResponseWithMessage](
 			httpClient,
 			baseURL+FeedServiceUpdateFeedProcedure,
-			opts...,
+			connect.WithSchema(feedServiceUpdateFeedMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		deleteFeed: connect.NewClient[v2.Feed, v21.ResponseWithMessage](
 			httpClient,
 			baseURL+FeedServiceDeleteFeedProcedure,
-			opts...,
+			connect.WithSchema(feedServiceDeleteFeedMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getFeedsStreamList: connect.NewClient[v2.QueryFeed, v2.FeedList](
 			httpClient,
 			baseURL+FeedServiceGetFeedsStreamListProcedure,
-			opts...,
+			connect.WithSchema(feedServiceGetFeedsStreamListMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		testFeed: connect.NewClient[v2.Feed, v2.FeedTest](
 			httpClient,
 			baseURL+FeedServiceTestFeedProcedure,
-			opts...,
+			connect.WithSchema(feedServiceTestFeedMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
@@ -190,37 +209,44 @@ func NewFeedServiceHandler(svc FeedServiceHandler, opts ...connect.HandlerOption
 	feedServiceCreateFeedHandler := connect.NewUnaryHandler(
 		FeedServiceCreateFeedProcedure,
 		svc.CreateFeed,
-		opts...,
+		connect.WithSchema(feedServiceCreateFeedMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	feedServiceGetFeedHandler := connect.NewUnaryHandler(
 		FeedServiceGetFeedProcedure,
 		svc.GetFeed,
-		opts...,
+		connect.WithSchema(feedServiceGetFeedMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	feedServiceGetFeedsHandler := connect.NewUnaryHandler(
 		FeedServiceGetFeedsProcedure,
 		svc.GetFeeds,
-		opts...,
+		connect.WithSchema(feedServiceGetFeedsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	feedServiceUpdateFeedHandler := connect.NewUnaryHandler(
 		FeedServiceUpdateFeedProcedure,
 		svc.UpdateFeed,
-		opts...,
+		connect.WithSchema(feedServiceUpdateFeedMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	feedServiceDeleteFeedHandler := connect.NewUnaryHandler(
 		FeedServiceDeleteFeedProcedure,
 		svc.DeleteFeed,
-		opts...,
+		connect.WithSchema(feedServiceDeleteFeedMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	feedServiceGetFeedsStreamListHandler := connect.NewUnaryHandler(
 		FeedServiceGetFeedsStreamListProcedure,
 		svc.GetFeedsStreamList,
-		opts...,
+		connect.WithSchema(feedServiceGetFeedsStreamListMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	feedServiceTestFeedHandler := connect.NewUnaryHandler(
 		FeedServiceTestFeedProcedure,
 		svc.TestFeed,
-		opts...,
+		connect.WithSchema(feedServiceTestFeedMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	return "/mediawatch.feeds.v2.FeedService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {

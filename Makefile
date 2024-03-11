@@ -40,6 +40,7 @@ buf-generate-py: ## generate python files
 		--exclude-path proto/mediawatch/compare \
 		--exclude-path proto/mediawatch/feeds \
 		--exclude-path proto/mediawatch/scrape \
+		--exclude-path proto/mediawatch/passages \
 		--exclude-path proto/mediawatch/posts \
 		.  
 
