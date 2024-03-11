@@ -5,9 +5,10 @@ package mediawatch.passages.v2;
 import "mediawatch/common/v2/common.proto";
 
 enum PassageType {
-  TRIM_LEFT = 0;
-  TRIM_RIGHT = 1;
-  SPLIT = 2;
+  TYPE_UNSPECIFIED = 0;
+  TRIM_LEFT = 1;
+  TRIM_RIGHT = 2;
+  SPLIT = 3;
 }
 
 message Passage {
@@ -24,7 +25,7 @@ message PassageList {
 
 message QueryPassage {
     string id = 1;
-    string language = 3;
+    string language = 2;
 }
 
 service PassageService {
