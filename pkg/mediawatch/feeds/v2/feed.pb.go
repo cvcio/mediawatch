@@ -143,13 +143,13 @@ type FeedStream struct {
 
 	// stream key to select, can be the twitter_id of the feed in case
 	// stream type is STREAM_TYPE_TWITTER, otherwise an ATOM/RSS feed url.
-	StreamTarget string `protobuf:"bytes,1,opt,name=stream_target,json=streamTarget,proto3" json:"stream_target,omitempty"`
+	StreamTarget string `protobuf:"bytes,1,opt,name=stream_target,json=streamTarget,proto3" json:"stream_target,omitempty" bson:"stream_target,omitempty"`
 	// stream type, can be other, twitter or rss
 	// currently only twitter is supported
-	StreamType v2.StreamType `protobuf:"varint,2,opt,name=stream_type,json=streamType,proto3,enum=mediawatch.common.v2.StreamType" json:"stream_type,omitempty"`
+	StreamType v2.StreamType `protobuf:"varint,2,opt,name=stream_type,json=streamType,proto3,enum=mediawatch.common.v2.StreamType" json:"stream_type,omitempty" bson:"stream_type,omitempty"`
 	// common status (see common.proto)
-	StreamStatus  v2.Status `protobuf:"varint,3,opt,name=stream_status,json=streamStatus,proto3,enum=mediawatch.common.v2.Status" json:"stream_status,omitempty"`
-	RequiresProxy bool      `protobuf:"varint,4,opt,name=requires_proxy,json=requiresProxy,proto3" json:"requires_proxy,omitempty"`
+	StreamStatus  v2.Status `protobuf:"varint,3,opt,name=stream_status,json=streamStatus,proto3,enum=mediawatch.common.v2.Status" json:"stream_status,omitempty" bson:"stream_status,omitempty"`
+	RequiresProxy bool      `protobuf:"varint,4,opt,name=requires_proxy,json=requiresProxy,proto3" json:"requires_proxy,omitempty" bson:"requires_proxy,omitempty"`
 	// stream state
 	State v2.State `protobuf:"varint,5,opt,name=state,proto3,enum=mediawatch.common.v2.State" json:"state,omitempty"`
 }
@@ -227,7 +227,7 @@ type FeedDOM struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	DomType        string `protobuf:"bytes,1,opt,name=dom_type,json=domType,proto3" json:"dom_type,omitempty"`
+	DomType        string `protobuf:"bytes,1,opt,name=dom_type,json=domType,proto3" json:"dom_type,omitempty" bson:"dom_type,omitempty"`
 	Api            string `protobuf:"bytes,2,opt,name=api,proto3" json:"api,omitempty"`
 	Title          string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
 	Excerpt        string `protobuf:"bytes,4,opt,name=excerpt,proto3" json:"excerpt,omitempty"`
@@ -236,9 +236,9 @@ type FeedDOM struct {
 	Sources        string `protobuf:"bytes,7,opt,name=sources,proto3" json:"sources,omitempty"`
 	Tags           string `protobuf:"bytes,8,opt,name=tags,proto3" json:"tags,omitempty"`
 	Categories     string `protobuf:"bytes,9,opt,name=categories,proto3" json:"categories,omitempty"`
-	PublishedAt    string `protobuf:"bytes,10,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
-	EditedAt       string `protobuf:"bytes,11,opt,name=edited_at,json=editedAt,proto3" json:"edited_at,omitempty"`
-	TimezoneOffset string `protobuf:"bytes,12,opt,name=timezone_offset,json=timezoneOffset,proto3" json:"timezone_offset,omitempty"`
+	PublishedAt    string `protobuf:"bytes,10,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty" bson:"published_at,omitempty"`
+	EditedAt       string `protobuf:"bytes,11,opt,name=edited_at,json=editedAt,proto3" json:"edited_at,omitempty" bson:"edited_at,omitempty"`
+	TimezoneOffset string `protobuf:"bytes,12,opt,name=timezone_offset,json=timezoneOffset,proto3" json:"timezone_offset,omitempty" bson:"timezone_offset,omitempty"`
 	Img            string `protobuf:"bytes,13,opt,name=img,proto3" json:"img,omitempty"`
 }
 
@@ -457,16 +457,16 @@ type FeedMeta struct {
 	// as suggested by ioanna archontaki (phd@uoa)
 	// the purpose of these meta is to correlate feeds
 	// by their political context
-	BusinessType  v2.BusinessType `protobuf:"varint,2,opt,name=business_type,json=businessType,proto3,enum=mediawatch.common.v2.BusinessType" json:"business_type,omitempty"`
-	BusinessOwner string          `protobuf:"bytes,3,opt,name=business_owner,json=businessOwner,proto3" json:"business_owner,omitempty"`
+	BusinessType  v2.BusinessType `protobuf:"varint,2,opt,name=business_type,json=businessType,proto3,enum=mediawatch.common.v2.BusinessType" json:"business_type,omitempty" bson:"business_type,omitempty"`
+	BusinessOwner string          `protobuf:"bytes,3,opt,name=business_owner,json=businessOwner,proto3" json:"business_owner,omitempty" bson:"business_owner,omitempty"`
 	// if the business is registered or not in a
 	// public business registry, association, etc.
-	BusinessRegistered   bool                    `protobuf:"varint,4,opt,name=business_registered,json=businessRegistered,proto3" json:"business_registered,omitempty"`
-	ContentType          v2.ContentType          `protobuf:"varint,5,opt,name=content_type,json=contentType,proto3,enum=mediawatch.common.v2.ContentType" json:"content_type,omitempty"`
-	PoliticalOrientation v2.PoliticalOrientation `protobuf:"varint,6,opt,name=political_orientation,json=politicalOrientation,proto3,enum=mediawatch.common.v2.PoliticalOrientation" json:"political_orientation,omitempty"`
-	PoliticalAffiliation string                  `protobuf:"bytes,7,opt,name=political_affiliation,json=politicalAffiliation,proto3" json:"political_affiliation,omitempty"`
+	BusinessRegistered   bool                    `protobuf:"varint,4,opt,name=business_registered,json=businessRegistered,proto3" json:"business_registered,omitempty" bson:"business_registered,omitempty"`
+	ContentType          v2.ContentType          `protobuf:"varint,5,opt,name=content_type,json=contentType,proto3,enum=mediawatch.common.v2.ContentType" json:"content_type,omitempty" bson:"content_type,omitempty"`
+	PoliticalOrientation v2.PoliticalOrientation `protobuf:"varint,6,opt,name=political_orientation,json=politicalOrientation,proto3,enum=mediawatch.common.v2.PoliticalOrientation" json:"political_orientation,omitempty" bson:"political_orientation,omitempty"`
+	PoliticalAffiliation string                  `protobuf:"bytes,7,opt,name=political_affiliation,json=politicalAffiliation,proto3" json:"political_affiliation,omitempty" bson:"political_affiliation,omitempty"`
 	Tier                 v2.Tier                 `protobuf:"varint,8,opt,name=tier,proto3,enum=mediawatch.common.v2.Tier" json:"tier,omitempty"`
-	RegistryId           string                  `protobuf:"bytes,9,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty"`
+	RegistryId           string                  `protobuf:"bytes,9,opt,name=registry_id,json=registryId,proto3" json:"registry_id,omitempty" bson:"registry_id,omitempty"`
 }
 
 func (x *FeedMeta) Reset() {
@@ -570,19 +570,19 @@ type Feed struct {
 	unknownFields protoimpl.UnknownFields
 
 	// UUID as a string
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty" bson:"_id,omitempty"`
 	// Feed creation datetime in RFC3339 format
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty" bson:"created_at,omitempty"`
 	// Feed update datetime in RFC3339 format
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty" bson:"updated_at,omitempty"`
 	// Name of the feed
 	Name string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
 	// Twitter user_name of the feed (if appliccable)
-	UserName string `protobuf:"bytes,5,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	UserName string `protobuf:"bytes,5,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty" bson:"user_name,omitempty"`
 	// A small description of the feed
 	Description string `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	// Twitter id_str of the feed (if appliccable)
-	TwitterId string `protobuf:"bytes,7,opt,name=twitter_id,json=twitterId,proto3" json:"twitter_id,omitempty"`
+	TwitterId string `protobuf:"bytes,7,opt,name=twitter_id,json=twitterId,proto3" json:"twitter_id,omitempty" bson:"twitter_id,omitempty"`
 	// Twitter profile_image_url of the feed (if appliccable), or favicon url
 	Icon string `protobuf:"bytes,8,opt,name=icon,proto3" json:"icon,omitempty"`
 	// Base url of the feed, including trailing slash `/`
