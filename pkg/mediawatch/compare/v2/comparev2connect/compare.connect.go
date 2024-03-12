@@ -18,7 +18,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
+const _ = connect.IsAtLeastVersion0_1_0
 
 const (
 	// CompareServiceName is the fully-qualified name of the CompareService service.
@@ -41,14 +41,6 @@ const (
 	// CompareServiceManyToManyProcedure is the fully-qualified name of the CompareService's ManyToMany
 	// RPC.
 	CompareServiceManyToManyProcedure = "/mediawatch.compare.v2.CompareService/ManyToMany"
-)
-
-// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
-var (
-	compareServiceServiceDescriptor          = v2.File_mediawatch_compare_v2_compare_proto.Services().ByName("CompareService")
-	compareServiceSingleMethodDescriptor     = compareServiceServiceDescriptor.Methods().ByName("Single")
-	compareServiceOneToManyMethodDescriptor  = compareServiceServiceDescriptor.Methods().ByName("OneToMany")
-	compareServiceManyToManyMethodDescriptor = compareServiceServiceDescriptor.Methods().ByName("ManyToMany")
 )
 
 // CompareServiceClient is a client for the mediawatch.compare.v2.CompareService service.
@@ -74,20 +66,17 @@ func NewCompareServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 		single: connect.NewClient[v2.SingleRequest, v2.SingleResponse](
 			httpClient,
 			baseURL+CompareServiceSingleProcedure,
-			connect.WithSchema(compareServiceSingleMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		oneToMany: connect.NewClient[v2.OneToManyRequest, v2.MultipleResponse](
 			httpClient,
 			baseURL+CompareServiceOneToManyProcedure,
-			connect.WithSchema(compareServiceOneToManyMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 		manyToMany: connect.NewClient[v2.ManyToManyRequest, v2.MultipleResponse](
 			httpClient,
 			baseURL+CompareServiceManyToManyProcedure,
-			connect.WithSchema(compareServiceManyToManyMethodDescriptor),
-			connect.WithClientOptions(opts...),
+			opts...,
 		),
 	}
 }
@@ -133,20 +122,17 @@ func NewCompareServiceHandler(svc CompareServiceHandler, opts ...connect.Handler
 	compareServiceSingleHandler := connect.NewUnaryHandler(
 		CompareServiceSingleProcedure,
 		svc.Single,
-		connect.WithSchema(compareServiceSingleMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	compareServiceOneToManyHandler := connect.NewUnaryHandler(
 		CompareServiceOneToManyProcedure,
 		svc.OneToMany,
-		connect.WithSchema(compareServiceOneToManyMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	compareServiceManyToManyHandler := connect.NewUnaryHandler(
 		CompareServiceManyToManyProcedure,
 		svc.ManyToMany,
-		connect.WithSchema(compareServiceManyToManyMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
+		opts...,
 	)
 	return "/mediawatch.compare.v2.CompareService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
