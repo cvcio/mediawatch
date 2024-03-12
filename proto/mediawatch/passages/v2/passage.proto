@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package mediawatch.passages.v2;
 
+import "tagger/tagger.proto";
+
 import "mediawatch/common/v2/common.proto";
 
 enum PassageType {
@@ -12,7 +14,7 @@ enum PassageType {
 }
 
 message Passage {
-  string id = 1;
+  string id = 1 [(tagger.tags) = "bson:\"_id,omitempty\""];
   string text = 2;
   string language = 3;
   PassageType type = 4;
