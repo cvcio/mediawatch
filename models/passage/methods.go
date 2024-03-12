@@ -3,6 +3,7 @@ package passage
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cvcio/mediawatch/pkg/db"
@@ -39,7 +40,25 @@ func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 	opts := options.CreateIndexes().SetMaxTime(10 * time.Second)
 
 	f := func(collection *mongo.Collection) error {
-		_, err := collection.Indexes().CreateMany(ctx, index, opts) //EnsureIndex(index)
+		cursor, err := collection.Indexes().List(ctx)
+		if err != nil {
+			return err
+		}
+		defer cursor.Close(ctx)
+
+		var existingIndexes []bson.M
+		if err = cursor.All(ctx, &existingIndexes); err != nil {
+			return err
+		}
+
+		for _, existingIndex := range existingIndexes {
+			if existingIndex["name"] == "type_1_text_1" {
+				// Index already exists, no need to create it again
+				return nil
+			}
+		}
+
+		_, err = collection.Indexes().CreateMany(ctx, index, opts)
 		return err
 	}
 	if err := dbConn.Execute(ctx, passagesCollection, f); err != nil {
@@ -85,13 +104,16 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 	filter := bson.M{}
 
 	opts := DefaultOpts()
+
 	for _, o := range optionsList {
 		o(&opts)
 	}
 
 	if opts.Lang != "" {
-		filter["language"] = opts.Lang
+		filter["language"] = strings.ToLower(opts.Lang)
 	}
+
+	fmt.Println(filter)
 
 	findOptions := options.Find()
 	findOptions.SetLimit(int64(opts.Limit))
@@ -104,6 +126,8 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println(p)
 
 	if _, ok := p["total"]; ok {
 		pagination.Total = p["total"].(int64)

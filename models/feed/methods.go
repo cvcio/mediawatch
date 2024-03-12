@@ -231,6 +231,7 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(p)
 
 	if _, ok := p["total"]; ok {
 		pagination.Total = p["total"].(int64)
