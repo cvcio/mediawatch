@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/cvcio/mediawatch/models/passage"
@@ -50,4 +51,19 @@ func (h *PassagesHandler) GetPassages(ctx context.Context, req *connect.Request[
 	}
 
 	return connect.NewResponse(data), nil
+}
+
+// CreateFeed creates a new feed.
+func (h *PassagesHandler) CreatePassage(ctx context.Context, req *connect.Request[passagesv2.Passage]) (*connect.Response[passagesv2.Passage], error) {
+	h.log.Debugf("CreateFeed Request Message: %+v", req.Msg)
+
+	now := time.Now()
+	f, err := passage.Create(ctx, h.mg, req.Msg, now)
+	if err != nil {
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to create feed"))
+		h.log.Errorf("Internal: %s", err.Error())
+		return nil, errorMessage
+	}
+
+	return connect.NewResponse(f), nil
 }
