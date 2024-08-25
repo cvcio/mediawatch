@@ -13,7 +13,7 @@ type ListOpts struct {
 func DefaultOpts() ListOpts {
 	l := ListOpts{}
 	l.Offset = 0
-	l.Limit = 24
+	l.Limit = 0
 	l.Lang = ""
 	l.Id = ""
 	return l

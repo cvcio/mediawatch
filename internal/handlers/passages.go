@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/cvcio/mediawatch/models/passage"
@@ -10,6 +9,7 @@ import (
 	"github.com/cvcio/mediawatch/pkg/config"
 	"github.com/cvcio/mediawatch/pkg/db"
 	"github.com/cvcio/mediawatch/pkg/es"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
 	passagesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/passages/v2"
 	"github.com/cvcio/mediawatch/pkg/mediawatch/passages/v2/passagesv2connect"
 	"github.com/cvcio/mediawatch/pkg/redis"
@@ -55,15 +55,38 @@ func (h *PassagesHandler) GetPassages(ctx context.Context, req *connect.Request[
 
 // CreateFeed creates a new feed.
 func (h *PassagesHandler) CreatePassage(ctx context.Context, req *connect.Request[passagesv2.Passage]) (*connect.Response[passagesv2.Passage], error) {
-	h.log.Debugf("CreateFeed Request Message: %+v", req.Msg)
+	h.log.Debugf("CreatePassage Request Message: %+v", req.Msg)
+	// TODO: parse claims and authorization tokens
 
-	now := time.Now()
-	f, err := passage.Create(ctx, h.mg, req.Msg, now)
+	if req.Msg.Language == "" || req.Msg.Text == "" {
+		errorMessage := connect.NewError(connect.CodeInvalidArgument, errors.Errorf("missing required fields"))
+		h.log.Errorf("Invalid Argument: %s", errorMessage.Error())
+		return nil, errorMessage
+	}
+
+	f, err := passage.Create(ctx, h.mg, req.Msg)
 	if err != nil {
-		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to create feed"))
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to create passage"))
 		h.log.Errorf("Internal: %s", err.Error())
 		return nil, errorMessage
 	}
 
 	return connect.NewResponse(f), nil
+}
+
+// DeletePassage deletes a passage.
+func (h *PassagesHandler) DeletePassage(ctx context.Context, req *connect.Request[passagesv2.Passage]) (*connect.Response[commonv2.ResponseWithMessage], error) {
+	h.log.Debugf("DeletePassage Request Message: %+v", req.Msg)
+	// TODO: parse claims and authorization tokens
+
+	if err := passage.Delete(ctx, h.mg, req.Msg); err != nil {
+		errorMessage := connect.NewError(connect.CodeInternal, errors.Errorf("unable to delete passage"))
+		h.log.Errorf("Internal: %s", err.Error())
+		return nil, errorMessage
+	}
+
+	return connect.NewResponse(&commonv2.ResponseWithMessage{
+		Status:  "ok",
+		Message: "passage deleted",
+	}), nil
 }

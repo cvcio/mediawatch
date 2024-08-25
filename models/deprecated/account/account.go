@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/x/bsonx"
 
 	"github.com/cvcio/mediawatch/pkg/auth"
 	"github.com/cvcio/mediawatch/pkg/db"
@@ -52,11 +51,11 @@ func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 			},
 		},
 		{
-			Keys: bsonx.Doc{
-				{Key: "firstName", Value: bsonx.String("text")},
-				{Key: "lastName", Value: bsonx.String("text")},
-				{Key: "screenName", Value: bsonx.String("text")},
-				{Key: "email", Value: bsonx.String("text")},
+			Keys: bson.D{
+				{"firstName", "text"},
+				{"lastName", "text"},
+				{"screenName", "text"},
+				{"email", "text"},
 			},
 			Options: options.Index().SetDefaultLanguage("en").SetLanguageOverride("el"),
 		},

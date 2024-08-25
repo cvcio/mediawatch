@@ -15,10 +15,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
-const passagesCollection = "passages"
+const passagesCollection = "v2_passages"
 
 // EnsureIndex in mongodb.
 func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
@@ -31,8 +30,8 @@ func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 			Options: options.Index().SetUnique(true),
 		},
 		{
-			Keys: bsonx.Doc{
-				{Key: "language", Value: bsonx.String("text")},
+			Keys: bson.M{
+				"language": "text",
 			},
 			Options: options.Index().SetDefaultLanguage("en").SetLanguageOverride("el"),
 		},
@@ -68,8 +67,7 @@ func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 }
 
 // Create inserts a new passage into the database.
-func Create(ctx context.Context, dbConn *db.MongoDB, passage *passagesv2.Passage, now time.Time) (*passagesv2.Passage, error) {
-
+func Create(ctx context.Context, dbConn *db.MongoDB, passage *passagesv2.Passage) (*passagesv2.Passage, error) {
 	f := func(collection *mongo.Collection) error {
 		inserted, err := collection.InsertOne(ctx, &passage) // (&u)
 		// Normally we would return ErrDuplicateKey in this scenario but we do not want
@@ -104,7 +102,6 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 	filter := bson.M{}
 
 	opts := DefaultOpts()
-
 	for _, o := range optionsList {
 		o(&opts)
 	}
@@ -112,8 +109,6 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 	if opts.Lang != "" {
 		filter["language"] = strings.ToLower(opts.Lang)
 	}
-
-	fmt.Println(filter)
 
 	findOptions := options.Find()
 	findOptions.SetLimit(int64(opts.Limit))
@@ -126,8 +121,6 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(p)
 
 	if _, ok := p["total"]; ok {
 		pagination.Total = p["total"].(int64)
@@ -161,4 +154,31 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 		Data:       data,
 		Pagination: pagination,
 	}, nil
+}
+
+// Delete deletes a passage.
+func Delete(ctx context.Context, mg *db.MongoDB, passage *passagesv2.Passage) error {
+	oid, err := primitive.ObjectIDFromHex(passage.Id)
+	if err != nil {
+		return db.ErrInvalidID
+	}
+
+	filter := bson.M{"_id": oid}
+
+	f := func(collection *mongo.Collection) error {
+		c, err := collection.DeleteOne(ctx, filter)
+		if c.DeletedCount == 0 {
+			return db.ErrNotFound
+		}
+		return err
+	}
+
+	if err := mg.Execute(ctx, passagesCollection, f); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return db.ErrNotFound
+		}
+		return errors.Wrap(err, fmt.Sprintf("db.passages.delete(%v)", db.Query(filter)))
+	}
+
+	return nil
 }
