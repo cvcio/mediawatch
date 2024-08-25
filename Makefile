@@ -14,8 +14,8 @@ keys: ## generate keys
 
 .PHONY: tools
 tools: ## install tools
-	go get github.com/andefined/realize
-	go get github.com/golangci/golangci-lint
+	go get github.com/andefined/realize@latest
+	go get github.com/golangci/golangci-lint@latest
 
 .PHONY: buf-install
 buf-install: ## install buf version $$BUF_VERSION
@@ -40,6 +40,7 @@ buf-generate-py: ## generate python files
 		--exclude-path proto/mediawatch/compare \
 		--exclude-path proto/mediawatch/feeds \
 		--exclude-path proto/mediawatch/scrape \
+		--exclude-path proto/mediawatch/passages \
 		--exclude-path proto/mediawatch/posts \
 		.  
 

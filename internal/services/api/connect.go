@@ -17,6 +17,7 @@ import (
 	"github.com/cvcio/mediawatch/pkg/es"
 	"github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2/articlesv2connect"
 	"github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2/feedsv2connect"
+	"github.com/cvcio/mediawatch/pkg/mediawatch/passages/v2/passagesv2connect"
 	"github.com/cvcio/mediawatch/pkg/neo"
 	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/rs/cors"
@@ -144,6 +145,14 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	muxArticlesPath, muxArticlesHandler := articlesv2connect.NewArticlesServiceHandler(articlesHandler, connect.WithCompressMinBytes(1024*100))
 	mux.Handle(muxArticlesPath, muxArticlesHandler)
 
+	//passages
+	passagesHandler, err := handlers.NewPassagesHandler(cfg, log, mongo, elastic, authenticator, rdb)
+	if err != nil {
+		log.Errorf("[SERVER] Error while creating passages collection: %s", err.Error())
+		return err
+	}
+	muxPassagesPath, muxPassagesHandler := passagesv2connect.NewPassageServiceHandler(passagesHandler, connect.WithCompressMinBytes(1024*100))
+	mux.Handle(muxPassagesPath, muxPassagesHandler)
 	// ============================================================
 	// H2C Server
 	// ============================================================

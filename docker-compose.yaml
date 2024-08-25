@@ -11,7 +11,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock # So that Traefik can listen to the Docker events
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
     ports:
       - 9200:9200
       - 9300:9300
@@ -27,7 +27,7 @@ services:
       - "traefik.frontend.rule=Host:elasticsearch.docker.localhost"
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.12.2
+    image: docker.elastic.co/kibana/kibana:8.15.0
     ports:
       - 5601:5601
     environment:
@@ -83,7 +83,7 @@ services:
       # - NEO4J_streams_procedures_enabled=true
       # - NEO4J_streams_sink_enabled=true
       # - NEO4J_streams_sink_topic_pattern_node_compare="SinkArticle{!docId}"
-      - NEO4J_PLUGINS='["graph-data-science"]'
+      # - NEO4J_PLUGINS='["graph-data-science"]'
     volumes:
       - data_neo4j_data:/data
       - $PWD/tmp:/export
@@ -98,7 +98,7 @@ services:
       - 6379:6379
 
   kafka: # bitnami
-    image: bitnami/kafka:latest
+    image: bitnami/kafka:3.6.1
     ports:
       - 9092:9092
       - 9093:9093
@@ -109,14 +109,6 @@ services:
       KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
       KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CFG_LOG_CLEANUP_POLICY: "compact,delete"
-      KAFKA_CFG_COMPRESSION_TYPE: "lz4" 
-      KAFKA_CFG_LINGER_MS: 0
-      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CFG_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_CFG_LOG_RETENTION_MINUTES: 2
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
     extra_hosts:
       - "moby:127.0.0.1"

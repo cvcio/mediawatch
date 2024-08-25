@@ -14,7 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/x/bsonx"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -30,11 +29,11 @@ func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 			Options: options.Index().SetUnique(true), // {Unique: true},
 		},
 		{
-			Keys: bsonx.Doc{
-				{Key: "user_name", Value: bsonx.String("text")},
-				{Key: "hostname", Value: bsonx.String("text")},
-				{Key: "url", Value: bsonx.String("text")},
-				{Key: "name", Value: bsonx.String("text")},
+			Keys: bson.D{
+				{"user_name", "text"},
+				{"hostname", "text"},
+				{"url", "text"},
+				{"name", "text"},
 			},
 			Options: options.Index().SetDefaultLanguage("en").SetLanguageOverride("el"),
 		},
