@@ -74,6 +74,8 @@ enum BusinessType {
     BUSINESS_TYPE_ORGANIZATION = 3;
     BUSINESS_TYPE_BLOG = 4;
     BUSINESS_TYPE_PORTAL = 5;
+    BUSINESS_TYPE_NON_PROFIT = 6;
+    BUSINESS_TYPE_ACADEMIA = 7;
 };
 
 // ContentType Enumeration
