@@ -75,7 +75,7 @@ func (es *Elastic) CheckIfIndexExists(name string) bool {
 // CreateElasticIndexWithLanguages creates indexes for each language provided.
 func (es *Elastic) CreateElasticIndexWithLanguages(prefix string, languages []string) error {
 	for _, lang := range languages {
-		index := prefix + "_" + strings.ToLower(lang) + "*"
+		index := prefix + "_" + strings.ToLower(lang)
 		template := getIndex(lang)
 		if es.CheckIfIndexExists(index) == true {
 			continue

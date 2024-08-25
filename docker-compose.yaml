@@ -98,7 +98,7 @@ services:
       - 6379:6379
 
   kafka: # bitnami
-    image: bitnami/kafka:latest
+    image: bitnami/kafka:3.6.1
     ports:
       - 9092:9092
       - 9093:9093
