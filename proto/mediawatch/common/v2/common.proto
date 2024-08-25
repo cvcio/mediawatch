@@ -65,7 +65,8 @@ enum Locality {
 //
 // Business type of the media outlet can be STATE for state controlled media outlets, 
 // ORGANIZATION for news organizations that employ journalists, BLOG for personal blogs, 
-// PORTAL for news aggregators and portals, OTHER for any other value that does not 
+// PORTAL for news aggregators and portals, NON_PROFIT for non-profits or NGOs, ACADEMIC for 
+// universities and academic research, OTHER for any other value that does not 
 // fit in any of the previous categories, and UNSPECIFIED as a default.
 enum BusinessType {
     BUSINESS_TYPE_UNSPECIFIED = 0;
