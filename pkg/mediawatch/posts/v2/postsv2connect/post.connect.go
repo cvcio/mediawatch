@@ -18,7 +18,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// PostServiceName is the fully-qualified name of the PostService service.
@@ -47,6 +47,17 @@ const (
 	PostServiceStreamPostsProcedure = "/mediawatch.posts.v2.PostService/StreamPosts"
 )
 
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	postServiceServiceDescriptor           = v2.File_mediawatch_posts_v2_post_proto.Services().ByName("PostService")
+	postServiceGetPostMethodDescriptor     = postServiceServiceDescriptor.Methods().ByName("GetPost")
+	postServiceGetPostsMethodDescriptor    = postServiceServiceDescriptor.Methods().ByName("GetPosts")
+	postServiceCreatePostMethodDescriptor  = postServiceServiceDescriptor.Methods().ByName("CreatePost")
+	postServiceUpdatePostMethodDescriptor  = postServiceServiceDescriptor.Methods().ByName("UpdatePost")
+	postServiceDeletePostMethodDescriptor  = postServiceServiceDescriptor.Methods().ByName("DeletePost")
+	postServiceStreamPostsMethodDescriptor = postServiceServiceDescriptor.Methods().ByName("StreamPosts")
+)
+
 // PostServiceClient is a client for the mediawatch.posts.v2.PostService service.
 type PostServiceClient interface {
 	GetPost(context.Context, *connect.Request[v2.PostRequest]) (*connect.Response[v2.PostResponse], error)
@@ -70,32 +81,38 @@ func NewPostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 		getPost: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
 			baseURL+PostServiceGetPostProcedure,
-			opts...,
+			connect.WithSchema(postServiceGetPostMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		getPosts: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
 			baseURL+PostServiceGetPostsProcedure,
-			opts...,
+			connect.WithSchema(postServiceGetPostsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		createPost: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
 			baseURL+PostServiceCreatePostProcedure,
-			opts...,
+			connect.WithSchema(postServiceCreatePostMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		updatePost: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
 			baseURL+PostServiceUpdatePostProcedure,
-			opts...,
+			connect.WithSchema(postServiceUpdatePostMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		deletePost: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
 			baseURL+PostServiceDeletePostProcedure,
-			opts...,
+			connect.WithSchema(postServiceDeletePostMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 		streamPosts: connect.NewClient[v2.PostRequest, v2.PostResponse](
 			httpClient,
 			baseURL+PostServiceStreamPostsProcedure,
-			opts...,
+			connect.WithSchema(postServiceStreamPostsMethodDescriptor),
+			connect.WithClientOptions(opts...),
 		),
 	}
 }
@@ -159,32 +176,38 @@ func NewPostServiceHandler(svc PostServiceHandler, opts ...connect.HandlerOption
 	postServiceGetPostHandler := connect.NewUnaryHandler(
 		PostServiceGetPostProcedure,
 		svc.GetPost,
-		opts...,
+		connect.WithSchema(postServiceGetPostMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	postServiceGetPostsHandler := connect.NewUnaryHandler(
 		PostServiceGetPostsProcedure,
 		svc.GetPosts,
-		opts...,
+		connect.WithSchema(postServiceGetPostsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	postServiceCreatePostHandler := connect.NewUnaryHandler(
 		PostServiceCreatePostProcedure,
 		svc.CreatePost,
-		opts...,
+		connect.WithSchema(postServiceCreatePostMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	postServiceUpdatePostHandler := connect.NewUnaryHandler(
 		PostServiceUpdatePostProcedure,
 		svc.UpdatePost,
-		opts...,
+		connect.WithSchema(postServiceUpdatePostMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	postServiceDeletePostHandler := connect.NewUnaryHandler(
 		PostServiceDeletePostProcedure,
 		svc.DeletePost,
-		opts...,
+		connect.WithSchema(postServiceDeletePostMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	postServiceStreamPostsHandler := connect.NewServerStreamHandler(
 		PostServiceStreamPostsProcedure,
 		svc.StreamPosts,
-		opts...,
+		connect.WithSchema(postServiceStreamPostsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
 	return "/mediawatch.posts.v2.PostService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
