@@ -4,7 +4,7 @@ TAG:=$(shell git rev-parse HEAD)
 BRANCH:=$(shell git rev-parse --abbrev-ref HEAD)
 POD=$(shell kubectl get pod -l app=mongo -o jsonpath='{.items[0].metadata.name}')
 CONTAINER=$(shell docker ps -f name=mongo -f label=app=mediawatch -q)
-BUF_VERSION:=1.28.1
+BUF_VERSION:=1.38.0
 SERVICES=api compare enrich feeds scraper worker
 NAMESPACE=default
 
