@@ -51,8 +51,9 @@ func (es *Elastic) CreateIndex(name, template string) error {
 	}
 
 	if res.IsError() {
-		return fmt.Errorf("Cannot create index: %s", res)
+		return fmt.Errorf("cannot create index: %s", res)
 	}
+
 	defer res.Body.Close()
 	return nil
 }
@@ -75,14 +76,14 @@ func (es *Elastic) CheckIfIndexExists(name string) bool {
 // CreateElasticIndexWithLanguages creates indexes for each language provided.
 func (es *Elastic) CreateElasticIndexWithLanguages(prefix string, languages []string) error {
 	for _, lang := range languages {
-		index := prefix + "_" + strings.ToLower(lang) + "*"
+		index := prefix + "_" + strings.ToLower(lang)
 		template := getIndex(lang)
 		if es.CheckIfIndexExists(index) == true {
 			continue
 		}
 
 		if err := es.CreateIndex(index, template); err != nil {
-			return fmt.Errorf("Error creating index %s for lang %s: %v", index, lang, err)
+			return fmt.Errorf("error creating index %s for lang %s: %v", index, lang, err)
 		}
 	}
 
