@@ -7,15 +7,18 @@ import (
 	"google.golang.org/grpc"
 )
 
+// TimeoutCallOption is a custom call option to set a forced timeout
 type TimeoutCallOption struct {
 	grpc.EmptyCallOption
 	forcedTimeout time.Duration
 }
 
-func WithForcedTimeout(forceTimeout time.Duration) TimeoutCallOption {
-	return TimeoutCallOption{forcedTimeout: forceTimeout}
-}
+// WithForcedTimeout returns a new TimeoutCallOption with the given forced timeout
+// func WithForcedTimeout(forceTimeout time.Duration) TimeoutCallOption {
+// 	return TimeoutCallOption{forcedTimeout: forceTimeout}
+// }
 
+// getTimeout returns the forced timeout from the call options
 func getTimeout(callOptions []grpc.CallOption) (time.Duration, bool) {
 	for _, opt := range callOptions {
 		if co, ok := opt.(TimeoutCallOption); ok {
@@ -26,6 +29,7 @@ func getTimeout(callOptions []grpc.CallOption) (time.Duration, bool) {
 	return 0, false
 }
 
+// TimeoutInterceptor returns a new timeout interceptor
 func TimeoutInterceptor(t time.Duration) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn,
 		invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
