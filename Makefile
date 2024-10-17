@@ -2,7 +2,7 @@ REGISTRY=cvcio
 PROJECT=mediawatch-v2
 TAG:=$(shell git rev-parse HEAD)
 BRANCH:=$(shell git rev-parse --abbrev-ref HEAD)
-POD=$(shell kubectl get pod -l app=mongo -o jsonpath='{.items[0].metadata.name}')
+POD=$(shell kubectl get pod -l app.kubernetes.io/name=mongodb -o jsonpath='{.items[0].metadata.name}')
 CONTAINER=$(shell docker ps -f name=mongo -f label=app=mediawatch -q)
 BUF_VERSION:=1.28.1
 SERVICES=api compare enrich feeds scraper worker
@@ -192,7 +192,7 @@ prod-all: vendor ## build all services and deploy them to kubernetes
 
 .PHONY: get-mongo-backup
 get-mongo-backup: ## get mongo backup
-	kubectl exec ${POD} -c mongo -i -t -- bash -c 'mongodump -d mediawatch --gzip --archive=/tmp/dump.tar.gz' && kubectl cp ${POD}:/tmp/dump.tar.gz dump.tar.gz
+	kubectl exec ${POD} -i -t -- bash -c 'mongodump -d mediawatch --gzip --archive=/tmp/dump.tar.gz' && kubectl cp ${POD}:/tmp/dump.tar.gz dump.tar.gz
 
 .PHONY: restore-mongo-backup
 restore-mongo-backup: ## restore mongo backup
