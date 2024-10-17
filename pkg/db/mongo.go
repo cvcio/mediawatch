@@ -26,16 +26,16 @@ var (
 
 	// ErrAuthenticationFailure occurs when a user attempts to authenticate but
 	// anything goes wrong.
-	ErrAuthenticationFailure = errors.New("authentication failed")
+	// ErrAuthenticationFailure = errors.New("authentication failed")
 
 	// ErrForbidden occurs when a user tries to do something that is forbidden to them according to our access control policies.
-	ErrForbidden = errors.New("attempted action is not allowed")
+	// ErrForbidden = errors.New("attempted action is not allowed")
 
 	// ErrInvalid is a generic error
 	ErrInvalid = errors.New("invalid request")
 
 	// ErrInvalidDBProvided wrong database
-	ErrInvalidDBProvided = errors.New("invalid DB provided")
+	// ErrInvalidDBProvided = errors.New("invalid DB provided")
 
 	// ErrConnectionFailed connection error
 	ErrConnectionFailed = errors.New("connection failed")
@@ -128,12 +128,12 @@ func (db *MongoDB) IsDuplicateError(err error) bool {
 
 // Query provides a string version of the value
 func Query(value interface{}) string {
-	json, err := json.Marshal(value)
+	j, err := json.Marshal(value)
 	if err != nil {
 		return ""
 	}
 
-	return string(json)
+	return string(j)
 }
 
 // Valid returns true if a given id is a valid mongo id
