@@ -83,7 +83,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// HTTP Middleware
 	// ============================================================
 	// Create cors middleware
-	cors := cors.New(cors.Options{
+	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins:  []string{"*"},
 		AllowOriginFunc: func(origin string) bool { return true },
 		AllowedMethods: []string{
@@ -151,7 +151,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// websocket stream with newline-delimited JSON as the content encoding.
 	server := &http.Server{
 		Addr:              cfg.GetServiceURL(),
-		Handler:           h2c.NewHandler(cors.Handler(mux), &http2.Server{}),
+		Handler:           h2c.NewHandler(corsMiddleware.Handler(mux), &http2.Server{}),
 		ReadHeaderTimeout: time.Second,
 		ReadTimeout:       cfg.Service.ReadTimeout,
 		WriteTimeout:      0, // set to 0 in order to stream to clients forever cfg.Service.WriteTimeout, //
@@ -179,9 +179,9 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 		log.Errorf("[SERVER] Server error: %s", err.Error())
 		return err
 
-	case signal := <-osSignals:
-		log.Infof("[SERVER] Server shutdown signal %s", signal)
-		// Asking listener to shutdown and load shed.
+	case s := <-osSignals:
+		log.Infof("[SERVER] Server shutdown signal %s", s)
+		// Asking listener shutdown and load shed.
 		if err := server.Shutdown(ctx); err != nil {
 			log.Debugf("[SERVER] Graceful shutdown did not complete in %s, exiting with error: %s", cfg.Service.ShutdownTimeout, err.Error())
 			if err := server.Close(); err != nil {
