@@ -32,7 +32,6 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ============================================================
 	mongo, err := db.NewMongoDB(cfg.Mongo.URL, cfg.Mongo.Path, cfg.Mongo.DialTimeout)
 	if err != nil {
-		log.Errorf("[SERVER] MongoDB connection failed with error: %s", err.Error())
 		return err
 	}
 	log.Debugf("[SERVER] MongoDB connected on: %s", cfg.GetMongoURL())
@@ -45,7 +44,6 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ============================================================
 	elastic, err := es.NewElasticsearch(cfg.Elasticsearch.Host, cfg.Elasticsearch.User, cfg.Elasticsearch.Pass)
 	if err != nil {
-		log.Errorf("[SERVER] Elasticsearch connection failed with error: %s", err.Error())
 		return err
 	}
 	log.Debugf("[SERVER] Elasticsearch connected on: %s", cfg.GetElasticsearchURL())
@@ -55,7 +53,6 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ============================================================
 	neoClient, err := neo.NewNeo(cfg.Neo.BOLT, cfg.Neo.User, cfg.Neo.Pass)
 	if err != nil {
-		log.Errorf("[SERVER] Neo4J connection failed with error: %s", err.Error())
 		return err
 	}
 	log.Debugf("[SERVER] Neo4J connected on: %s", cfg.Neo.BOLT)
@@ -66,7 +63,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ============================================================
 	rdb, err := redis.NewRedisClient(context.Background(), cfg.GetRedisURL(), "")
 	if err != nil {
-		log.Fatalf("[SERVER] Error connecting to Redis: %s", err.Error())
+		return err
 	}
 	log.Debugf("[SERVER] Redis connected on: %s", cfg.GetRedisURL())
 	defer func() { _ = rdb.Close() }()
@@ -74,7 +71,6 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// Create authenticator
 	authenticator, err := auth.NewJWTAuthenticator(cfg.Auth.PrivateKeyFile, cfg.Auth.KeyID, cfg.Auth.Algorithm, cfg.Auth.Authorizer)
 	if err != nil {
-		log.Errorf("[SERVER] Error while creating the authenticator: %s", err.Error())
 		return err
 	}
 	log.Debugf("[SERVER] Authenticator for %s created with key %s", cfg.Auth.Authorizer, cfg.Auth.KeyID)
@@ -84,7 +80,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ============================================================
 	// Create cors middleware
 	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins:  []string{"*"},
+		AllowedOrigins:  []string{"*.localhost", "*.cvcio.org", "*.mediawatch.io"},
 		AllowOriginFunc: func(origin string) bool { return true },
 		AllowedMethods: []string{
 			http.MethodHead,
@@ -133,7 +129,6 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// feeds
 	feedsHandler, err := handlers.NewFeedsHandler(cfg, log, mongo, elastic, authenticator, rdb)
 	if err != nil {
-		log.Errorf("[SERVER] Error while creating feeds collection: %s", err.Error())
 		return err
 	}
 	muxFeedsPath, muxFeedsHandler := feedsv2connect.NewFeedServiceHandler(feedsHandler, connect.WithCompressMinBytes(1024*100))
@@ -162,7 +157,6 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	go func() {
 		log.Debugf("[SERVER] Starting Connect/gRPC server on: %s", server.Addr)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Errorf("[SERVER] Connect/gRPC server failed to start: %s", err.Error())
 			errSignals <- err
 		}
 	}()
@@ -176,7 +170,6 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// Blocking main and waiting for shutdown.
 	select {
 	case err := <-errSignals:
-		log.Errorf("[SERVER] Server error: %s", err.Error())
 		return err
 
 	case s := <-osSignals:
