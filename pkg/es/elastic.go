@@ -54,8 +54,7 @@ func (es *Elastic) CreateIndex(name, template string) error {
 		return fmt.Errorf("cannot create index: %s", res)
 	}
 
-	defer res.Body.Close()
-	return nil
+	return res.Body.Close()
 }
 
 // CheckIfIndexExists check if index exists.
@@ -69,7 +68,7 @@ func (es *Elastic) CheckIfIndexExists(name string) bool {
 		return false
 	}
 
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	return res.StatusCode == 200
 }
 
