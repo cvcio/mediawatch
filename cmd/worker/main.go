@@ -279,7 +279,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Neo4j connection error", zap.Error(err))
 	}
-	defer func() { _ = neoClient.Client.Close() }()
+	defer func() { _ = neoClient.Client.Close(context.Background()) }()
 
 	// ============================================================
 	// Redis

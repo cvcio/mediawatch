@@ -283,7 +283,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("[SVC-COMPARE] Register Neo4J: %v", err)
 	}
-	defer func() { _ = neoClient.Client.Close() }()
+	defer func() { _ = neoClient.Client.Close(context.Background()) }()
 
 	// create a reader/writer kafka connection
 	kafkaClient := kafka.NewKafkaClient(
