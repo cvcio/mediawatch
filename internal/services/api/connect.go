@@ -59,7 +59,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 		return err
 	}
 	log.Debugf("[SERVER] Neo4J connected on: %s", cfg.Neo.BOLT)
-	defer func() { _ = neoClient.Client.Close() }()
+	defer func() { _ = neoClient.Client.Close(context.Background()) }()
 
 	// ============================================================
 	// Redis
