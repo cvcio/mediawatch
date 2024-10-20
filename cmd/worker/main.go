@@ -410,7 +410,7 @@ func (worker *WorkerGroup) ProcessArticle(in link.Link) error {
 	}
 
 	// skip if offline
-	if f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
+	if f != nil && f.Stream != nil && f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
 		workerProcessErrors.WithLabelValues("feed offline").Inc()
 		worker.log.Warn("Skip message, feed is offline", zap.String("hostname", f.Hostname), zap.String("url", in.Url))
 		return nil
