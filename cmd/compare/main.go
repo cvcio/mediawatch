@@ -41,10 +41,12 @@ var (
 	}, []string{"service"})
 )
 
-// CompareService responsible for comparing articles.
+// CompareService struct.
 //
-// For each article coming through kafka, compares it with other articles in the same language
-// and stores the similarity in a neo4j database.
+// CompareService is a service that listens to a kafka topic and consumes articles coming
+// from the enrich service. The service compares articles with similar keywords and tests
+// them using the go-plagiarism algorithm. If the score is higher than 0.25, the service
+// saves the relation to the neo4j database.
 type CompareService struct {
 	ctx context.Context
 
@@ -58,7 +60,8 @@ type CompareService struct {
 	errChan chan error
 }
 
-// NewCompareService returns a new CompareService.
+// NewCompareService initializes and returns a new CompareService instance with provided
+// configuration, logger, and clients.
 func NewCompareService(cfg *config.Config, log *zap.SugaredLogger, esClient *es.Elastic, neoClient *neo.Neo, kafkaClient *kafka.Client) *CompareService {
 	return &CompareService{
 		ctx: context.Background(),
@@ -187,16 +190,14 @@ func (c *CompareService) FindAndCompare(id string, lang string) error {
 	return nil
 }
 
-// Close closes the kafka client.
+// Close terminates the active Kafka consumers and producers associated with the
+// CompareService.
 func (c *CompareService) Close() {
 	c.kafkaClient.Close()
 }
 
-// Consume consumes kafka topics inside an infinite loop. In our logic we need
-// to fetch a message from a topic (FetchMessage), parse the json (Unmarshal)
-// and find similar articles. If, for any reason, any step fails with an error
-// we will skip commiting this message to kafka as we want to re-process
-// this particular message again.
+// Consume listens to a Kafka topic, processes incoming articles, tests for similarities,
+// and commits Kafka messages.
 func (c *CompareService) Consume() {
 	for {
 		timer := prometheus.NewTimer(compareProcessDuration.WithLabelValues("compare"))
