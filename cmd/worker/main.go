@@ -259,7 +259,7 @@ func main() {
 	if err != nil {
 		log.Fatal("MongoDB connection error", zap.Error(err))
 	}
-	defer dbConn.Close()
+	defer func() { _ = dbConn.Close() }()
 
 	// =========================================================================
 	// Start elasticsearch
@@ -279,7 +279,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Neo4j connection error", zap.Error(err))
 	}
-	defer neoClient.Client.Close()
+	defer func() { _ = neoClient.Client.Close() }()
 
 	// ============================================================
 	// Redis
@@ -288,7 +288,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Redis connection error", zap.Error(err))
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	// =========================================================================
 	// Create kafka consumer/producer worker
@@ -481,7 +481,7 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 		workerProcessErrors.WithLabelValues("index error").Inc()
 		return errors.New(index.String())
 	}
-	index.Body.Close()
+	_ = index.Body.Close()
 
 	// Create a new nodeAuthor if not exist for each author extracted
 	// by svc-scraper service and return the uid
@@ -552,7 +552,9 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 	if fUID != "" {
 		// disable lint for the error since we don't care about the response
 		// nolint:errcheck
-		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, a.FeedId, "PUBLISHED_AT")
+		go func() {
+			_ = relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, a.FeedId, "PUBLISHED_AT")
+		}()
 	}
 	for _, entity := range entities {
 		// if entity.Type == "author" {
@@ -565,7 +567,9 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 		if entity.Type == "topic" {
 			// disable lint for the error since we don't care about the response
 			// nolint:errcheck
-			go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
+			go func() {
+				_ = relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
+			}()
 		}
 	}
 
