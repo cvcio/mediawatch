@@ -409,8 +409,14 @@ func (worker *WorkerGroup) ProcessArticle(in link.Link) error {
 		f = tf
 	}
 
+	if f == nil {
+		workerProcessErrors.WithLabelValues("feed not found").Inc()
+		worker.log.Error("Feed not found", zap.String("hostname", in.Hostname), zap.String("url", in.Url))
+		return errors.New("feed not found")
+	}
+
 	// skip if offline
-	if f != nil && f.Stream != nil && f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
+	if f.Stream != nil && f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
 		workerProcessErrors.WithLabelValues("feed offline").Inc()
 		worker.log.Warn("Skip message, feed is offline", zap.String("hostname", f.Hostname), zap.String("url", in.Url))
 		return nil
