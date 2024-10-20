@@ -131,14 +131,14 @@ func (h *ArticlesHandler) StreamArticles(ctx context.Context, req *connect.Reque
 	defer pubsub.Close()
 
 	for m := range articlesCh {
-		var article *articlesv2.Article
-		if err := json.Unmarshal(m, &article); err != nil {
+		var a *articlesv2.Article
+		if err := json.Unmarshal(m, &a); err != nil {
 			h.log.Errorf("[ARTICLES] Unmarshal error: %s", err.Error())
 			continue
 		}
 
 		data := &articlesv2.ArticleList{}
-		data.Data = append(data.Data, article)
+		data.Data = append(data.Data, a)
 
 		h.log.Debugf("[ARTICLES] Streaming article: %s", article.DocId)
 
