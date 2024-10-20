@@ -52,9 +52,9 @@ func (h *ArticlesHandler) GetArticle(ctx context.Context, req *connect.Request[a
 	}
 	if req.Msg.CountCases {
 		// return count per article
-		ressession := h.neo.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
-		defer ressession.Close()
-		res, err := ressession.Run(relationships.CountSimilarTpl, map[string]interface{}{
+		ses := h.neo.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
+		defer func() { _ = ses.Close() }()
+		res, err := ses.Run(relationships.CountSimilarTpl, map[string]interface{}{
 			"doc_id": data.DocId,
 		})
 
@@ -91,9 +91,9 @@ func (h *ArticlesHandler) GetArticles(ctx context.Context, req *connect.Request[
 	if req.Msg.CountCases {
 		// return count per article
 		for _, v := range data.Data {
-			ressession := h.neo.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
-			defer ressession.Close()
-			res, err := ressession.Run(relationships.CountSimilarTpl, map[string]interface{}{
+			ses := h.neo.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
+			defer func() { _ = ses.Close() }()
+			res, err := ses.Run(relationships.CountSimilarTpl, map[string]interface{}{
 				"doc_id": v.DocId,
 			})
 
@@ -128,7 +128,7 @@ func (h *ArticlesHandler) StreamArticles(ctx context.Context, req *connect.Reque
 		h.log.Errorf("[ARTICLES] Pub/Sub subscriprion error: %s", err.Error())
 		return connect.NewError(connect.CodeInternal, err)
 	}
-	defer pubsub.Close()
+	defer func() { _ = pubsub.Close() }()
 
 	for m := range articlesCh {
 		var a *articlesv2.Article
