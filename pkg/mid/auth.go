@@ -23,19 +23,19 @@ func (a *Auth) Authenticate() func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			authHdr := r.Header.Get("Authorization")
 			if authHdr == "" {
-				render.Render(w, r, web.ErrUnauthorized)
+				_ = render.Render(w, r, web.ErrUnauthorized)
 				return
 			}
 
 			tknStr, err := parseAuthHeader(authHdr)
 			if err != nil {
-				render.Render(w, r, web.ErrUnauthorized)
+				_ = render.Render(w, r, web.ErrUnauthorized)
 				return
 			}
 
 			claims, err := a.Authenticator.ParseClaims(tknStr)
 			if err != nil {
-				render.Render(w, r, web.ErrUnauthorized)
+				_ = render.Render(w, r, web.ErrUnauthorized)
 				return
 			}
 
@@ -66,12 +66,12 @@ func (a *Auth) HasRole(roles ...string) func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			claims, ok := r.Context().Value(auth.Key).(auth.Claims)
 			if !ok {
-				render.Render(w, r, web.ErrUnauthorized)
+				_ = render.Render(w, r, web.ErrUnauthorized)
 				return
 			}
 
 			if !claims.HasRole(roles...) {
-				render.Render(w, r, web.ErrForbidden)
+				_ = render.Render(w, r, web.ErrForbidden)
 				return
 			}
 			next.ServeHTTP(w, r)
