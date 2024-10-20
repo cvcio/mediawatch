@@ -55,7 +55,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	// ============================================================
 	neoClient, err := neo.NewNeo(cfg.Neo.BOLT, cfg.Neo.User, cfg.Neo.Pass)
 	if err != nil {
-		log.Errorf("[SERVER] Neo4J connection failed with error: %", err.Error())
+		log.Errorf("[SERVER] Neo4J connection failed with error: %s", err.Error())
 		return err
 	}
 	log.Debugf("[SERVER] Neo4J connected on: %s", cfg.Neo.BOLT)
