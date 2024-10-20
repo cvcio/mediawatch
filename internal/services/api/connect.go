@@ -38,7 +38,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 	log.Debugf("[SERVER] MongoDB connected on: %s", cfg.GetMongoURL())
 
 	// Close mongo connection on exit
-	defer mongo.Close()
+	defer func() { _ = mongo.Close() }()
 
 	// ============================================================
 	// Elasticsearch
@@ -59,7 +59,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 		return err
 	}
 	log.Debugf("[SERVER] Neo4J connected on: %s", cfg.Neo.BOLT)
-	defer neoClient.Client.Close()
+	defer func() { _ = neoClient.Client.Close() }()
 
 	// ============================================================
 	// Redis
@@ -69,7 +69,7 @@ func RunConnect(ctx context.Context, cfg *config.Config, log *zap.SugaredLogger)
 		log.Fatalf("[SERVER] Error connecting to Redis: %s", err.Error())
 	}
 	log.Debugf("[SERVER] Redis connected on: %s", cfg.GetRedisURL())
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	// Create authenticator
 	authenticator, err := auth.NewJWTAuthenticator(cfg.Auth.PrivateKeyFile, cfg.Auth.KeyID, cfg.Auth.Algorithm, cfg.Auth.Authorizer)
