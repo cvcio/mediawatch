@@ -375,6 +375,7 @@ class EnrichService(EnrichServiceServicer):
 
         # escape text
         body = html.unescape(request.body)
+        stopwords = []
 
         try:
             # get the stopwords
