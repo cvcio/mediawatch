@@ -220,7 +220,7 @@ func (h *FeedsHandler) TestFeed(ctx context.Context, req *connect.Request[feedsv
 		return nil, errorMessage
 	}
 
-	defer scrapeGRPC.Close()
+	defer func() { _ = scrapeGRPC.Close() }()
 
 	// Create gRPC Scrape client
 	scrape := scrapev2.NewScrapeServiceClient(scrapeGRPC)
