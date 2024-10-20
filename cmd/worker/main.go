@@ -11,18 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
-	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
-	enrichv2 "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
-	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
-	"github.com/cvcio/mediawatch/pkg/redis"
-	"github.com/kelseyhightower/envconfig"
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.uber.org/zap"
-
 	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/models/feed"
 	"github.com/cvcio/mediawatch/models/link"
@@ -32,8 +20,19 @@ import (
 	"github.com/cvcio/mediawatch/pkg/es"
 	"github.com/cvcio/mediawatch/pkg/kafka"
 	"github.com/cvcio/mediawatch/pkg/logger"
+	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
+	enrichv2 "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
+	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/neo"
+	"github.com/cvcio/mediawatch/pkg/redis"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	kaf "github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
 )
 
 var (
@@ -53,7 +52,7 @@ var (
 type WorkerGroup struct {
 	ctx         context.Context
 	log         *zap.Logger
-	kafkaClient *kafka.KafkaClient
+	kafkaClient *kafka.Client
 	errChan     chan error
 
 	dbConn    *db.MongoDB
@@ -89,7 +88,7 @@ func (worker *WorkerGroup) TimeTrack(start time.Time, name string) {
 
 // Consume consumes kafka topics inside an infinite loop. In our logic we need
 // to fetch a message from a topic (FetchMessage), parse the json (Unmarshal)
-// and process the content (articleProcess) if it doesn't already exists.
+// and process the content (articleProcess) if it doesn't already exist.
 // If, for any reason, any step fails with an error we will commit this message
 // to kafka as we don't want to process this particular message again (it failed
 // for some reason).
@@ -210,7 +209,7 @@ func (worker *WorkerGroup) Publish(channel string, msg string) {
 // NewWorkerGroup implements a new WorkerGroup struct.
 func NewWorkerGroup(
 	log *zap.Logger,
-	kafkaClient *kafka.KafkaClient,
+	kafkaClient *kafka.Client,
 	errChan chan error,
 	dbConn *db.MongoDB,
 	esClient *es.Elastic,
@@ -302,8 +301,6 @@ func main() {
 		cfg.GetKafkaBrokers(),
 		cfg.Kafka.ConsumerTopic,
 		cfg.Kafka.ConsumerGroup,
-		cfg.Kafka.ProducerTopic,
-		cfg.Kafka.ProducerGroup,
 		cfg.Kafka.WorkerOffsetOldest,
 	)
 
@@ -373,7 +370,7 @@ func main() {
 		case s := <-osSignals:
 			log.Debug("Worker shutdown signal", zap.String("signal", s.String()))
 
-			// Asking prometheus to shutdown and load shed.
+			// Asking prometheus shutdown and load shed.
 			if err := promHandler.Shutdown(context.Background()); err != nil {
 				log.Error("Graceful shutdown did not complete", zap.Error(err))
 				if err := promHandler.Close(); err != nil {

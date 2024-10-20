@@ -27,7 +27,7 @@ import (
 type ListenGroup struct {
 	ctx         context.Context
 	log         *zap.SugaredLogger
-	kafkaClient *kafka.KafkaClient
+	kafkaClient *kafka.Client
 	errChan     chan error
 }
 
@@ -47,7 +47,7 @@ func (worker *ListenGroup) Produce(msg kaf.Message) {
 // NewListenGroup implements a new ListenGroup struct.
 func NewListenGroup(
 	log *zap.SugaredLogger,
-	kafkaClient *kafka.KafkaClient,
+	kafkaClient *kafka.Client,
 	errChan chan error,
 ) *ListenGroup {
 	return &ListenGroup{
@@ -95,8 +95,6 @@ func main() {
 		cfg.GetKafkaBrokers(),
 		"",
 		"",
-		cfg.Kafka.WorkerTopic,
-		cfg.Kafka.ConsumerGroupWorker,
 		false,
 	)
 
@@ -250,7 +248,7 @@ func main() {
 		case s := <-osSignals:
 			log.Fatalf("Listen shutdown signal: %s", s)
 
-			// // Asking prometheus to shutdown and load shed.
+			// // Asking prometheus shutdown and load shed.
 			// if err := promHandler.Shutdown(context.Background()); err != nil {
 			// 	log.Errorf("Graceful shutdown did not complete in %v: %v", cfg.Prometheus.ShutdownTimeout, err)
 			// 	if err := promHandler.Close(); err != nil {
@@ -357,7 +355,7 @@ func getUserNameFromTweet(authorId string, users []*twitter.User) string {
 	return ""
 }
 
-// remove twitter api rules.
+// remove Twitter api rules.
 func removeRules(api *twitter.Twitter, ruleTag string) (bool, error) {
 	rules, err := api.GetFilterStreamRules(nil)
 	if err != nil {

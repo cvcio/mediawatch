@@ -29,7 +29,7 @@ import (
 type ListenGroup struct {
 	ctx         context.Context
 	log         *zap.Logger
-	kafkaClient *kafka.KafkaClient
+	kafkaClient *kafka.Client
 	errChan     chan error
 }
 
@@ -49,7 +49,7 @@ func (worker *ListenGroup) Produce(msg kaf.Message) {
 // NewListenGroup implements a new ListenGroup struct.
 func NewListenGroup(
 	log *zap.Logger,
-	kafkaClient *kafka.KafkaClient,
+	kafkaClient *kafka.Client,
 	errChan chan error,
 ) *ListenGroup {
 	return &ListenGroup{
@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Mongo connection error", zap.Error(err))
 	}
-	defer dbConn.Close()
+	defer func() { _ = dbConn.Close() }()
 
 	// ============================================================
 	// Redis
@@ -96,7 +96,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Redis connection error", zap.Error(err))
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	// ============================================================
 	// Kafka
@@ -110,8 +110,6 @@ func main() {
 		cfg.GetKafkaBrokers(),
 		"",
 		"",
-		cfg.Kafka.WorkerTopic,
-		cfg.Kafka.ConsumerGroupWorker,
 		false,
 	)
 
@@ -133,15 +131,12 @@ func main() {
 		dbConn,
 		feed.Limit(cfg.Streamer.Size),
 		feed.Lang(strings.ToUpper(cfg.Streamer.Lang)),
-		// feed.StreamType(int(commonv2.StreamType_STREAM_TYPE_RSS)),
 	)
 	if err != nil {
 		log.Fatal("Error getting feeds list, can't continue", zap.Error(err))
 	}
 
 	feeds = filter(feeds)
-	log.Debug("Loaded feeds", zap.Int("count", len(feeds)))
-
 	if len(feeds) == 0 {
 		log.Info("No feeds to listen, exiting.")
 		os.Exit(0)
@@ -158,6 +153,7 @@ func main() {
 
 	// run the tickers
 	go tick(cfg, log, worker, rdb, done, targets, cfg.Streamer.Init, cfg.Streamer.Interval)
+	log.Info("Ticker started", zap.Int("chunks", len(targets)), zap.Int("feeds", len(feeds)))
 
 	// ============================================================
 	// Set Channels
@@ -176,7 +172,6 @@ func main() {
 	}
 
 	// Start the service listening for requests.
-	log.Info("Ready to start")
 	go func() {
 		errSignals <- promHandler.ListenAndServe()
 	}()
@@ -204,7 +199,7 @@ func main() {
 		case s := <-osSignals:
 			log.Debug("Feeds shutdown signal", zap.String("signal", s.String()))
 
-			// Asking prometheus to shutdown and load shed.
+			// Asking prometheus shutdown and load shed.
 			if err := promHandler.Shutdown(context.Background()); err != nil {
 				log.Error("Graceful shutdown did not complete", zap.Error(err))
 				if err := promHandler.Close(); err != nil {
