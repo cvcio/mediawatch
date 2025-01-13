@@ -30,7 +30,9 @@ func main() {
 	// Set Logger
 	// ============================================================
 	sugar := logger.NewLogger(cfg.Env, cfg.Log.Level, cfg.Log.Path)
-	defer sugar.Sync()
+	defer func() {
+		_ = sugar.Sync()
+	}()
 	log := sugar.Sugar()
 
 	// ============================================================

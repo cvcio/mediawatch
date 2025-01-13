@@ -16,7 +16,7 @@ var client_no_proxy = &http.Client{Timeout: 30 * time.Second}
 // Amna
 func Test_El_Amna_proxy_off(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "amna.gr"
 	client := targets.Targets[hostname]
@@ -38,7 +38,7 @@ func Test_El_Amna_proxy_off(t *testing.T) {
 
 func Test_El_Amna(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "amna.gr"
 	client := targets.Targets[hostname]
@@ -61,7 +61,7 @@ func Test_El_Amna(t *testing.T) {
 // News247
 func Test_El_News247_proxy_off(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "news247.gr"
 	client := targets.Targets[hostname]
@@ -82,7 +82,7 @@ func Test_El_News247_proxy_off(t *testing.T) {
 
 func Test_El_News247(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "news247.gr"
 	client := targets.Targets[hostname]
@@ -104,7 +104,7 @@ func Test_El_News247(t *testing.T) {
 // ProNews
 func Test_El_ProNews_proxy_off(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "pronews.gr"
 	client := targets.Targets[hostname]
@@ -126,7 +126,7 @@ func Test_El_ProNews_proxy_off(t *testing.T) {
 
 func Test_El_ProNews(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "pronews.gr"
 	client := targets.Targets[hostname]
@@ -149,7 +149,7 @@ func Test_El_ProNews(t *testing.T) {
 // Liberal
 func Test_El_Liberal_proxy_off(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "liberal.gr"
 	client := targets.Targets[hostname]
@@ -171,7 +171,7 @@ func Test_El_Liberal_proxy_off(t *testing.T) {
 
 func Test_El_Liberal(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "liberal.gr"
 	client := targets.Targets[hostname]
@@ -194,7 +194,7 @@ func Test_El_Liberal(t *testing.T) {
 // Lifo
 func Test_El_Lifo_proxy_off(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "lifo.gr"
 	client := targets.Targets[hostname]
@@ -216,7 +216,7 @@ func Test_El_Lifo_proxy_off(t *testing.T) {
 
 func Test_El_Lifo(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "lifo.gr"
 	client := targets.Targets[hostname]
@@ -240,7 +240,7 @@ func Test_El_Lifo(t *testing.T) {
 // Efsyn
 func Test_El_Efsyn_proxy_off(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "efsyn.gr"
 	client := targets.Targets[hostname]
@@ -262,7 +262,7 @@ func Test_El_Efsyn_proxy_off(t *testing.T) {
 
 func Test_El_Efsyn(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "efsyn.gr"
 	client := targets.Targets[hostname]
@@ -285,7 +285,7 @@ func Test_El_Efsyn(t *testing.T) {
 // MoneyReview
 func Test_El_MoneyReview_proxy_off(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "moneyreview.gr"
 	client := targets.Targets[hostname]
@@ -307,7 +307,7 @@ func Test_El_MoneyReview_proxy_off(t *testing.T) {
 
 func Test_El_MoneyReview(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "moneyreview.gr"
 	client := targets.Targets[hostname]
@@ -330,7 +330,7 @@ func Test_El_MoneyReview(t *testing.T) {
 // Stoxos
 func Test_El_Stoxos_proxy_off(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "stoxos.gr"
 	client := targets.Targets[hostname]
@@ -352,7 +352,7 @@ func Test_El_Stoxos_proxy_off(t *testing.T) {
 
 func Test_El_Stoxos(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "stoxos.gr"
 	client := targets.Targets[hostname]
@@ -375,7 +375,7 @@ func Test_El_Stoxos(t *testing.T) {
 // Tvxs
 func Test_El_Tvxs_proxy_off(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "tvxs.gr"
 	client := targets.Targets[hostname]
@@ -397,7 +397,7 @@ func Test_El_Tvxs_proxy_off(t *testing.T) {
 
 func Test_El_Tvxs(t *testing.T) {
 	cfg := config.NewConfig()
-	envconfig.Process("", cfg)
+	_ = envconfig.Process("", cfg)
 
 	hostname := "tvxs.gr"
 	client := targets.Targets[hostname]

@@ -214,9 +214,9 @@ func (c *Config) GetProxyList() []string {
 
 func (c *Config) ExternalAuths() (map[string]*oauth2.Config, error) {
 	var auths = make(map[string]*oauth2.Config)
-	google, err := c.EnableGoogle()
+	g, err := c.EnableGoogle()
 	if err == nil {
-		auths["google"] = google
+		auths["google"] = g
 	}
 	return auths, nil
 }

@@ -3,7 +3,7 @@ package auth
 import (
 	"crypto/rsa"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
@@ -100,7 +100,7 @@ func NewDefaultAuthenticator(key *rsa.PrivateKey, keyID, algorithm string, publi
 // - The specified algorithm is unsupported.
 func NewJWTAuthenticator(keyCertificate, keyID, algorithm, issuer string) (*JWTAuthenticator, error) {
 	// read private certificate file
-	keyContents, err := ioutil.ReadFile(keyCertificate)
+	keyContents, err := os.ReadFile(keyCertificate)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading auth private key")
 	}

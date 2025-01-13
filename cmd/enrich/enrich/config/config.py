@@ -73,7 +73,7 @@ class AppConfig:
                 self.__setattr__(field, value)
             except ValueError as exc:
                 raise AppConfigError(
-                    f"Unable to cast value of {env[field]} to type {var_type} for {field} field"
+                    f"Unable to cast value of {env[field]} for {field} field"
                 ) from exc
 
     def __repr__(self):

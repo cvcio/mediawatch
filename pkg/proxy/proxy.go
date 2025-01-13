@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// CreateProxyFromList returns an http.Client with a proxy
+// CreateProxyFromList returns a http.Client with a proxy
 func CreateProxyFromList(proxylist []string, user, pass string) *http.Client {
 	proxyUrl := &url.URL{Scheme: "http", Host: proxylist[rand.Intn(len(proxylist))]}
 	if user != "" && pass != "" {
@@ -23,7 +23,7 @@ func CreateProxyFromList(proxylist []string, user, pass string) *http.Client {
 	}
 }
 
-// CreateProxy returns an http.Client with a proxy
+// CreateProxy returns a http.Client with a proxy
 func CreateProxy(u string) *http.Client {
 	proxyUrl, err := url.Parse(u)
 	if err != nil {

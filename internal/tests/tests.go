@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime/debug"
-	"testing"
 	"time"
 
 	"github.com/cvcio/mediawatch/internal/docker"
@@ -15,8 +13,8 @@ import (
 
 // Success and failure markers.
 const (
-	Success = "\u2713"
-	Failed  = "\u2717"
+// Success = "\u2713"
+// Failed  = "\u2717"
 )
 
 // Test owns state for running/shutting down tests.
@@ -28,7 +26,6 @@ type Test struct {
 
 // New is the entry point for tests.
 func New(withContainer bool) *Test {
-
 	// =========================================================================
 	// Logging
 
@@ -83,12 +80,13 @@ func (t *Test) TearDown() {
 	}
 }
 
-// Recover is used to prevent panics from allowing the test to cleanup.
-func Recover(t *testing.T) {
-	if r := recover(); r != nil {
-		t.Fatal("Unhandled Exception:", string(debug.Stack()))
-	}
-}
+//
+// // Recover is used to prevent panics from allowing the test to cleanup.
+// func Recover(t *testing.T) {
+// 	if r := recover(); r != nil {
+// 		t.Fatal("Unhandled Exception:", string(debug.Stack()))
+// 	}
+// }
 
 // Context returns an app level context for testing.
 // func Context() context.Context {
@@ -110,6 +108,6 @@ func StringPointer(s string) *string {
 // IntPointer is a helper to get a *int from a int. It is in the tests package
 // because we normally don't want to deal with pointers to basic types but it's
 // useful in some tests.
-func IntPointer(i int) *int {
-	return &i
-}
+// func IntPointer(i int) *int {
+// 	return &i
+// }

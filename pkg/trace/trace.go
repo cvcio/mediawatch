@@ -17,7 +17,7 @@ type ctxKey int
 // KeyValues is how request values are stored/retrieved
 const KeyValues ctxKey = 1
 
-//Values represent state for each request
+// Values represent state for each request
 type Values struct {
 	TraceID    string
 	Now        time.Time

@@ -31,8 +31,8 @@ func (h El_Efsyn) ParseList(client *http.Client) ([]*gofeed.Item, error) {
 		return nil, err
 	}
 
-	defer r.Body.Close()
-
+	defer func() { _ = r.Body.Close() }()
+	
 	if r.StatusCode != 200 {
 		return nil, errors.New(fmt.Sprintf("Failed with code: %d", r.StatusCode))
 	}

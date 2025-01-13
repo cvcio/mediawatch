@@ -153,7 +153,7 @@ func List(ctx context.Context, mg *db.MongoDB, q *sessionsv2.Session) ([]*sessio
 	return res, nil
 }
 
-// Create returns an new session object on succesfull insert
+// Create returns a new session object on successful insert
 func Create(ctx context.Context, mg *db.MongoDB, res *sessionsv2.Session, expire bool) (*sessionsv2.Session, error) {
 	now := time.Now()
 
@@ -161,13 +161,13 @@ func Create(ctx context.Context, mg *db.MongoDB, res *sessionsv2.Session, expire
 
 	if !expire {
 		res.ExpiresAt = nil
-	} else if res.ExpiresAt == nil && expire {
+	} else {
 		res.ExpiresAt = timestamppb.New(now.Add(12 * time.Hour))
 	}
 
 	f := func(collection *mongo.Collection) error {
 		inserted, err := collection.InsertOne(ctx, &res) // (&u)
-		// Normally we would return ErrDuplicateKey in this scenario but we do not want
+		// Normally we would return ErrDuplicateKey in this scenario, but we do not want
 		// to leak to an unauthenticated user which emails are in the system.
 		if err != nil {
 			we, _ := err.(mongo.WriteException)

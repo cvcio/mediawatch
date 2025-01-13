@@ -11,18 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
-	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
-	enrichv2 "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
-	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
-	"github.com/cvcio/mediawatch/pkg/redis"
-	"github.com/kelseyhightower/envconfig"
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.uber.org/zap"
-
 	"github.com/cvcio/mediawatch/models/article"
 	"github.com/cvcio/mediawatch/models/feed"
 	"github.com/cvcio/mediawatch/models/link"
@@ -32,8 +20,19 @@ import (
 	"github.com/cvcio/mediawatch/pkg/es"
 	"github.com/cvcio/mediawatch/pkg/kafka"
 	"github.com/cvcio/mediawatch/pkg/logger"
+	articlesv2 "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2"
+	commonv2 "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2"
+	enrichv2 "github.com/cvcio/mediawatch/pkg/mediawatch/enrich/v2"
+	feedsv2 "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2"
 	"github.com/cvcio/mediawatch/pkg/neo"
+	"github.com/cvcio/mediawatch/pkg/redis"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	kaf "github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
 )
 
 var (
@@ -53,7 +52,7 @@ var (
 type WorkerGroup struct {
 	ctx         context.Context
 	log         *zap.Logger
-	kafkaClient *kafka.KafkaClient
+	kafkaClient *kafka.Client
 	errChan     chan error
 
 	dbConn    *db.MongoDB
@@ -89,7 +88,7 @@ func (worker *WorkerGroup) TimeTrack(start time.Time, name string) {
 
 // Consume consumes kafka topics inside an infinite loop. In our logic we need
 // to fetch a message from a topic (FetchMessage), parse the json (Unmarshal)
-// and process the content (articleProcess) if it doesn't already exists.
+// and process the content (articleProcess) if it doesn't already exist.
 // If, for any reason, any step fails with an error we will commit this message
 // to kafka as we don't want to process this particular message again (it failed
 // for some reason).
@@ -210,7 +209,7 @@ func (worker *WorkerGroup) Publish(channel string, msg string) {
 // NewWorkerGroup implements a new WorkerGroup struct.
 func NewWorkerGroup(
 	log *zap.Logger,
-	kafkaClient *kafka.KafkaClient,
+	kafkaClient *kafka.Client,
 	errChan chan error,
 	dbConn *db.MongoDB,
 	esClient *es.Elastic,
@@ -260,7 +259,7 @@ func main() {
 	if err != nil {
 		log.Fatal("MongoDB connection error", zap.Error(err))
 	}
-	defer dbConn.Close()
+	defer func() { _ = dbConn.Close() }()
 
 	// =========================================================================
 	// Start elasticsearch
@@ -280,7 +279,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Neo4j connection error", zap.Error(err))
 	}
-	defer neoClient.Client.Close()
+	defer func() { _ = neoClient.Client.Close(context.Background()) }()
 
 	// ============================================================
 	// Redis
@@ -289,7 +288,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Redis connection error", zap.Error(err))
 	}
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	// =========================================================================
 	// Create kafka consumer/producer worker
@@ -302,8 +301,6 @@ func main() {
 		cfg.GetKafkaBrokers(),
 		cfg.Kafka.ConsumerTopic,
 		cfg.Kafka.ConsumerGroup,
-		cfg.Kafka.ProducerTopic,
-		cfg.Kafka.ProducerGroup,
 		cfg.Kafka.WorkerOffsetOldest,
 	)
 
@@ -373,7 +370,7 @@ func main() {
 		case s := <-osSignals:
 			log.Debug("Worker shutdown signal", zap.String("signal", s.String()))
 
-			// Asking prometheus to shutdown and load shed.
+			// Asking prometheus shutdown and load shed.
 			if err := promHandler.Shutdown(context.Background()); err != nil {
 				log.Error("Graceful shutdown did not complete", zap.Error(err))
 				if err := promHandler.Close(); err != nil {
@@ -412,8 +409,14 @@ func (worker *WorkerGroup) ProcessArticle(in link.Link) error {
 		f = tf
 	}
 
+	if f == nil {
+		workerProcessErrors.WithLabelValues("feed not found").Inc()
+		worker.log.Error("Feed not found", zap.String("hostname", in.Hostname), zap.String("url", in.Url))
+		return errors.New("feed not found")
+	}
+
 	// skip if offline
-	if f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
+	if f.Stream != nil && f.Stream.StreamStatus == commonv2.Status_STATUS_OFFLINE {
 		workerProcessErrors.WithLabelValues("feed offline").Inc()
 		worker.log.Warn("Skip message, feed is offline", zap.String("hostname", f.Hostname), zap.String("url", in.Url))
 		return nil
@@ -478,7 +481,7 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 		workerProcessErrors.WithLabelValues("index error").Inc()
 		return errors.New(index.String())
 	}
-	index.Body.Close()
+	_ = index.Body.Close()
 
 	// Create a new nodeAuthor if not exist for each author extracted
 	// by svc-scraper service and return the uid
@@ -549,7 +552,9 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 	if fUID != "" {
 		// disable lint for the error since we don't care about the response
 		// nolint:errcheck
-		go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, a.FeedId, "PUBLISHED_AT")
+		go func() {
+			_ = relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, a.FeedId, "PUBLISHED_AT")
+		}()
 	}
 	for _, entity := range entities {
 		// if entity.Type == "author" {
@@ -562,7 +567,9 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 		if entity.Type == "topic" {
 			// disable lint for the error since we don't care about the response
 			// nolint:errcheck
-			go relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
+			go func() {
+				_ = relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
+			}()
 		}
 	}
 
