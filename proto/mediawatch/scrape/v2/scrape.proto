@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package mediawatch.scrape.v2;
+option go_package = "github.com/cvcio/mediawatch/pkg/mediawatch/scrape/v2";
 
 import "mediawatch/feeds/v2/feed.proto";
 

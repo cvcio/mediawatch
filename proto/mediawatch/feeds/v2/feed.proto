@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package mediawatch.feeds.v2;
+option go_package = "github.com/cvcio/mediawatch/pkg/mediawatch/feeds/v2";
 
 // third party imports
 import "google/protobuf/timestamp.proto";

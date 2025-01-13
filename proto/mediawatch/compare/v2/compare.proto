@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package mediawatch.compare.v2;
+option go_package = "github.com/cvcio/mediawatch/pkg/mediawatch/compare/v2";
 
 // SingleRequest
 message SingleRequest {

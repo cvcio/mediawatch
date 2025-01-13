@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package mediawatch.common.v2;
+option go_package = "github.com/cvcio/mediawatch/pkg/mediawatch/common/v2";
 
 // Status Enumeration
 //
