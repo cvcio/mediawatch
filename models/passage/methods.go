@@ -24,7 +24,6 @@ func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 	index := []mongo.IndexModel{
 		{
 			Keys: bson.M{
-				"type": 1,
 				"text": 1,
 			},
 			Options: options.Index().SetUnique(true),

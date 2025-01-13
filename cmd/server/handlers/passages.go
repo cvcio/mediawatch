@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/cvcio/mediawatch/models/passage"
 
@@ -48,7 +47,7 @@ func (u *Passages) Create() http.HandlerFunc {
 			return
 		}
 
-		created, err := passage.Create(ctx, u.DB, newPassage, time.Now()) // Remove the address-of operator (&) from newPassage
+		created, err := passage.Create(ctx, u.DB, newPassage) // Remove the address-of operator (&) from newPassage
 		if err != nil {
 			u.log.Debug(err)
 			render.Render(w, r, web.ErrInvalidRequest(err))
