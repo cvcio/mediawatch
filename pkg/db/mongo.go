@@ -201,6 +201,9 @@ func NewListOpts() []func(*ListOpts) {
 func GetPagination(ctx context.Context, mg *MongoDB, filter bson.M, limit int, collection string) (map[string]interface{}, error) {
 	res := map[string]interface{}{}
 
+	res["total"] = int64(0)
+	res["pages"] = int64(0)
+
 	// count total documents with query
 	f := func(collection *mongo.Collection) error {
 		total, err := collection.CountDocuments(ctx, filter)

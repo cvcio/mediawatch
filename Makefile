@@ -4,7 +4,7 @@ TAG:=$(shell git rev-parse HEAD)
 BRANCH:=$(shell git rev-parse --abbrev-ref HEAD)
 POD=$(shell kubectl get pod -l app.kubernetes.io/name=mongodb -o jsonpath='{.items[0].metadata.name}')
 CONTAINER=$(shell docker ps -f name=mongo -f label=app=mediawatch -q)
-BUF_VERSION:=1.28.1
+BUF_VERSION:=1.38.0
 SERVICES=api compare enrich feeds scraper worker
 NAMESPACE=default
 
@@ -14,8 +14,8 @@ keys: ## generate keys
 
 .PHONY: tools
 tools: ## install tools
-	go get github.com/andefined/realize
-	go get github.com/golangci/golangci-lint
+	go get github.com/andefined/realize@latest
+	go get github.com/golangci/golangci-lint@latest
 
 .PHONY: buf-install
 buf-install: ## install buf version $$BUF_VERSION
@@ -40,6 +40,7 @@ buf-generate-py: ## generate python files
 		--exclude-path proto/mediawatch/compare \
 		--exclude-path proto/mediawatch/feeds \
 		--exclude-path proto/mediawatch/scrape \
+		--exclude-path proto/mediawatch/passages \
 		--exclude-path proto/mediawatch/posts \
 		.  
 

@@ -1,14 +1,9 @@
 
-version: v1
+version: v2
 managed:
   enabled: true
-  go_package_prefix:
-    default: github.com/cvcio/mediawatch/pkg
-    except:
-      - buf.build/googleapis/googleapis
-      - buf.build/srikrsna/protoc-gen-gotag
 plugins:
-  - name: gotag
+  - local: protoc-gen-gotag
     out: .
     opt:
       - outdir=pkg

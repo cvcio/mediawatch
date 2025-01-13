@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package mediawatch.passages.v2;
+
+import "mediawatch/common/v2/common.proto";
+import "tagger/tagger.proto";
+
+// Passage Type Enumeration
+enum PassageType {
+    PASSAGE_TYPE_UNSPECIFIED = 0;
+    PASSAGE_TYPE_TRIM_LEFT = 1;
+    PASSAGE_TYPE_TRIM_RIGHT = 2;
+    PASSAGE_TYPE_SPLIT = 3;
+    PASSAGE_TYPE_OMIT = 4;
+}
+
+// Passage Message
+message Passage {
+    string id = 1 [(tagger.tags) = "bson:\"_id,omitempty\""];
+    string text = 2;
+    string language = 3;
+    PassageType type = 4;
+}
+
+// Passage List Message
+message PassageList {
+    repeated Passage data = 1;
+    mediawatch.common.v2.Pagination pagination = 2;
+}
+
+// Query Passage Message
+message QueryPassage {
+    string language = 1;
+    PassageType type = 2;
+}
+
+// Passage Service
+service PassageService {
+    // create a new passage
+    rpc CreatePassage(Passage) returns (Passage) {}
+    // get list of passages by query
+    rpc GetPassages(QueryPassage) returns (PassageList) {}
+    // delete a passage by id
+    rpc DeletePassage(Passage) returns (mediawatch.common.v2.ResponseWithMessage) {}
+}

@@ -25,7 +25,7 @@ func NewElasticsearch(host, user, pass string) (*Elastic, error) {
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},
-			DiscoverNodesOnStart: true,
+			DiscoverNodesOnStart: false,
 		},
 	)
 
