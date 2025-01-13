@@ -66,45 +66,45 @@ func StartMongo(log *log.Logger) (*Container, error) {
 }
 
 // StartPostgres runs a Postgres container.
-func StartPostgres(user, password string) (*Container, error) {
-	pgUser := fmt.Sprintf("POSTGRES_USER=%s", user)
-	pgPassword := fmt.Sprintf("POSTGRES_PASSWORD=%s", password)
-	cmd := exec.Command("docker", "run", "-P",
-		"-e", pgPassword,
-		"-e", pgUser,
-		"-d", "postgres:11")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("starting container: %v", err)
-	}
-
-	id := out.String()[:12]
-
-	cmd = exec.Command("docker", "inspect", id)
-	out.Reset()
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("inspect container: %v", err)
-	}
-
-	var doc []struct {
-		NetworkSettings struct {
-			Ports struct {
-				TCP5432 []struct {
-					HostPort string `json:"HostPort"`
-				} `json:"5432/tcp"`
-			} `json:"Ports"`
-		} `json:"NetworkSettings"`
-	}
-	if err := json.Unmarshal(out.Bytes(), &doc); err != nil {
-		return nil, fmt.Errorf("decoding json: %v", err)
-	}
-
-	c := Container{
-		ID:   id,
-		Port: doc[0].NetworkSettings.Ports.TCP5432[0].HostPort,
-	}
-
-	return &c, nil
-}
+// func StartPostgres(user, password string) (*Container, error) {
+// 	pgUser := fmt.Sprintf("POSTGRES_USER=%s", user)
+// 	pgPassword := fmt.Sprintf("POSTGRES_PASSWORD=%s", password)
+// 	cmd := exec.Command("docker", "run", "-P",
+// 		"-e", pgPassword,
+// 		"-e", pgUser,
+// 		"-d", "postgres:11")
+// 	var out bytes.Buffer
+// 	cmd.Stdout = &out
+// 	if err := cmd.Run(); err != nil {
+// 		return nil, fmt.Errorf("starting container: %v", err)
+// 	}
+//
+// 	id := out.String()[:12]
+//
+// 	cmd = exec.Command("docker", "inspect", id)
+// 	out.Reset()
+// 	cmd.Stdout = &out
+// 	if err := cmd.Run(); err != nil {
+// 		return nil, fmt.Errorf("inspect container: %v", err)
+// 	}
+//
+// 	var doc []struct {
+// 		NetworkSettings struct {
+// 			Ports struct {
+// 				TCP5432 []struct {
+// 					HostPort string `json:"HostPort"`
+// 				} `json:"5432/tcp"`
+// 			} `json:"Ports"`
+// 		} `json:"NetworkSettings"`
+// 	}
+// 	if err := json.Unmarshal(out.Bytes(), &doc); err != nil {
+// 		return nil, fmt.Errorf("decoding json: %v", err)
+// 	}
+//
+// 	c := Container{
+// 		ID:   id,
+// 		Port: doc[0].NetworkSettings.Ports.TCP5432[0].HostPort,
+// 	}
+//
+// 	return &c, nil
+// }

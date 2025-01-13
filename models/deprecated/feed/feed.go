@@ -27,8 +27,8 @@ var (
 	// ErrInvalidID occurs when an ID is not in a valid form.
 	ErrInvalidID = errors.New("ID is not in its proper form")
 
-	// ErrDuplicate occurs when a key alerady exists
-	ErrDuplicate = errors.New("Entry already exists.")
+	// // ErrDuplicate occurs when a key already exists
+	// ErrDuplicate = errors.New("Entry already exists.")
 )
 
 func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
@@ -57,7 +57,7 @@ func EnsureIndex(ctx context.Context, dbConn *db.MongoDB) error {
 	opts := options.CreateIndexes().SetMaxTime(10 * time.Second)
 
 	f := func(collection *mongo.Collection) error {
-		_, err := collection.Indexes().CreateMany(ctx, index, opts) //EnsureIndex(index)
+		_, err := collection.Indexes().CreateMany(ctx, index, opts) // EnsureIndex(index)
 		return err
 	}
 	if err := dbConn.Execute(ctx, feedsCollection, f); err != nil {
@@ -164,11 +164,11 @@ func List(ctx context.Context, dbConn *db.MongoDB, optionsList ...func(*ListOpts
 	d.Pagination = pagination
 
 	f := func(collection *mongo.Collection) error {
-		c, err := collection.Find(ctx, filter, findOptions) //.Decode(p) //(nil).Limit(opts.Limit).Skip(opts.Offset * opts.Limit).All(&p)
+		c, err := collection.Find(ctx, filter, findOptions) // .Decode(p) //(nil).Limit(opts.Limit).Skip(opts.Offset * opts.Limit).All(&p)
 		if err != nil {
 			return err
 		}
-		defer c.Close(ctx)
+		defer func() { _ = c.Close(ctx) }()
 		for c.Next(ctx) {
 			var f Feed
 			err := c.Decode(&f)
@@ -496,7 +496,7 @@ func GetTargets(ctx context.Context, dbConn *db.MongoDB, optionsList ...func(*Li
 		if err != nil {
 			return err
 		}
-		defer c.Close(ctx)
+		defer func() { _ = c.Close(ctx) }()
 		for c.Next(ctx) {
 			var f Feed
 			err := c.Decode(&f)

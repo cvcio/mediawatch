@@ -76,9 +76,11 @@ const main = async () => {
 			logger.info(`[SVC-SCRAPER] gRPC server started at: ${process.env.SERVER_ADDRESS}`);
 		});
 
+	// Start the worker
 	await worker.initialize();
+	logger.info('[SVC-SCRAPER] Kafka connection established');
 
-	worker.consume('scrape', async message => {
+	await worker.consume('scrape', async message => {
 		const producedAt = moment.unix(message.timestamp / 1000);
 		const start = moment();
 		const request = JSON.parse(message.value.toString());

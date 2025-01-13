@@ -19,7 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// ArticlesHandler implements feeds connect service
+// ArticlesHandler handles operations related to articles, leveraging MongoDB, Elastic, Neo4j, JWT authentication, and Redis for caching.
 type ArticlesHandler struct {
 	log             *zap.SugaredLogger
 	mg              *db.MongoDB
@@ -34,17 +34,18 @@ type ArticlesHandler struct {
 	articlesv2connect.UnimplementedArticlesServiceHandler
 }
 
-// NewArticlesHandler returns a new ArticlesHandler service.
+// NewArticlesHandler initializes and returns a new ArticlesHandler instance.
+// It takes a configuration, logger, MongoDB, ElasticSearch, Neo4j, JWT authenticator, and Redis client as arguments.
 func NewArticlesHandler(cfg *config.Config, log *zap.SugaredLogger, mg *db.MongoDB, elastic *es.Elastic, neo *neo.Neo, authenticator *auth.JWTAuthenticator, rdb *redis.RedisClient) *ArticlesHandler {
 	// articlesCh, _ := rdb.Subscribe("mediawatch_articles")
 	// relationshipsCh, _ := rdb.Subscribe("mediawatch_relationships")
 	return &ArticlesHandler{log: log, mg: mg, elastic: elastic, neo: neo, authenticator: authenticator, rdb: rdb, articlesCh: nil, relationshipsCh: nil}
 }
 
-// Consume implements aticles redis consumer
+// Consume processes messages from the articles channel and handles them accordingly.
 func (h *ArticlesHandler) Consume() {}
 
-// GetArticle return a single article.
+// GetArticle retrieves an article by its ID from Elasticsearch and optionally counts similar articles if requested.
 func (h *ArticlesHandler) GetArticle(ctx context.Context, req *connect.Request[articlesv2.QueryArticle]) (*connect.Response[articlesv2.Article], error) {
 	data, err := article.GetById(ctx, h.elastic, "mediawatch_articles_el", req.Msg.DocId)
 	if err != nil {
@@ -52,9 +53,9 @@ func (h *ArticlesHandler) GetArticle(ctx context.Context, req *connect.Request[a
 	}
 	if req.Msg.CountCases {
 		// return count per article
-		ses := h.neo.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
-		defer func() { _ = ses.Close() }()
-		res, err := ses.Run(relationships.CountSimilarTpl, map[string]interface{}{
+		ses := h.neo.Client.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
+		defer func() { _ = ses.Close(ctx) }()
+		res, err := ses.Run(ctx, relationships.CountSimilarTpl, map[string]interface{}{
 			"doc_id": data.DocId,
 		})
 
@@ -63,7 +64,7 @@ func (h *ArticlesHandler) GetArticle(ctx context.Context, req *connect.Request[a
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
 
-		if res.Next() {
+		if res.Next(ctx) {
 			record := res.Record()
 			data.RelCount = 0
 			if value, ok := record.Get("count"); ok {
@@ -78,7 +79,7 @@ func (h *ArticlesHandler) GetArticle(ctx context.Context, req *connect.Request[a
 	return connect.NewResponse(data), nil
 }
 
-// GetArticles returns a list of aricles.
+// GetArticles retrieves a list of articles matching the specified query criteria.
 func (h *ArticlesHandler) GetArticles(ctx context.Context, req *connect.Request[articlesv2.QueryArticle]) (*connect.Response[articlesv2.ArticleList], error) {
 	j, _ := json.Marshal(req.Msg)
 	opts := article.NewOptsForm(j)
@@ -91,26 +92,30 @@ func (h *ArticlesHandler) GetArticles(ctx context.Context, req *connect.Request[
 	if req.Msg.CountCases {
 		// return count per article
 		for _, v := range data.Data {
-			ses := h.neo.Client.NewSession(neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
-			defer func() { _ = ses.Close() }()
-			res, err := ses.Run(relationships.CountSimilarTpl, map[string]interface{}{
-				"doc_id": v.DocId,
-			})
+			func() {
+				ses := h.neo.Client.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
+				defer func() { _ = ses.Close(ctx) }()
 
-			if err != nil {
-				h.log.Error(err)
-				return nil, connect.NewError(connect.CodeInternal, err)
-			}
+				res, err := ses.Run(ctx, relationships.CountSimilarTpl, map[string]interface{}{
+					"doc_id": v.DocId,
+				})
 
-			if res.Next() {
-				record := res.Record()
-				v.RelCount = 0
-				if value, ok := record.Get("count"); ok {
-					if value.(int64) > 0 {
-						v.RelCount = value.(int64)
+				if err != nil {
+					h.log.Error(err)
+					v.RelCount = 0
+					return
+				}
+
+				if res.Next(ctx) {
+					record := res.Record()
+					v.RelCount = 0
+					if value, ok := record.Get("count"); ok {
+						if value.(int64) > 0 {
+							v.RelCount = value.(int64)
+						}
 					}
 				}
-			}
+			}()
 		}
 	}
 	for _, v := range data.Data {
@@ -120,7 +125,7 @@ func (h *ArticlesHandler) GetArticles(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(data), nil
 }
 
-// Stream streams articles in real time.
+// StreamArticles streams articles in real-time to the client.
 func (h *ArticlesHandler) StreamArticles(ctx context.Context, req *connect.Request[articlesv2.QueryArticle], stream *connect.ServerStream[articlesv2.ArticleList]) error {
 	h.log.Infof("[ARTICLES] Streaming articles: %s", req.Msg.String())
 	pubsub, articlesCh, err := h.rdb.Subscribe(ctx, "mediawatch_articles_*")
@@ -151,7 +156,7 @@ func (h *ArticlesHandler) StreamArticles(ctx context.Context, req *connect.Reque
 	return nil
 }
 
-// StreamRelatedArticles streams article relationships for a specific article in real time.
+// StreamRelatedArticles streams related articles based on the given query parameters.
 func (h *ArticlesHandler) StreamRelatedArticles(ctx context.Context, req *connect.Request[articlesv2.QueryArticle], stream *connect.ServerStream[articlesv2.ArticleList]) error {
 	return nil
 }

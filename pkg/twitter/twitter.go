@@ -101,7 +101,7 @@ func WithPublicStream(values map[string][]string) ListenOpts {
 	}
 }
 
-// Listen start the listener and send cathed urls to chan
+// TweetListen start the listener and send cached urls to chan
 func (s *Listen) TweetListen(f func(anaconda.Tweet)) {
 	demux := NewStreamDemux()
 	demux.Tweet = f

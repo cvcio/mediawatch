@@ -25,6 +25,8 @@ exclude:
       - cmd/listen
       - cmd/twitter
       - cmd/streamer
+      - cmd/server
+      - cmd/enrich/enrich/mediawatch
 
 #Execute shell command before Qodana execution (Applied in CI/CD pipeline)
 #bootstrap: sh ./prepare-qodana.sh

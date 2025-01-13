@@ -171,11 +171,12 @@ func Org(i string) func(*ListOpts) {
 		l.Org = i
 	}
 }
-func Deleted() func(*ListOpts) {
-	return func(l *ListOpts) {
-		l.Deleted = true
-	}
-}
+
+// func Deleted() func(*ListOpts) {
+// 	return func(l *ListOpts) {
+// 		l.Deleted = true
+// 	}
+// }
 
 func Status(s string) func(*ListOpts) {
 	return func(l *ListOpts) {
