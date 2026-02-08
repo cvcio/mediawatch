@@ -1,14 +1,15 @@
 package handlers
 
+/*
 import (
 	"context"
 	"fmt"
 	"net/http"
 
-	"github.com/ChimeraCoder/anaconda"
 	"github.com/cvcio/mediawatch/pkg/config"
 	mailer "github.com/cvcio/mediawatch/pkg/mailer/v1"
 	"github.com/cvcio/mediawatch/pkg/neo"
+	"github.com/cvcio/mediawatch/pkg/redis"
 	"github.com/cvcio/mediawatch/pkg/twillio"
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -40,9 +41,10 @@ func API(
 	externalAuth map[string]*oauth2.Config,
 	mail *mailer.Mailer,
 	twillio *twillio.Twillio,
-	twtt *anaconda.TwitterApi,
+	// twtt *anaconda.TwitterApi,
 	scrape scrape_pb.ScrapeServiceClient,
-	cfg *config.Config) http.Handler {
+	cfg *config.Config,
+	rdb *redis.RedisClient) http.Handler {
 
 	// Create the application
 	app := web.New(mw...)
@@ -95,16 +97,6 @@ func API(
 		log: log,
 	}
 
-	// err = report.EnsureIndex(context.Background(), f.DB)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	t := Twitter{
-		log:  log,
-		twtt: twtt,
-	}
-
 	s := Subscription{
 		DB:        db,
 		log:       log,
@@ -116,6 +108,8 @@ func API(
 		log:    log,
 		scrape: scrape,
 	}
+
+	// cachemw := mid.NewRedisCache(rdb, log)
 
 	// Extrernal Auth Service API Endpoints
 	if len(u.auth) > 0 {
@@ -169,13 +163,13 @@ func API(
 
 	app.Handle("GET", "/v2/cases", c.List(), authmw.Authenticate())
 	app.Handle("GET", "/v2/cases/{id}", c.Get(), authmw.Authenticate())
-	app.Handle("GET", "/v2/cases/{id}/count", c.Count(), authmw.Authenticate())
+	app.Handle("GET", "/v2/cases/{id}/count", c.Count(), authmw.Authenticate()) // , cachemw.Cache(time.Minute*10))
 
 	app.Handle("GET", "/v2/reports", r.List(), authmw.Authenticate())
 	app.Handle("POST", "/v2/reports", r.Create(), authmw.Authenticate())
 	app.Handle("GET", "/v2/reports/{id}", r.Get(), authmw.Authenticate())
 
-	app.Handle("POST", "/v2/external/parse/twitter-profile", t.Profile(), authmw.Authenticate())
+	// app.Handle("POST", "/v2/external/parse/twitter-profile", t.Profile(), authmw.Authenticate())
 	app.Handle("POST", "/v2/external/parse/article", a.ParseArticle(), authmw.Authenticate())
 	app.Handle("GET", "/v2/external/export/feeds", f.Export(), authmw.Authenticate())
 	app.Handle("POST", "/v2/external/import/feeds", f.Import(), authmw.Authenticate())
@@ -192,3 +186,4 @@ func translate(err error) *web.ErrResponse {
 	}
 	return &web.ErrResponse{Err: err, ErrorText: err.Error()}
 }
+*/

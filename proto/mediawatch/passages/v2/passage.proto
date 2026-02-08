@@ -32,7 +32,14 @@ message PassageList {
 // Query Passage Message
 message QueryPassage {
     string language = 1;
-    PassageType type = 2;
+
+    int32 limit = 2;
+    int32 offset = 3;
+
+    int32 sort_order = 4;
+    string sort_key = 5;
+
+    PassageType type = 6;
 }
 
 // Passage Service

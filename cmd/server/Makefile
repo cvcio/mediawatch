@@ -2,7 +2,7 @@ VERSION ?= $(shell git describe --tags --always --dirty --match=v* 2> /dev/null 
 BLDVER = module:$(MODULE),version:$(VERSION),build:$(shell date +"%Y%m%d.%H%M%S.%N.%z")
 BASE = $(CURDIR)
 MODULE = server
-REGISTRY=reg.plagiari.sm
+REGISTRY=cvcio
 PROJECT=mediawatch
 ORG=cvcio
 

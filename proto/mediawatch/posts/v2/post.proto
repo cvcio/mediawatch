@@ -4,11 +4,9 @@ package mediawatch.posts.v2;
 option go_package = "github.com/cvcio/mediawatch/pkg/mediawatch/posts/v2";
 
 // third party imports
-import "google/protobuf/timestamp.proto";
-
+//
 // mediawatch specific imports
 import "mediawatch/articles/v2/articles.proto";
-import "mediawatch/enrich/v2/enrich.proto";
 import "mediawatch/feeds/v2/feed.proto";
 import "mediawatch/common/v2/common.proto";
 

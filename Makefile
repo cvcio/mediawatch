@@ -5,8 +5,10 @@ BRANCH:=$(shell git rev-parse --abbrev-ref HEAD)
 POD=$(shell kubectl get pod -l app.kubernetes.io/name=mongodb -o jsonpath='{.items[0].metadata.name}')
 CONTAINER=$(shell docker ps -f name=mongo -f label=app=mediawatch -q)
 BUF_VERSION:=1.38.0
-SERVICES=api compare enrich feeds scraper worker
+SERVICES=api compare feeds scraper worker server
 NAMESPACE=default
+USER_ID:=$(shell id -u)
+GROUP_ID:=$(shell id -g)
 
 .PHONY: keys
 keys: ## generate keys
@@ -35,10 +37,7 @@ buf-generate-tags: ## generate tagger files
 .PHONY: buf-generate-py
 buf-generate-py: ## generate python files
 	buf generate --template buf.gen.py.yaml \
-		--exclude-path proto/mediawatch/articles \
-		--exclude-path proto/mediawatch/common \
 		--exclude-path proto/mediawatch/compare \
-		--exclude-path proto/mediawatch/feeds \
 		--exclude-path proto/mediawatch/scrape \
 		--exclude-path proto/mediawatch/passages \
 		--exclude-path proto/mediawatch/posts \
@@ -123,7 +122,7 @@ lint: lint-go lint-py ## lint all code
 
 .PHONY: db-start
 db-start: ## start dbs
-	docker compose up -d 
+	docker compose up --remove-orphans -d  
 
 .PHONY: db-logs
 db-logs: ## show db logs

@@ -379,7 +379,7 @@ func Authenticate(ctx context.Context, tknGen TokenGenerator, now time.Time, u *
 			searchLimit = 30
 		}
 	}
-	accessClaims := auth.NewClaims(u.ID.Hex(), u.Email, u.Roles, u.Organization, strings.ToUpper(u.Language), searchLimit, now, 30*time.Minute)
+	accessClaims := auth.NewClaims(u.ID.Hex(), u.Email, u.Roles, u.Organization, strings.ToUpper(u.Language), searchLimit, now, 24*time.Hour)
 	tkn, err := tknGen.GenerateToken(accessClaims)
 	if err != nil {
 		return Token{}, errors.Wrap(err, "generating token")

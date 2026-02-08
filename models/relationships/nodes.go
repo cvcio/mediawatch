@@ -13,24 +13,20 @@ import (
 // mergeNodeFeed transaction function.
 func mergeNodeFeed(ctx context.Context, f *feedsv2.Feed) neo4j.ManagedTransactionWork {
 	return func(tx neo4j.ManagedTransaction) (interface{}, error) {
-		result, err := tx.Run(ctx, nodeFeedTpl, map[string]interface{}{
+		_, err := tx.Run(ctx, nodeFeedTpl, map[string]interface{}{
 			"feed_id":  f.Id,
+			"uid":      f.Id,
 			"name":     f.Name,
 			"hostname": f.Hostname,
 			"url":      f.Url,
 			"type":     "feed",
-			"uid":      uuid.New().String(),
 		})
 
 		if err != nil {
 			return nil, err
 		}
 
-		if result.Next(ctx) {
-			return result.Record().Values[0], nil
-		}
-
-		return nil, fmt.Errorf("feed %s record didn't create: %s", f.Hostname, result.Err().Error())
+		return f.Id, nil
 	}
 }
 
@@ -70,14 +66,16 @@ func mergeNodeEntity(ctx context.Context, label string, entityType string) neo4j
 		})
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to write entity %s %s: %s", entityType, label, err.Error())
 		}
 
-		if result.Next(ctx) {
-			return result.Record().Values[0], nil
+		entity, err := result.Single(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write entity %s %s: %s", entityType, label, err.Error())
 		}
 
-		return nil, fmt.Errorf("%s %s record didn't create: %s", entityType, label, result.Err().Error())
+		uid := entity.AsMap()["uid"]
+		return uid.(string), err
 	}
 }
 
@@ -112,11 +110,6 @@ func createNodeArticle(ctx context.Context, article *NodeArticle) neo4j.ManagedT
 			return nil, err
 		}
 
-		// if result.Next(ctx) {
-		// 	return result.Record().Values[0], nil
-		// }
-
-		// return nil, fmt.Errorf("article %s record didn't create: %s", article.DocId, result.Err().Error())
 		return article.DocId, nil
 	}
 }

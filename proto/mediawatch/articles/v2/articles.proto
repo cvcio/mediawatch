@@ -4,7 +4,7 @@ package mediawatch.articles.v2;
 option go_package = "github.com/cvcio/mediawatch/pkg/mediawatch/articles/v2";
 
 // third party imports
-import "google/protobuf/timestamp.proto";
+// import "google/protobuf/timestamp.proto";
 
 // mediawatch specific imports
 import "mediawatch/enrich/v2/enrich.proto";
@@ -43,6 +43,8 @@ message Article {
     string crawled_at = 10;
     int64 rel_count = 11;
     string screen_name = 12;
+    
+    repeated Article similar = 13;
 };
 
 // QueryArticle

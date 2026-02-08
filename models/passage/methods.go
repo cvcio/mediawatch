@@ -97,16 +97,11 @@ func Create(ctx context.Context, dbConn *db.MongoDB, passage *passagesv2.Passage
 }
 
 // List returns a list of passages by passage query.
-func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (*passagesv2.PassageList, error) {
+func List(ctx context.Context, mg *db.MongoDB, opts *passagesv2.QueryPassage) (*passagesv2.PassageList, error) {
 	filter := bson.M{}
 
-	opts := DefaultOpts()
-	for _, o := range optionsList {
-		o(&opts)
-	}
-
-	if opts.Lang != "" {
-		filter["language"] = strings.ToLower(opts.Lang)
+	if opts.Language != "" {
+		filter["language"] = strings.ToLower(opts.Language)
 	}
 
 	findOptions := options.Find()
@@ -116,7 +111,7 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 	data := make([]*passagesv2.Passage, 0)
 	pagination := &commonv2.Pagination{}
 
-	p, err := db.GetPagination(ctx, mg, filter, opts.Limit, passagesCollection)
+	p, err := db.GetPagination(ctx, mg, filter, int(opts.Limit), passagesCollection)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +128,7 @@ func List(ctx context.Context, mg *db.MongoDB, optionsList ...func(*ListOpts)) (
 		if err != nil {
 			return err
 		}
-		defer c.Close(ctx)
+		defer func() { _ = c.Close(ctx) }()
 		for c.Next(ctx) {
 			var p passagesv2.Passage
 			err := c.Decode(&p)

@@ -17,15 +17,13 @@ type Twillio struct {
 }
 
 func New(sid, token, sender string) *Twillio {
-	client := &http.Client{}
-	t := &Twillio{
-		Client: client,
+	return &Twillio{
+		Client: &http.Client{},
 		SID:    sid,
 		Token:  token,
 		URL:    "https://api.twilio.com/2010-04-01/Accounts/" + sid + "/Messages.json",
 		From:   sender,
 	}
-	return t
 }
 
 func sms(ctx context.Context, t *Twillio, To, Body string) error {
@@ -44,7 +42,7 @@ func sms(ctx context.Context, t *Twillio, To, Body string) error {
 	return err
 }
 
-func SendPin(ctx context.Context, t *Twillio, To, Pin string) error {
+func (t *Twillio) SendPin(ctx context.Context, To, Pin string) error {
 	body := fmt.Sprintf("Your MediaWatch Verification Code is %s", Pin)
 	return sms(ctx, t, To, body)
 }

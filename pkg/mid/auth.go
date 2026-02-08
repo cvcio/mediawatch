@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-chi/render"
 	"github.com/pkg/errors"
 
@@ -17,34 +18,64 @@ type Auth struct {
 	Authenticator auth.Authenticator
 }
 
+// // Authenticate validates a JWT from the `Authorization` header.
+// func (a *Auth) Authenticate() func(next http.Handler) http.Handler {
+// 	return func(next http.Handler) http.Handler {
+// 		fn := func(w http.ResponseWriter, r *http.Request) {
+// 			authHdr := r.Header.Get("Authorization")
+// 			if authHdr == "" {
+// 				_ = render.Render(w, r, web.ErrUnauthorized)
+// 				return
+// 			}
+
+// 			tknStr, err := parseAuthHeader(authHdr)
+// 			if err != nil {
+// 				_ = render.Render(w, r, web.ErrUnauthorized)
+// 				return
+// 			}
+
+// 			claims, err := a.Authenticator.ParseClaims(tknStr)
+// 			if err != nil {
+// 				_ = render.Render(w, r, web.ErrUnauthorized)
+// 				return
+// 			}
+
+// 			// Add claims to the context so they can be retrieved later.
+// 			ctx := context.WithValue(r.Context(), auth.Key, claims)
+
+// 			next.ServeHTTP(w, r.WithContext(ctx))
+// 		}
+// 		return http.HandlerFunc(fn)
+// 	}
+// }
+
 // Authenticate validates a JWT from the `Authorization` header.
-func (a *Auth) Authenticate() func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			authHdr := r.Header.Get("Authorization")
-			if authHdr == "" {
-				_ = render.Render(w, r, web.ErrUnauthorized)
-				return
-			}
-
-			tknStr, err := parseAuthHeader(authHdr)
-			if err != nil {
-				_ = render.Render(w, r, web.ErrUnauthorized)
-				return
-			}
-
-			claims, err := a.Authenticator.ParseClaims(tknStr)
-			if err != nil {
-				_ = render.Render(w, r, web.ErrUnauthorized)
-				return
-			}
-
-			// Add claims to the context so they can be retrieved later.
-			ctx := context.WithValue(r.Context(), auth.Key, claims)
-
-			next.ServeHTTP(w, r.WithContext(ctx))
+func (a *Auth) Authenticate() gin.HandlerFunc { // func(next http.Handler) http.Handler {
+	return func(c *gin.Context) {
+		header := c.Request.Header.Get("Authorization")
+		if header == "" {
+			_ = c.AbortWithError(http.StatusUnauthorized, errors.Errorf("No Authorization Header Error"))
+			return
 		}
-		return http.HandlerFunc(fn)
+
+		token, err := parseAuthHeader(header)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusUnauthorized, err)
+			return
+		}
+
+		claims, err := a.Authenticator.ParseClaims(token)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusUnauthorized, err)
+			return
+		}
+		c.Request = c.Request.WithContext(
+			context.WithValue(
+				c.Request.Context(),
+				auth.Key, claims,
+			),
+		)
+		c.Next()
 	}
 }
 

@@ -4,7 +4,7 @@ managed:
 plugins:
   - remote: buf.build/grpc/python:v1.59.2
     out: cmd/enrich/enrich
-  - remote: buf.build/protocolbuffers/python
+  - remote: buf.build/protocolbuffers/python:v29.3
     out: cmd/enrich/enrich
   - remote: buf.build/community/nipunn1313-mypy:v3.4.0
     out: cmd/enrich/enrich

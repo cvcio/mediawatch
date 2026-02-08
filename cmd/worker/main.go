@@ -527,13 +527,8 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 	nArticle.Type = "article"
 
 	if _, err := relationships.CreateNodeArticle(worker.ctx, worker.neoClient, nArticle); err != nil {
-		workerProcessErrors.WithLabelValues("create node article error").Inc()
+		workerProcessErrors.WithLabelValues("create n4ode article error").Inc()
 		worker.log.Error("Merge article error", zap.Error(err))
-		if !strings.Contains(err.Error(), "already exists with label `Article`") {
-			// since the article exists we don't need to save it again
-			// return nil to mark the message as read
-			return errors.Wrap(err, "neo4j error")
-		}
 	}
 
 	// create a new node into the neo4j database, if not exists
@@ -543,46 +538,56 @@ func (worker *WorkerGroup) StoreArticle(a *articlesv2.Article) error {
 		// if there is an error during feed node creation return an error
 		// as will not be able to associate the article with a feed.
 		worker.log.Error("Merge feed failed", zap.String("hostname", a.Hostname), zap.Error(err))
-		return errors.Wrap(err, "merge feed error")
 	}
 
 	// =========================================================================
 	// Save relationships
-	// feed published at
 	if fUID != "" {
-		// disable lint for the error since we don't care about the response
-		// nolint:errcheck
 		go func() {
-			_ = relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, a.FeedId, "PUBLISHED_AT")
+			if err := relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, fUID, "PUBLISHED_AT"); err != nil {
+				workerProcessErrors.WithLabelValues("merge PUBLISHED_AT error").Inc()
+				worker.log.Error("Merge PUBLISHED_AT error", zap.String("hostname", a.Hostname), zap.Error(err))
+			}
 		}()
 	}
 	for _, entity := range entities {
-		// if entity.Type == "author" {
-		// 	go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, nArticle.DocId, "AUTHOR_OF")
-		// 	if fUID != "" {
-		// 		// writes for
-		// 		go relationships.MergeRel(worker.ctx, worker.neoClient, entity.Uid, fUID, "WRITES_FOR")
-		// 	}
-		// } else
-		if entity.Type == "topic" {
-			// disable lint for the error since we don't care about the response
-			// nolint:errcheck
-			go func() {
-				_ = relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, entity.Uid, "IN_TOPIC")
-			}()
+		if entity.Type == "author" {
+			go func(e *relationships.NodeEntity) {
+				if err := relationships.MergeRel(worker.ctx, worker.neoClient, e.Uid, nArticle.DocId, "AUTHOR_OF"); err != nil {
+					workerProcessErrors.WithLabelValues("merge AUTHOR_OF error").Inc()
+					worker.log.Error("Merge AUTHOR_OF error", zap.String("hostname", a.Hostname), zap.Error(err))
+				}
+			}(entity)
+			if fUID != "" {
+				go func(e *relationships.NodeEntity) {
+					if err := relationships.MergeRel(worker.ctx, worker.neoClient, e.Uid, fUID, "WRITES_FOR"); err != nil {
+						workerProcessErrors.WithLabelValues("write WRITES_FOR error").Inc()
+						worker.log.Error("Merge WRITES_FOR error", zap.String("hostname", a.Hostname), zap.Error(err))
+					}
+				}(entity)
+			}
+		} else if entity.Type == "topic" {
+			go func(e *relationships.NodeEntity) {
+				if err := relationships.MergeRel(worker.ctx, worker.neoClient, nArticle.DocId, e.Uid, "IN_TOPIC"); err != nil {
+					workerProcessErrors.WithLabelValues("write IN_TOPIC error").Inc()
+					worker.log.Error("Merge IN_TOPIC error", zap.String("hostname", a.Hostname), zap.Error(err))
+				}
+			}(entity)
 		}
 	}
 
 	// marshal node article
-	b, err := json.Marshal(nArticle)
-	if err != nil {
-		workerProcessErrors.WithLabelValues("marshal article error").Inc()
-		worker.log.Error("Marshal article to message error", zap.Error(err))
-		return err
-	}
+	// b, err := json.Marshal(nArticle)
+	// if err != nil {
+	// 	workerProcessErrors.WithLabelValues("marshal article error").Inc()
+	// 	worker.log.Error("Marshal article to message error", zap.Error(err))
+	// 	return err
+	// }
+
+	// =========================================================================
 	// write node article as a new message in the compare topic, so we can process it
 	// using the compare microservice.
-	go worker.Produce(kaf.Message{Value: []byte(b), Topic: "compare"})
+	// go worker.Produce(kaf.Message{Value: []byte(b), Topic: "compare"})
 
 	// set values to stream to the frontend
 	a.Nlp.Stopwords = nil

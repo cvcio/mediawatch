@@ -2,6 +2,7 @@ package article
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"time"
 
@@ -49,6 +50,7 @@ func NewOpts() *Opts {
 	opts := new(Opts)
 	opts.Skip = 0
 	opts.Limit = 24
+	opts.CountCases = false
 	opts.Range.From = "now-7d"
 	opts.Range.To = "now"
 	opts.Range.By = "content.published_at"
@@ -61,7 +63,49 @@ func NewOpts() *Opts {
 
 func NewOptsForm(j []byte) *Opts {
 	opts := NewOpts()
-	json.Unmarshal(j, &opts)
+	_ = json.Unmarshal(j, &opts)
+	return opts
+}
+
+func NewOptsFromChiForm(j map[string][]string) *Opts {
+	m := map[string]string{}
+	for k, v := range j {
+		m[k] = v[0]
+	}
+
+	b, _ := json.Marshal(m)
+	opts := NewOptsForm(b)
+
+	if v, ok := j["skip"]; ok {
+		if len(v) > 0 {
+			opts.Skip, _ = strconv.Atoi(v[0])
+		}
+	}
+
+	if v, ok := j["limit"]; ok {
+		if len(v) > 0 {
+			opts.Limit, _ = strconv.Atoi(v[0])
+		}
+	}
+
+	if v, ok := j["scroll"]; ok {
+		if len(v) > 0 {
+			opts.Scroll, _ = strconv.ParseBool(v[0])
+		}
+	}
+
+	if v, ok := j["count_cases"]; ok {
+		if len(v) > 0 {
+			opts.CountCases, _ = strconv.ParseBool(v[0])
+		}
+	}
+
+	if v, ok := j["include_rels"]; ok {
+		if len(v) > 0 {
+			opts.IncludeRels, _ = strconv.ParseBool(v[0])
+		}
+	}
+
 	return opts
 }
 
@@ -356,7 +400,7 @@ func (o *Opts) NewArticlesSearchQuery(es esapi.Search) []func(*esapi.SearchReque
 	opts := make([]func(*esapi.SearchRequest), 0)
 	opts = append(opts, esapi.Search.WithBody(es, strings.NewReader(string(buf))))
 	opts = append(opts, esapi.Search.WithIndex(es, o.Index))
-	opts = append(opts, esapi.Search.WithFrom(es, o.Skip))
+	opts = append(opts, esapi.Search.WithFrom(es, o.Skip*o.Limit))
 	opts = append(opts, esapi.Search.WithSize(es, o.Limit))
 	opts = append(opts, esapi.Search.WithTimeout(es, time.Second*10))
 	opts = append(opts, esapi.Search.WithTrackTotalHits(es, true))

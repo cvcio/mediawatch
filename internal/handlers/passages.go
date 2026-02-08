@@ -41,7 +41,8 @@ func (h *PassagesHandler) GetPassages(ctx context.Context, req *connect.Request[
 	// TODO: parse claims and authorization tokens
 
 	data, err := passage.List(ctx, h.mg,
-		passage.Lang(req.Msg.Language),
+		// passage.Lang(req.Msg.Language),
+		nil,
 	)
 
 	if err != nil {

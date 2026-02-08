@@ -6,8 +6,8 @@ import "strings"
 type ListOpts struct {
 	Limit  int
 	Offset int
-	Id     string
 	Lang   string
+	Type   int32
 }
 
 func DefaultOpts() ListOpts {
@@ -15,7 +15,6 @@ func DefaultOpts() ListOpts {
 	l.Offset = 0
 	l.Limit = 0
 	l.Lang = ""
-	l.Id = ""
 	return l
 }
 
@@ -32,12 +31,6 @@ func Limit(i int) func(*ListOpts) {
 func Offset(i int) func(*ListOpts) {
 	return func(l *ListOpts) {
 		l.Offset = i
-	}
-}
-
-func Id(i string) func(*ListOpts) {
-	return func(l *ListOpts) {
-		l.Id = i
 	}
 }
 
