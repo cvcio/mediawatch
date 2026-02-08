@@ -57,7 +57,7 @@ services:
       - "traefik.frontend.rule=Host:express.docker.localhost"
 
   neo4j:
-    image: neo4j:5.5.0
+    image: neo4j:5.26.0
     ports:
       - 7474:7474
       - 7473:7473
@@ -66,71 +66,70 @@ services:
       - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
       - NEO4J_AUTH=none
       - NEO4J_dbms_allow__upgrade=true
-      # - NEO4J_dbms_cluster_discovery_log__level=DEBUG
-      # - NEO4J_db_transaction_tracing_level=DEBUG
-      # - NEO4J_dbms_routing_driver_logging_level=DEBUG
       - NEO4J_server_memory_heap_max__size=2G
       - NEO4J_dbms_security_procedures_unrestricted=apoc.*
       - NEO4J_initial_dbms_default__database=mediawatch
-      # - NEO4J_apoc_import_file_enabled=true
-      # - NEO4J_apoc_import_file_use_neo4j_config=true
-      # - NEO4J_apoc_export_file_enabled=true
-      # - NEO4J_dbms_shell_enabled=true
-      # - NEO4J_kafka_zookeeper_connect=zookeeper:2181
-      # - NEO4J_kafka_bootstrap_servers=kafka:9092
-      # - NEO4J_kafka_max_poll_records=16384
-      # - NEO4J_streams_source_enabled=false
-      # - NEO4J_streams_procedures_enabled=true
-      # - NEO4J_streams_sink_enabled=true
-      # - NEO4J_streams_sink_topic_pattern_node_compare="SinkArticle{!docId}"
-      # - NEO4J_PLUGINS='["graph-data-science"]'
     volumes:
       - data_neo4j_data:/data
       - $PWD/tmp:/export
-      # - data_neo4j_logs:/logs
-      # - $PWD/plugins:/var/lib/neo4j/plugins
     labels:
       - "traefik.frontend.rule=Host:neo4j.docker.localhost"
 
   redis:
-    image: redis:7
+    image: redis:8
     ports:
       - 6379:6379
 
-  kafka: # bitnami
-    image: bitnami/kafka:3.6.1
+  kafka:
+    image: confluentinc/cp-kafka:8.1.0
     ports:
-      - 9092:9092
-      - 9093:9093
+      - "9092:9092"
+      - "9094:9094"
     environment:
-      KAFKA_CFG_NODE_ID: 0
-      KAFKA_CFG_PROCESS_ROLES: controller,broker
-      KAFKA_CFG_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
-    extra_hosts:
-      - "moby:127.0.0.1"
-      - "localhost:127.0.0.1"
-    volumes:
-      - data_kafka:/bitnami/kafka
-    labels:
-      - "traefik.frontend.rule=Host:kafka.docker.localhost"
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_NODE_ID: 0
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_CLEANUP_POLICY: compact,delete
+      KAFKA_COMPRESSION_TYPE: lz4
+      KAFKA_LINGER_MS: 0
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_MS: 120000
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --list --bootstrap-server localhost:9092 || exit 1"]
+      interval: 1s
+      timeout: 60s
+      retries: 50
 
-  kafka-ui:
-    image: provectuslabs/kafka-ui:v0.7.1
-    ports:
-      - 8070:8080
+  kafka-init:
+    image: confluentinc/cp-kafka:8.1.0
     depends_on:
-      - kafka
-    environment:
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      sleep 5
+      kafka-topics --create --topic worker --partitions 1 --config cleanup.policy=compact,delete --if-not-exists --bootstrap-server kafka:9092
+      kafka-topics --create --topic compare --partitions 1 --config cleanup.policy=compact,delete --if-not-exists --bootstrap-server kafka:9092
+      kafka-topics --create --topic enrich --partitions 1 --config cleanup.policy=compact,delete --if-not-exists --bootstrap-server kafka:9092
+      kafka-topics --create --topic store --partitions 1 --config cleanup.policy=compact,delete --if-not-exists --bootstrap-server kafka:9092
+      kafka-topics --create --topic scrape --partitions 1 --config cleanup.policy=compact,delete --if-not-exists --bootstrap-server kafka:9092
+      kafka-topics --bootstrap-server kafka:9092 --list
+      "
+    restart: "no"
 
 volumes:
   data_neo4j_data: 
   data_mongo:
   data_elasticsearh:
-  data_dgraph:
   data_kafka:
-  data_zookeper:
